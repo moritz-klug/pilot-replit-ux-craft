@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Paperclip } from "lucide-react";
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 const Hero = () => {
   const [url, setUrl] = useState("");
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleAnalysis = () => {
     if (!url) {
@@ -23,6 +24,11 @@ const Hero = () => {
       title: "Analysis started!",
       description: `Analyzing ${url} for UX improvements...`,
     });
+
+    // Simulate analysis delay then redirect
+    setTimeout(() => {
+      navigate("/feature-review");
+    }, 1500);
   };
 
   return (
