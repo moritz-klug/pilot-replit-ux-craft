@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import { ArrowLeft, CheckCircle, Eye, MoreHorizontal, Lightbulb, FileText, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -161,79 +168,142 @@ const Recommendations = () => {
           </CardContent>
         </Card>
 
-        {/* Recommendations */}
-        <div className="space-y-8">
-          {displayedRecommendations.map((recommendation, index) => (
-            <Card key={recommendation.id} className="overflow-hidden">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-orange-500/20 p-2 rounded-lg">
-                      {getCategoryIcon(recommendation.category)}
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl mb-2">
-                        {index + 1}. {recommendation.title}
-                      </CardTitle>
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className={getImpactColor(recommendation.impact)}>
-                          {recommendation.impact} impact
-                        </Badge>
-                        <Badge variant="outline" className="capitalize">
-                          {recommendation.category}
-                        </Badge>
+        {/* Top 3 Recommendations Carousel */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-6">Top Recommendations</h2>
+          <Carousel className="w-full">
+            <CarouselContent className="-ml-4">
+              {allRecommendations.slice(0, 3).map((recommendation, index) => (
+                <CarouselItem key={recommendation.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                  <Card className="h-full">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="bg-orange-500/20 p-2 rounded-lg flex-shrink-0">
+                          {getCategoryIcon(recommendation.category)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg mb-2 line-clamp-2">
+                            {recommendation.title}
+                          </CardTitle>
+                          <div className="flex flex-wrap gap-1">
+                            <Badge variant="outline" className={`text-xs ${getImpactColor(recommendation.impact)}`}>
+                              {recommendation.impact}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {recommendation.category}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {recommendation.description}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-muted rounded-lg p-3">
+                        <img 
+                          src={recommendation.mockupUrl} 
+                          alt={`Mockup for ${recommendation.title}`}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={() => handleChooseRecommendation(recommendation)}
+                        className="w-full bg-orange-600 hover:bg-orange-700"
+                        size="sm"
+                      >
+                        Choose This Recommendation
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="left-0" />
+            <CarouselNext className="right-0" />
+          </Carousel>
+        </div>
+
+        {/* Detailed Recommendations (if showing all) */}
+        {showAllRecommendations && (
+          <div className="space-y-8">
+            <h2 className="text-2xl font-bold">Detailed Analysis</h2>
+            {allRecommendations.map((recommendation, index) => (
+              <Card key={recommendation.id} className="overflow-hidden">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-orange-500/20 p-2 rounded-lg">
+                        {getCategoryIcon(recommendation.category)}
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl mb-2">
+                          {index + 1}. {recommendation.title}
+                        </CardTitle>
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className={getImpactColor(recommendation.impact)}>
+                            {recommendation.impact} impact
+                          </Badge>
+                          <Badge variant="outline" className="capitalize">
+                            {recommendation.category}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
+                    <Button
+                      onClick={() => handleChooseRecommendation(recommendation)}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      Choose This Recommendation
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => handleChooseRecommendation(recommendation)}
-                    className="bg-orange-600 hover:bg-orange-700"
-                  >
-                    Choose This Recommendation
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h4 className="font-semibold mb-2">Description</h4>
-                  <p className="text-muted-foreground">{recommendation.description}</p>
-                </div>
-
-                <Separator />
-
-                <div className="grid md:grid-cols-2 gap-6">
+                </CardHeader>
+                <CardContent className="space-y-6">
                   <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      UI/UX Principle
-                    </h4>
-                    <p className="text-sm text-muted-foreground">{recommendation.principle}</p>
+                    <h4 className="font-semibold mb-2">Description</h4>
+                    <p className="text-muted-foreground">{recommendation.description}</p>
                   </div>
+
+                  <Separator />
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        UI/UX Principle
+                      </h4>
+                      <p className="text-sm text-muted-foreground">{recommendation.principle}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">Research Citation</h4>
+                      <p className="text-sm text-muted-foreground italic">{recommendation.research}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
                   <div>
-                    <h4 className="font-semibold mb-2">Research Citation</h4>
-                    <p className="text-sm text-muted-foreground italic">{recommendation.research}</p>
+                    <h4 className="font-semibold mb-3">Visual Mockup</h4>
+                    <div className="bg-muted rounded-lg p-4">
+                      <img 
+                        src={recommendation.mockupUrl} 
+                        alt={`Mockup for ${recommendation.title}`}
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Before/After comparison showing {recommendation.title}
+                      </p>
+                    </div>
                   </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h4 className="font-semibold mb-3">Visual Mockup</h4>
-                  <div className="bg-muted rounded-lg p-4">
-                    <img 
-                      src={recommendation.mockupUrl} 
-                      alt={`Mockup for ${recommendation.title}`}
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      Before/After comparison showing {recommendation.title}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* More Options Button */}
         {!showAllRecommendations && allRecommendations.length > 3 && (
