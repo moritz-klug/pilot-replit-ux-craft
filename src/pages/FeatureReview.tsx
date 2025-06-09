@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle, Plus } from "lucide-react";
+import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle, Plus, Globe, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Feature {
@@ -25,6 +26,9 @@ interface Feature {
 
 const FeatureReview = () => {
   const { toast } = useToast();
+  const location = useLocation();
+  const analyzedUrl = location.state?.url || '';
+  const [showPreview, setShowPreview] = useState(true);
   const [features, setFeatures] = useState<Feature[]>([
     {
       id: '1',
@@ -166,13 +170,24 @@ const FeatureReview = () => {
                 Review AI-detected UI features and provide feedback
               </p>
             </div>
-            <Dialog open={isAddFeatureOpen} onOpenChange={setIsAddFeatureOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-orange-600 hover:bg-orange-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Feature Manually
+            <div className="flex gap-2">
+              {analyzedUrl && !showPreview && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPreview(true)}
+                >
+                  <Globe className="h-4 w-4 mr-2" />
+                  Show Preview
                 </Button>
-              </DialogTrigger>
+              )}
+              <Dialog open={isAddFeatureOpen} onOpenChange={setIsAddFeatureOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-orange-600 hover:bg-orange-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Feature Manually
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>Add Feature Manually</DialogTitle>
@@ -259,10 +274,49 @@ const FeatureReview = () => {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </div>
 
-        <Tabs defaultValue="all" className="space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[400px,1fr] gap-6">
+          {/* Browser Preview */}
+          {analyzedUrl && showPreview && (
+            <div className="xl:sticky xl:top-6 h-fit">
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <CardTitle className="text-sm font-medium">Preview</CardTitle>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setShowPreview(false)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{analyzedUrl}</p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="relative bg-muted">
+                    <iframe
+                      src={analyzedUrl.startsWith('http') ? analyzedUrl : `https://${analyzedUrl}`}
+                      className="w-full h-[600px] border-0"
+                      title="Website Preview"
+                      sandbox="allow-scripts allow-same-origin"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className="flex-1">
+            <Tabs defaultValue="all" className="space-y-6">
           <TabsList>
             <TabsTrigger value="all">All Features ({features.length})</TabsTrigger>
             <TabsTrigger value="pending">
@@ -444,7 +498,9 @@ const FeatureReview = () => {
               ))}
             </div>
           </TabsContent>
-        </Tabs>
+            </Tabs>
+          </div>
+        </div>
       </div>
     </div>
   );
