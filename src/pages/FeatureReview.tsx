@@ -29,8 +29,11 @@ const FeatureReview = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const analyzedUrl = location.state?.url || '';
+  const extractedFeatures = location.state?.features || [];
   const [showPreview, setShowPreview] = useState(true);
-  const [features, setFeatures] = useState<Feature[]>([
+  
+  // Use extracted features if available, otherwise use default ones
+  const initialFeatures = extractedFeatures.length > 0 ? extractedFeatures : [
     {
       id: '1',
       title: 'Hero Section CTA',
@@ -67,7 +70,9 @@ const FeatureReview = () => {
       status: 'pending',
       aiConfidence: 0.82
     }
-  ]);
+  ];
+  
+  const [features, setFeatures] = useState<Feature[]>(initialFeatures);
 
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [userNotes, setUserNotes] = useState('');
@@ -179,6 +184,11 @@ const FeatureReview = () => {
               <h1 className="text-3xl font-bold mb-2">Feature Review</h1>
               <p className="text-muted-foreground">
                 Review AI-detected UI features and provide feedback
+                {extractedFeatures.length === 0 && (
+                  <span className="text-yellow-500 text-sm block mt-1">
+                    (Using demo data - analyze a real URL for actual results)
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex gap-2">

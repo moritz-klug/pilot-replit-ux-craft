@@ -2,15 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Paperclip } from "lucide-react";
+import { Paperclip, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { extractUIElements } from "@/services/firecrawl";
 
 const Hero = () => {
   const [url, setUrl] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleAnalysis = () => {
+  const handleAnalysis = async () => {
     if (!url) {
       toast({
         title: "Please enter a URL",
@@ -20,15 +22,34 @@ const Hero = () => {
       return;
     }
     
-    toast({
-      title: "Analysis started!",
-      description: `Analyzing ${url} for UX improvements...`,
-    });
+    setIsAnalyzing(true);
+    
+    try {
+      toast({
+        title: "Analysis started!",
+        description: `Analyzing ${url} for UX improvements...`,
+      });
 
-    // Simulate analysis delay then redirect
-    setTimeout(() => {
-      navigate("/feature-review", { state: { url } });
-    }, 1500);
+      // Call Firecrawl API to extract UI elements
+      const features = await extractUIElements(url);
+      
+      // Navigate with both URL and extracted features
+      navigate("/feature-review", { 
+        state: { 
+          url,
+          features 
+        } 
+      });
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis failed",
+        description: "Failed to analyze the website. Please check the URL and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -77,9 +98,17 @@ const Hero = () => {
               </Button>
               <Button 
                 onClick={handleAnalysis}
+                disabled={isAnalyzing}
                 className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-2 h-10 font-medium"
               >
-                Analyze now
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  'Analyze now'
+                )}
               </Button>
             </div>
           </div>
