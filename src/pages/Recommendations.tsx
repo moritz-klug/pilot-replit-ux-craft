@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -188,7 +187,7 @@ const Recommendations = () => {
           <ScrollArea className="w-full whitespace-nowrap rounded-md">
             <div className="flex w-max space-x-6 p-4">
               {allRecommendations.map((recommendation, index) => (
-                <Card key={recommendation.id} className="w-[700px] flex-none">
+                <Card key={recommendation.id} className="w-[500px] flex-none">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
@@ -223,64 +222,63 @@ const Recommendations = () => {
                       <p className="text-sm text-muted-foreground">{recommendation.description}</p>
                     </div>
 
-                    {/* Compact Layout: Left side - Principle & Research, Right side - Visual Mockup */}
-                    <div className="grid grid-cols-3 gap-4">
-                      {/* Left Side - Principle and Research (2/3 width) */}
-                      <div className="col-span-2 space-y-3">
-                        <div>
-                          <h4 className="font-semibold mb-1 flex items-center gap-2 text-xs">
-                            <FileText className="h-3 w-3" />
-                            UI/UX Principle
-                          </h4>
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{recommendation.principle}</p>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-semibold mb-1 text-xs">Research Citation</h4>
-                          <p className="text-xs text-muted-foreground italic leading-relaxed line-clamp-3">{recommendation.research}</p>
-                        </div>
+                    {/* Vertical Layout: Principle, Research, then Visual Mockup */}
+                    <div className="space-y-4">
+                      {/* UI/UX Principle */}
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+                          <FileText className="h-4 w-4" />
+                          UI/UX Principle
+                        </h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{recommendation.principle}</p>
+                      </div>
+                      
+                      {/* Research Citation */}
+                      <div>
+                        <h4 className="font-semibold mb-2 text-sm">Research Citation</h4>
+                        <p className="text-xs text-muted-foreground italic leading-relaxed">{recommendation.research}</p>
                       </div>
 
-                      {/* Right Side - Swipeable Visual Mockup (1/3 width) */}
-                      <div className="col-span-1">
-                        <h4 className="font-semibold mb-2 text-xs">Visual Mockup</h4>
-                        <div className="bg-muted rounded-lg p-2 relative">
+                      {/* Visual Mockup */}
+                      <div>
+                        <h4 className="font-semibold mb-2 text-sm">Visual Mockup</h4>
+                        <div className="bg-muted rounded-lg p-3 relative">
                           <div className="relative">
                             <img 
                               src={getMockupUrl(recommendation)} 
                               alt={`${getMockupLabel(recommendation.id)} mockup for ${recommendation.title}`}
-                              className="w-full h-24 object-cover rounded-lg transition-all duration-300"
+                              className="w-full h-32 object-cover rounded-lg transition-all duration-300"
                             />
                             
                             {/* Swipe Controls */}
-                            <div className="absolute inset-0 flex items-center justify-between p-1">
+                            <div className="absolute inset-0 flex items-center justify-between p-2">
                               <Button
                                 variant="secondary"
                                 size="icon"
-                                className="h-5 w-5 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
+                                className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
                                 onClick={() => toggleMockupView(recommendation.id)}
                               >
-                                <ChevronLeft className="h-3 w-3" />
+                                <ChevronLeft className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="secondary"
                                 size="icon"
-                                className="h-5 w-5 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
+                                className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
                                 onClick={() => toggleMockupView(recommendation.id)}
                               >
-                                <ChevronRight className="h-3 w-3" />
+                                <ChevronRight className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
                           
                           {/* Before/After Label */}
-                          <div className="flex justify-between items-center mt-1">
-                            <p className="text-xs text-muted-foreground truncate">
+                          <div className="flex justify-between items-center mt-2">
+                            <p className="text-xs text-muted-foreground">
                               {getMockupLabel(recommendation.id)}
                             </p>
                             <div className="flex gap-1">
-                              <div className={`w-1 h-1 rounded-full ${mockupStates[recommendation.id] !== 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
-                              <div className={`w-1 h-1 rounded-full ${mockupStates[recommendation.id] === 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
+                              <div className={`w-2 h-2 rounded-full ${mockupStates[recommendation.id] !== 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
+                              <div className={`w-2 h-2 rounded-full ${mockupStates[recommendation.id] === 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
                             </div>
                           </div>
                         </div>
