@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,6 @@ const Recommendations = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const feature = location.state?.feature;
-  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
   const [mockupStates, setMockupStates] = useState<{[key: string]: 'before' | 'after'}>({});
 
   if (!feature) {
@@ -90,8 +90,6 @@ const Recommendations = () => {
       category: 'accessibility'
     }
   ];
-
-  const displayedRecommendations = showAllRecommendations ? allRecommendations : allRecommendations.slice(0, 3);
 
   const getImpactColor = (impact: Recommendation['impact']) => {
     switch (impact) {
@@ -186,11 +184,11 @@ const Recommendations = () => {
 
         {/* Horizontal Scrollable Recommendations */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-6">Recommendations</h2>
+          <h2 className="text-2xl font-bold mb-6">Design Recommendations</h2>
           <ScrollArea className="w-full whitespace-nowrap rounded-md">
             <div className="flex w-max space-x-6 p-4">
-              {displayedRecommendations.map((recommendation, index) => (
-                <Card key={recommendation.id} className="w-[800px] flex-none">
+              {allRecommendations.map((recommendation, index) => (
+                <Card key={recommendation.id} className="w-[700px] flex-none">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
@@ -198,7 +196,7 @@ const Recommendations = () => {
                           {getCategoryIcon(recommendation.category)}
                         </div>
                         <div>
-                          <CardTitle className="text-xl mb-2">
+                          <CardTitle className="text-lg mb-2">
                             {index + 1}. {recommendation.title}
                           </CardTitle>
                           <div className="flex gap-2">
@@ -216,7 +214,7 @@ const Recommendations = () => {
                         className="bg-orange-600 hover:bg-orange-700"
                         size="sm"
                       >
-                        Choose This Recommendation
+                        Choose This
                       </Button>
                     </div>
                   </CardHeader>
@@ -226,40 +224,40 @@ const Recommendations = () => {
                     </div>
 
                     {/* Compact Layout: Left side - Principle & Research, Right side - Visual Mockup */}
-                    <div className="grid lg:grid-cols-2 gap-6">
-                      {/* Left Side - Principle and Research */}
-                      <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      {/* Left Side - Principle and Research (2/3 width) */}
+                      <div className="col-span-2 space-y-3">
                         <div>
-                          <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+                          <h4 className="font-semibold mb-1 flex items-center gap-2 text-xs">
                             <FileText className="h-3 w-3" />
                             UI/UX Principle
                           </h4>
-                          <p className="text-xs text-muted-foreground">{recommendation.principle}</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{recommendation.principle}</p>
                         </div>
                         
                         <div>
-                          <h4 className="font-semibold mb-2 text-sm">Research Citation</h4>
-                          <p className="text-xs text-muted-foreground italic">{recommendation.research}</p>
+                          <h4 className="font-semibold mb-1 text-xs">Research Citation</h4>
+                          <p className="text-xs text-muted-foreground italic leading-relaxed line-clamp-3">{recommendation.research}</p>
                         </div>
                       </div>
 
-                      {/* Right Side - Swipeable Visual Mockup */}
-                      <div>
-                        <h4 className="font-semibold mb-3 text-sm">Visual Mockup</h4>
-                        <div className="bg-muted rounded-lg p-3 relative">
+                      {/* Right Side - Swipeable Visual Mockup (1/3 width) */}
+                      <div className="col-span-1">
+                        <h4 className="font-semibold mb-2 text-xs">Visual Mockup</h4>
+                        <div className="bg-muted rounded-lg p-2 relative">
                           <div className="relative">
                             <img 
                               src={getMockupUrl(recommendation)} 
                               alt={`${getMockupLabel(recommendation.id)} mockup for ${recommendation.title}`}
-                              className="w-full h-32 object-cover rounded-lg transition-all duration-300"
+                              className="w-full h-24 object-cover rounded-lg transition-all duration-300"
                             />
                             
                             {/* Swipe Controls */}
-                            <div className="absolute inset-0 flex items-center justify-between p-2">
+                            <div className="absolute inset-0 flex items-center justify-between p-1">
                               <Button
                                 variant="secondary"
                                 size="icon"
-                                className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
+                                className="h-5 w-5 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
                                 onClick={() => toggleMockupView(recommendation.id)}
                               >
                                 <ChevronLeft className="h-3 w-3" />
@@ -267,7 +265,7 @@ const Recommendations = () => {
                               <Button
                                 variant="secondary"
                                 size="icon"
-                                className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
+                                className="h-5 w-5 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
                                 onClick={() => toggleMockupView(recommendation.id)}
                               >
                                 <ChevronRight className="h-3 w-3" />
@@ -276,13 +274,13 @@ const Recommendations = () => {
                           </div>
                           
                           {/* Before/After Label */}
-                          <div className="flex justify-between items-center mt-2">
-                            <p className="text-xs text-muted-foreground">
-                              {getMockupLabel(recommendation.id)} - {recommendation.title}
+                          <div className="flex justify-between items-center mt-1">
+                            <p className="text-xs text-muted-foreground truncate">
+                              {getMockupLabel(recommendation.id)}
                             </p>
                             <div className="flex gap-1">
-                              <div className={`w-1.5 h-1.5 rounded-full ${mockupStates[recommendation.id] !== 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
-                              <div className={`w-1.5 h-1.5 rounded-full ${mockupStates[recommendation.id] === 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
+                              <div className={`w-1 h-1 rounded-full ${mockupStates[recommendation.id] !== 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
+                              <div className={`w-1 h-1 rounded-full ${mockupStates[recommendation.id] === 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
                             </div>
                           </div>
                         </div>
@@ -295,20 +293,6 @@ const Recommendations = () => {
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
-
-        {/* More Options Button */}
-        {!showAllRecommendations && allRecommendations.length > 3 && (
-          <div className="text-center mt-8">
-            <Button
-              variant="outline"
-              onClick={() => setShowAllRecommendations(true)}
-              className="bg-background hover:bg-muted"
-            >
-              <MoreHorizontal className="h-4 w-4 mr-2" />
-              More Design Options ({allRecommendations.length - 3} more)
-            </Button>
-          </div>
-        )}
 
         {/* Summary */}
         <Card className="mt-8">
