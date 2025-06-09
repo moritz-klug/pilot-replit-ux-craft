@@ -25,20 +25,11 @@ const Hero = () => {
     });
   };
 
-  // Tagline options (max 8 words each):
-  // 1. "Uncover insights, instantly."
-  // 2. "Analyze websites, effortlessly." 
-  // 3. "See the unseen, now."
-  
-  // Button options (max 3 words each):
-  // 1. "Start analysis"
-  // 2. "Analyze now"
-
   return (
     <section className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-          Uncover insights, instantly.
+          Paste a link, get instant UX science.
         </h1>
         
         <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
@@ -47,29 +38,29 @@ const Hero = () => {
         </p>
         
         <div className="max-w-3xl mx-auto mb-8">
-          <div className="bg-card rounded-lg border border-border p-4 mb-6">
+          <div className="bg-card rounded-lg border border-border p-6 mb-6">
             <Input
-              placeholder="What website would you like to analyze? Start typing or paste a URL..."
+              placeholder="Enter a public URL to analyze"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="border-0 bg-transparent text-lg h-12 focus-visible:ring-0 mb-4"
+              className="border-0 bg-transparent text-lg h-14 focus-visible:ring-0 mb-6"
             />
             
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-6">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-500/10 text-red-400">
-                🛍️ E-commerce site
+                🛍️ Online shop
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-500/10 text-yellow-400">
-                📝 SaaS landing page
+                📝 Personal blog
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-500/10 text-purple-400">
-                📱 Mobile app site
+                🏃 Waitlist site
               </span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-500/10 text-green-400">
-                💼 Portfolio site
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-500/10 text-yellow-400">
+                💼 Workout tracker
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-500/10 text-blue-400">
-                🎯 Marketing page
+                🤖 AI debate app
               </span>
             </div>
             
@@ -80,9 +71,9 @@ const Hero = () => {
               </Button>
               <Button 
                 onClick={handleAnalysis}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-6"
+                className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 text-base font-medium"
               >
-                Start analysis
+                Analyze now
               </Button>
             </div>
           </div>
@@ -97,7 +88,7 @@ const Hero = () => {
         </div>
         
         <p className="text-sm text-muted-foreground">
-          We prioritize accessibility and data privacy.
+          Built with accessibility in mind and strict respect for your data privacy.
         </p>
       </div>
     </section>
