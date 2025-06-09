@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Play } from "lucide-react";
+import { Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Hero = () => {
@@ -25,54 +25,80 @@ const Hero = () => {
     });
   };
 
+  // Tagline options (max 8 words each):
+  // 1. "Uncover insights, instantly."
+  // 2. "Analyze websites, effortlessly." 
+  // 3. "See the unseen, now."
+  
+  // Button options (max 3 words each):
+  // 1. "Start analysis"
+  // 2. "Analyze now"
+
   return (
-    <section className="hero-gradient min-h-screen flex items-center relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-10 w-20 h-20 bg-primary/20 rounded-full blur-xl"></div>
-        <div className="absolute top-40 right-20 w-32 h-32 bg-accent/20 rounded-full blur-xl"></div>
-        <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-primary/30 rounded-full blur-xl"></div>
-      </div>
-      
-      <div className="container mx-auto px-4 py-20 relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            Analyze any{" "}
-            <span className="text-primary">public website</span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
-            Get evidence-backed recommendations to improve your website's user experience.
-          </p>
-          
-          <div className="max-w-2xl mx-auto mb-8">
-            <div className="flex flex-col sm:flex-row gap-4 p-2 bg-card rounded-xl border border-border shadow-lg">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                <Input
-                  placeholder="Enter a URL"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="pl-10 border-0 bg-transparent text-lg h-12 focus-visible:ring-0"
-                />
-              </div>
+    <section className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
+      <div className="max-w-4xl mx-auto text-center">
+        <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
+          Uncover insights, instantly.
+        </h1>
+        
+        <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
+          Transform any website into actionable UX recommendations. Describe 
+          what you need and our AI Agent analyzes it for you.
+        </p>
+        
+        <div className="max-w-3xl mx-auto mb-8">
+          <div className="bg-card rounded-lg border border-border p-4 mb-6">
+            <Input
+              placeholder="What website would you like to analyze? Start typing or paste a URL..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="border-0 bg-transparent text-lg h-12 focus-visible:ring-0 mb-4"
+            />
+            
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-500/10 text-red-400">
+                🛍️ E-commerce site
+              </span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-500/10 text-yellow-400">
+                📝 SaaS landing page
+              </span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-500/10 text-purple-400">
+                📱 Mobile app site
+              </span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-500/10 text-green-400">
+                💼 Portfolio site
+              </span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-500/10 text-blue-400">
+                🎯 Marketing page
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <Button variant="ghost" size="sm" className="text-muted-foreground">
+                <Paperclip className="h-4 w-4 mr-2" />
+                Attach
+              </Button>
               <Button 
                 onClick={handleAnalysis}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 h-12 text-lg font-medium"
+                className="bg-orange-600 hover:bg-orange-700 text-white px-6"
               >
                 Start analysis
               </Button>
             </div>
           </div>
           
-          <p className="text-muted-foreground mb-6">
+          <p className="text-muted-foreground mb-4">
             We only support public pages for now.
           </p>
           
           <Button variant="link" className="text-primary hover:text-primary/80">
-            See a sample report
+            View sample report
           </Button>
         </div>
+        
+        <p className="text-sm text-muted-foreground">
+          We prioritize accessibility and data privacy.
+        </p>
       </div>
     </section>
   );
