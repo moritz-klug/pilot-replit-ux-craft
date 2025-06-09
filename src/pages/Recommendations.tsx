@@ -187,7 +187,7 @@ const Recommendations = () => {
           <ScrollArea className="w-full whitespace-nowrap rounded-md">
             <div className="flex w-max space-x-6 p-4">
               {allRecommendations.map((recommendation, index) => (
-                <Card key={recommendation.id} className="w-[500px] flex-none">
+                <Card key={recommendation.id} className="w-[450px] flex-none">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
@@ -219,7 +219,7 @@ const Recommendations = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">{recommendation.description}</p>
+                      <p className="text-sm text-muted-foreground break-words">{recommendation.description}</p>
                     </div>
 
                     {/* Vertical Layout: Principle, Research, then Visual Mockup */}
@@ -230,13 +230,13 @@ const Recommendations = () => {
                           <FileText className="h-4 w-4" />
                           UI/UX Principle
                         </h4>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{recommendation.principle}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal">{recommendation.principle}</p>
                       </div>
                       
                       {/* Research Citation */}
                       <div>
                         <h4 className="font-semibold mb-2 text-sm">Research Citation</h4>
-                        <p className="text-xs text-muted-foreground italic leading-relaxed">{recommendation.research}</p>
+                        <p className="text-xs text-muted-foreground italic leading-relaxed break-words whitespace-normal">{recommendation.research}</p>
                       </div>
 
                       {/* Visual Mockup */}
