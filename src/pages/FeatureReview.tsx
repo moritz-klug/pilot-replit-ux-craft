@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +26,6 @@ interface Feature {
 
 const FeatureReview = () => {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const location = useLocation();
   const analyzedUrl = location.state?.url || '';
   const [showPreview, setShowPreview] = useState(true);
@@ -158,12 +157,12 @@ const FeatureReview = () => {
 
   const handleGetRecommendations = (feature: Feature) => {
     toast({
-      title: "Generating Recommendations",
+      title: "Getting Recommendations",
       description: `Analyzing "${feature.title}" for improvement suggestions...`,
     });
     
-    // Navigate to recommendations page with feature data
-    navigate('/recommendations', { state: { feature } });
+    // Here you would typically make an API call to get AI recommendations
+    console.log(`Getting recommendations for feature: ${feature.title}`);
   };
 
   const filteredFeatures = (status?: Feature['status']) => {
