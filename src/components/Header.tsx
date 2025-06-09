@@ -7,10 +7,12 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-orange-600 rounded flex items-center justify-center">
-              <span className="text-white font-bold text-sm">UX</span>
-            </div>
-            <span className="text-xl font-semibold">UX Pilot Pro</span>
+            <img 
+              src="/lovable-uploads/de1b37d7-39b9-4668-81d7-1b1d316fd42d.png" 
+              alt="Auto UI" 
+              className="w-8 h-8"
+            />
+            <span className="text-xl font-semibold">Auto UI</span>
           </div>
           
           <nav className="hidden md:flex items-center space-x-8">
