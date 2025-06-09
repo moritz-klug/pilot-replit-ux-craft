@@ -27,7 +27,7 @@ const Hero = () => {
 
     // Simulate analysis delay then redirect
     setTimeout(() => {
-      navigate("/feature-review");
+      navigate("/feature-review", { state: { url } });
     }, 1500);
   };
 
