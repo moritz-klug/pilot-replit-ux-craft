@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Feature {
@@ -19,6 +20,7 @@ interface Feature {
   aiConfidence: number;
   userNotes?: string;
   screenshot?: string;
+  isManual?: boolean;
 }
 
 const FeatureReview = () => {
@@ -64,6 +66,14 @@ const FeatureReview = () => {
 
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [userNotes, setUserNotes] = useState('');
+  const [isAddFeatureOpen, setIsAddFeatureOpen] = useState(false);
+  const [newFeature, setNewFeature] = useState({
+    title: '',
+    description: '',
+    category: 'interactive' as Feature['category'],
+    severity: 'medium' as Feature['severity'],
+    screenshot: null as File | null
+  });
 
   const getSeverityColor = (severity: Feature['severity']) => {
     switch (severity) {
@@ -103,6 +113,44 @@ const FeatureReview = () => {
     });
   };
 
+  const handleAddFeature = () => {
+    if (!newFeature.title.trim() || !newFeature.description.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in both title and description",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const feature: Feature = {
+      id: Date.now().toString(),
+      title: newFeature.title,
+      description: newFeature.description,
+      category: newFeature.category,
+      severity: newFeature.severity,
+      status: 'pending',
+      aiConfidence: 1.0, // Manual features have 100% confidence
+      isManual: true,
+      screenshot: newFeature.screenshot ? URL.createObjectURL(newFeature.screenshot) : undefined
+    };
+
+    setFeatures(prev => [feature, ...prev]);
+    setIsAddFeatureOpen(false);
+    setNewFeature({
+      title: '',
+      description: '',
+      category: 'interactive',
+      severity: 'medium',
+      screenshot: null
+    });
+
+    toast({
+      title: "Feature added",
+      description: "Manual feature has been added successfully",
+    });
+  };
+
   const filteredFeatures = (status?: Feature['status']) => {
     return status ? features.filter(f => f.status === status) : features;
   };
@@ -111,10 +159,107 @@ const FeatureReview = () => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Feature Review</h1>
-          <p className="text-muted-foreground">
-            Review AI-detected UI features and provide feedback
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Feature Review</h1>
+              <p className="text-muted-foreground">
+                Review AI-detected UI features and provide feedback
+              </p>
+            </div>
+            <Dialog open={isAddFeatureOpen} onOpenChange={setIsAddFeatureOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-orange-600 hover:bg-orange-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Feature Manually
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Add Feature Manually</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Feature Title</Label>
+                    <Input
+                      id="title"
+                      placeholder="Enter feature title..."
+                      value={newFeature.title}
+                      onChange={(e) => setNewFeature(prev => ({ ...prev, title: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Describe the feature..."
+                      value={newFeature.description}
+                      onChange={(e) => setNewFeature(prev => ({ ...prev, description: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Category</Label>
+                      <select
+                        id="category"
+                        className="w-full px-3 py-2 border rounded-md bg-background"
+                        value={newFeature.category}
+                        onChange={(e) => setNewFeature(prev => ({ ...prev, category: e.target.value as Feature['category'] }))}
+                      >
+                        <option value="interactive">Interactive</option>
+                        <option value="navigation">Navigation</option>
+                        <option value="forms">Forms</option>
+                        <option value="content">Content</option>
+                        <option value="visual">Visual</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="severity">Severity</Label>
+                      <select
+                        id="severity"
+                        className="w-full px-3 py-2 border rounded-md bg-background"
+                        value={newFeature.severity}
+                        onChange={(e) => setNewFeature(prev => ({ ...prev, severity: e.target.value as Feature['severity'] }))}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="screenshot">Screenshot (Optional)</Label>
+                    <Input
+                      id="screenshot"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setNewFeature(prev => ({ 
+                        ...prev, 
+                        screenshot: e.target.files?.[0] || null 
+                      }))}
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    <Button onClick={handleAddFeature} className="flex-1">
+                      Add Feature
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsAddFeatureOpen(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <Tabs defaultValue="all" className="space-y-6">
@@ -143,7 +288,14 @@ const FeatureReview = () => {
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg">{feature.title}</CardTitle>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        {feature.title}
+                        {feature.isManual && (
+                          <Badge variant="outline" className="text-xs">
+                            Manual
+                          </Badge>
+                        )}
+                      </CardTitle>
                       {getStatusIcon(feature.status)}
                     </div>
                     <div className="flex gap-2">
