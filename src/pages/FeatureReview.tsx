@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle, Plus, Globe, X } from "lucide-react";
+import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle, Plus, Globe, X, Lightbulb } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Feature {
@@ -153,6 +153,16 @@ const FeatureReview = () => {
       title: "Feature added",
       description: "Manual feature has been added successfully",
     });
+  };
+
+  const handleGetRecommendations = (feature: Feature) => {
+    toast({
+      title: "Getting Recommendations",
+      description: `Analyzing "${feature.title}" for improvement suggestions...`,
+    });
+    
+    // Here you would typically make an API call to get AI recommendations
+    console.log(`Getting recommendations for feature: ${feature.title}`);
   };
 
   const filteredFeatures = (status?: Feature['status']) => {
@@ -491,8 +501,16 @@ const FeatureReview = () => {
                       {feature.severity}
                     </Badge>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    <Button 
+                      onClick={() => handleGetRecommendations(feature)}
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      size="sm"
+                    >
+                      <Lightbulb className="h-4 w-4 mr-2" />
+                      Get Recommendations
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
