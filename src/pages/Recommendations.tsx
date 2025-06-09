@@ -12,7 +12,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { ArrowLeft, CheckCircle, Eye, MoreHorizontal, Lightbulb, FileText, Palette } from "lucide-react";
+import { ArrowLeft, CheckCircle, Eye, MoreHorizontal, Lightbulb, FileText, Palette, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Recommendation {
@@ -21,7 +21,8 @@ interface Recommendation {
   description: string;
   principle: string;
   research: string;
-  mockupUrl: string;
+  beforeMockupUrl: string;
+  afterMockupUrl: string;
   impact: 'high' | 'medium' | 'low';
   category: 'accessibility' | 'usability' | 'visual' | 'interaction';
 }
@@ -32,6 +33,7 @@ const Recommendations = () => {
   const location = useLocation();
   const feature = location.state?.feature;
   const [showAllRecommendations, setShowAllRecommendations] = useState(false);
+  const [mockupStates, setMockupStates] = useState<{[key: string]: 'before' | 'after'}>({});
 
   if (!feature) {
     navigate('/feature-review');
@@ -46,7 +48,8 @@ const Recommendations = () => {
       description: 'Increase the contrast ratio between the button text and background to meet WCAG AA standards (4.5:1 minimum).',
       principle: 'The principle of accessibility requires sufficient color contrast for users with visual impairments. Poor contrast can make content illegible for users with color vision deficiencies or low vision.',
       research: 'According to Web Content Accessibility Guidelines (WCAG) 2.1 and research by Reinecke et al. (2013) on "Predicting users\' first impressions of website aesthetics", proper contrast significantly improves both accessibility and perceived trustworthiness.',
-      mockupUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=300&fit=crop',
+      beforeMockupUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=300&fit=crop',
+      afterMockupUrl: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop',
       impact: 'high',
       category: 'accessibility'
     },
@@ -56,7 +59,8 @@ const Recommendations = () => {
       description: 'Implement a subtle scale and shadow transition on hover to provide clear visual feedback and improve perceived interactivity.',
       principle: 'Affordance theory by James J. Gibson suggests that users need clear visual cues about interactive elements. Hover states communicate that an element is clickable and responsive.',
       research: 'Studies by Hornbæk & Hertzum (2007) in "Aesthetics and usability" show that micro-interactions like hover effects improve user confidence and task completion rates by up to 23%.',
-      mockupUrl: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop',
+      beforeMockupUrl: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop',
+      afterMockupUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop',
       impact: 'medium',
       category: 'interaction'
     },
@@ -66,7 +70,8 @@ const Recommendations = () => {
       description: 'Increase button height to 44px minimum to meet touch target accessibility guidelines and improve mobile usability.',
       principle: 'Fitts\' Law states that the time to acquire a target is a function of the distance to and size of the target. Larger targets are easier and faster to click.',
       research: 'Apple\'s Human Interface Guidelines and research by Parhi et al. (2006) "Target size study for one-handed thumb use on small touchscreen devices" recommend minimum 44px touch targets.',
-      mockupUrl: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop',
+      beforeMockupUrl: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=300&fit=crop',
+      afterMockupUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=300&fit=crop',
       impact: 'high',
       category: 'usability'
     },
@@ -76,7 +81,8 @@ const Recommendations = () => {
       description: 'Implement a loading spinner and disabled state when the button is clicked to prevent double submissions and provide user feedback.',
       principle: 'The principle of feedback ensures users understand system status. Loading states reduce uncertainty and prevent user frustration during processing.',
       research: 'Nielsen\'s usability heuristics emphasize "visibility of system status." Research by Miller (1968) shows users expect feedback within 0.1 seconds for immediate actions.',
-      mockupUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop',
+      beforeMockupUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop',
+      afterMockupUrl: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop',
       impact: 'medium',
       category: 'interaction'
     },
@@ -86,7 +92,8 @@ const Recommendations = () => {
       description: 'Add clear keyboard focus indicators with a distinct outline for better keyboard navigation accessibility.',
       principle: 'Keyboard accessibility is essential for users who cannot use a mouse. Focus indicators show which element currently has keyboard focus.',
       research: 'WCAG 2.1 Success Criterion 2.4.7 and studies by WebAIM (2021) show that 98.1% of home pages have accessibility failures, with missing focus indicators being a common issue.',
-      mockupUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=300&fit=crop',
+      beforeMockupUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=300&fit=crop',
+      afterMockupUrl: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop',
       impact: 'high',
       category: 'accessibility'
     }
@@ -116,6 +123,23 @@ const Recommendations = () => {
       title: "Recommendation Selected",
       description: `"${recommendation.title}" has been added to your implementation queue.`,
     });
+  };
+
+  const toggleMockupView = (recommendationId: string) => {
+    setMockupStates(prev => ({
+      ...prev,
+      [recommendationId]: prev[recommendationId] === 'after' ? 'before' : 'after'
+    }));
+  };
+
+  const getMockupUrl = (recommendation: Recommendation) => {
+    const state = mockupStates[recommendation.id] || 'before';
+    return state === 'before' ? recommendation.beforeMockupUrl : recommendation.afterMockupUrl;
+  };
+
+  const getMockupLabel = (recommendationId: string) => {
+    const state = mockupStates[recommendationId] || 'before';
+    return state === 'before' ? 'Before' : 'After';
   };
 
   return (
@@ -205,7 +229,7 @@ const Recommendations = () => {
                       
                       <div className="bg-muted rounded-lg p-3">
                         <img 
-                          src={recommendation.mockupUrl} 
+                          src={recommendation.beforeMockupUrl} 
                           alt={`Mockup for ${recommendation.title}`}
                           className="w-full h-32 object-cover rounded-lg"
                         />
@@ -270,33 +294,67 @@ const Recommendations = () => {
 
                   <Separator />
 
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        UI/UX Principle
-                      </h4>
-                      <p className="text-sm text-muted-foreground">{recommendation.principle}</p>
+                  {/* Reorganized Layout: Left side - Principle & Research, Right side - Visual Mockup */}
+                  <div className="grid lg:grid-cols-2 gap-8">
+                    {/* Left Side - Principle and Research */}
+                    <div className="space-y-6">
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          UI/UX Principle
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{recommendation.principle}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-semibold mb-2">Research Citation</h4>
+                        <p className="text-sm text-muted-foreground italic">{recommendation.research}</p>
+                      </div>
                     </div>
+
+                    {/* Right Side - Swipeable Visual Mockup */}
                     <div>
-                      <h4 className="font-semibold mb-2">Research Citation</h4>
-                      <p className="text-sm text-muted-foreground italic">{recommendation.research}</p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h4 className="font-semibold mb-3">Visual Mockup</h4>
-                    <div className="bg-muted rounded-lg p-4">
-                      <img 
-                        src={recommendation.mockupUrl} 
-                        alt={`Mockup for ${recommendation.title}`}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                      <p className="text-xs text-muted-foreground mt-2 text-center">
-                        Before/After comparison showing {recommendation.title}
-                      </p>
+                      <h4 className="font-semibold mb-3">Visual Mockup</h4>
+                      <div className="bg-muted rounded-lg p-4 relative">
+                        <div className="relative">
+                          <img 
+                            src={getMockupUrl(recommendation)} 
+                            alt={`${getMockupLabel(recommendation.id)} mockup for ${recommendation.title}`}
+                            className="w-full h-48 object-cover rounded-lg transition-all duration-300"
+                          />
+                          
+                          {/* Swipe Controls */}
+                          <div className="absolute inset-0 flex items-center justify-between p-2">
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
+                              onClick={() => toggleMockupView(recommendation.id)}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
+                              onClick={() => toggleMockupView(recommendation.id)}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Before/After Label */}
+                        <div className="flex justify-between items-center mt-3">
+                          <p className="text-xs text-muted-foreground">
+                            {getMockupLabel(recommendation.id)} - {recommendation.title}
+                          </p>
+                          <div className="flex gap-1">
+                            <div className={`w-2 h-2 rounded-full ${mockupStates[recommendation.id] !== 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
+                            <div className={`w-2 h-2 rounded-full ${mockupStates[recommendation.id] === 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
