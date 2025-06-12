@@ -390,7 +390,7 @@ const FeatureReview = () => {
             </div>
 
             {selectedFeature && (
-              <Card className="sticky top-6">
+              <Card className="sticky top-6 h-fit">
                 <CardHeader>
                   <CardTitle>Review Feature</CardTitle>
                 </CardHeader>
