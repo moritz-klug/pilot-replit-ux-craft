@@ -35,6 +35,7 @@ export interface Feature {
   userNotes?: string;
   screenshot?: string;
   isManual?: boolean;
+  elementId?: string;
 }
 
 // Map priority to severity
@@ -123,9 +124,15 @@ export const extractUIElements = async (url: string): Promise<Feature[]> => {
       [`${fullUrl}`], // Try without wildcard based on troubleshooting guide
       {
         prompt: "Extract all UI elements in sections from the website. Provide a title and description for each UI section and element. Include a confidence score in percentage (0-100) for how accurately each section and element is parsed. Assign a priority level (low, medium, high) for each feature on the website based on UX importance.",
-        schema: fixedSchema
+        schema: fixedSchema,
+        agent: {
+          model: 'FIRE-1'
+        }
       }
     );
+
+    // Log the raw extract result
+    console.log('Raw Firecrawl extract result:', extractResult);
 
     // Check for the correct response structure
     if (!extractResult) {
@@ -136,8 +143,10 @@ export const extractUIElements = async (url: string): Promise<Feature[]> => {
     let uiElements;
     if (extractResult.data && extractResult.data.ui_elements) {
       uiElements = extractResult.data.ui_elements;
+      console.log('UI Elements from data.ui_elements:', uiElements);
     } else if (extractResult.ui_elements) {
       uiElements = extractResult.ui_elements;
+      console.log('UI Elements from ui_elements:', uiElements);
     } else {
       console.error('Extract result structure:', extractResult);
       throw new Error('No UI elements found in response');
@@ -152,13 +161,14 @@ export const extractUIElements = async (url: string): Promise<Feature[]> => {
       section.elements.forEach((element) => {
         features.push({
           id: featureId.toString(),
-          title: element.element_title,
+          title: `${section.section_title} - ${element.element_title}`,
           description: element.element_description,
           category: categorizeElement(element.element_title, element.element_description),
           severity: mapPriorityToSeverity(element.priority),
           status: 'pending',
           aiConfidence: element.confidence_score / 100, // Convert percentage to decimal
-          isManual: false
+          isManual: false,
+          elementId: `feature-${featureId}` // Add element ID for highlighting
         });
         featureId++;
       });
