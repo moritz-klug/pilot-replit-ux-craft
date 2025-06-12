@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle, Plus, Globe, X, Lightbulb } from "lucide-react";
+import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle, Plus, Globe, X, Lightbulb, Monitor, Tablet, Smartphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import highlightScript from "@/utils/highlightScript";
 
 interface Feature {
   id: string;
@@ -31,7 +32,44 @@ const FeatureReview = () => {
   const analyzedUrl = location.state?.url || '';
   const extractedFeatures = location.state?.features || [];
   const [showPreview, setShowPreview] = useState(true);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   
+  // Group features by section
+  const sections = useMemo(() => {
+    const sectionMap = new Map<string, Feature[]>();
+    extractedFeatures.forEach(feature => {
+      const section = feature.title.split(' - ')[0]; // Assuming format: "Section - Element"
+      if (!sectionMap.has(section)) {
+        sectionMap.set(section, []);
+      }
+      sectionMap.get(section)?.push(feature);
+    });
+    return Array.from(sectionMap.entries());
+  }, [extractedFeatures]);
+
+  const highlightElement = (elementId: string) => {
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentWindow) return;
+
+    // Send message to iframe to highlight element
+    iframe.contentWindow.postMessage({
+      type: 'HIGHLIGHT_ELEMENT',
+      elementId
+    }, '*');
+  };
+
+  const clearHighlight = () => {
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentWindow) return;
+
+    iframe.contentWindow.postMessage({
+      type: 'CLEAR_HIGHLIGHT'
+    }, '*');
+  };
+
   // Use extracted features if available, otherwise use default ones
   const initialFeatures = extractedFeatures.length > 0 ? extractedFeatures : [
     {
@@ -175,6 +213,40 @@ const FeatureReview = () => {
     return status ? features.filter(f => f.status === status) : features;
   };
 
+  const getPreviewWidth = () => {
+    switch (previewDevice) {
+      case 'desktop':
+        return '100%';
+      case 'tablet':
+        return '768px';
+      case 'mobile':
+        return '375px';
+    }
+  };
+
+  // Inject highlight script into iframe
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const handleIframeLoad = () => {
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!iframeDoc) return;
+
+        // Create and inject the script
+        const script = iframeDoc.createElement('script');
+        script.textContent = highlightScript;
+        iframeDoc.head.appendChild(script);
+      } catch (error) {
+        console.error('Error injecting highlight script:', error);
+      }
+    };
+
+    iframe.addEventListener('load', handleIframeLoad);
+    return () => iframe.removeEventListener('load', handleIframeLoad);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
@@ -299,7 +371,7 @@ const FeatureReview = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[400px,1fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Browser Preview */}
           {analyzedUrl && showPreview && (
             <div className="xl:sticky xl:top-6 h-fit">
@@ -310,223 +382,199 @@ const FeatureReview = () => {
                       <Globe className="h-4 w-4 text-muted-foreground" />
                       <CardTitle className="text-sm font-medium">Preview</CardTitle>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setShowPreview(false)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                        <Button
+                          variant={previewDevice === 'desktop' ? 'secondary' : 'ghost'}
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => setPreviewDevice('desktop')}
+                        >
+                          <Monitor className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={previewDevice === 'tablet' ? 'secondary' : 'ghost'}
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => setPreviewDevice('tablet')}
+                        >
+                          <Tablet className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={previewDevice === 'mobile' ? 'secondary' : 'ghost'}
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => setPreviewDevice('mobile')}
+                        >
+                          <Smartphone className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setShowPreview(false)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{analyzedUrl}</p>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="relative bg-muted">
-                    <iframe
-                      src={analyzedUrl.startsWith('http') ? analyzedUrl : `https://${analyzedUrl}`}
-                      className="w-full h-[600px] border-0"
-                      title="Website Preview"
-                      sandbox="allow-scripts allow-same-origin"
-                    />
+                    <div className="flex justify-center">
+                      <div 
+                        className="transition-all duration-300 ease-in-out"
+                        style={{ 
+                          width: getPreviewWidth(),
+                          maxWidth: '100%'
+                        }}
+                      >
+                        <iframe
+                          ref={iframeRef}
+                          src={analyzedUrl.startsWith('http') ? analyzedUrl : `https://${analyzedUrl}`}
+                          className="w-full h-[600px] border-0"
+                          title="Website Preview"
+                          sandbox="allow-scripts allow-same-origin"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
           )}
 
-          {/* Main Content */}
-          <div className="flex-1">
+          {/* UI Elements Panel */}
+          <div className="space-y-6">
             <Tabs defaultValue="all" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="all">All Features ({features.length})</TabsTrigger>
-            <TabsTrigger value="pending">
-              Pending ({filteredFeatures('pending').length})
-            </TabsTrigger>
-            <TabsTrigger value="reviewed">
-              Reviewed ({filteredFeatures('reviewed').length})
-            </TabsTrigger>
-            <TabsTrigger value="approved">
-              Approved ({filteredFeatures('approved').length})
-            </TabsTrigger>
-          </TabsList>
+              <TabsList>
+                <TabsTrigger value="all">All Sections</TabsTrigger>
+                <TabsTrigger value="pending">Pending</TabsTrigger>
+                <TabsTrigger value="reviewed">Reviewed</TabsTrigger>
+                <TabsTrigger value="approved">Approved</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="all" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              {features.map((feature) => (
-                <Card 
-                  key={feature.id} 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedFeature?.id === feature.id ? 'ring-2 ring-orange-500' : ''
-                  }`}
-                  onClick={() => setSelectedFeature(feature)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {feature.title}
-                        {feature.isManual && (
-                          <Badge variant="outline" className="text-xs">
-                            Manual
-                          </Badge>
-                        )}
+              <TabsContent value="all" className="space-y-6">
+                {sections.map(([sectionName, features]) => (
+                  <Card 
+                    key={sectionName}
+                    className={`transition-all ${
+                      selectedSection === sectionName ? 'ring-2 ring-orange-500' : ''
+                    }`}
+                  >
+                    <CardHeader>
+                      <CardTitle 
+                        className="text-lg cursor-pointer"
+                        onClick={() => setSelectedSection(sectionName)}
+                      >
+                        {sectionName}
                       </CardTitle>
-                      {getStatusIcon(feature.status)}
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className={getSeverityColor(feature.severity)}>
-                        {feature.severity}
-                      </Badge>
-                      <Badge variant="outline">
-                        {Math.round(feature.aiConfidence * 100)}% confidence
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {selectedFeature && (
-              <Card className="sticky top-6">
-                <CardHeader>
-                  <CardTitle>Review Feature</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold mb-2">{selectedFeature.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {selectedFeature.description}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Add Notes</label>
-                    <Textarea
-                      placeholder="Add your review notes..."
-                      value={userNotes}
-                      onChange={(e) => setUserNotes(e.target.value)}
-                      className="min-h-[100px]"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Attach Screenshot</label>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleScreenshotUpload(selectedFeature.id)}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleScreenshotUpload(selectedFeature.id)}
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Capture
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-4">
-                    <Button 
-                      onClick={() => updateFeatureStatus(selectedFeature.id, 'approved', userNotes)}
-                      className="flex-1"
-                    >
-                      Approve
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => updateFeatureStatus(selectedFeature.id, 'reviewed', userNotes)}
-                      className="flex-1"
-                    >
-                      Mark Reviewed
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      onClick={() => updateFeatureStatus(selectedFeature.id, 'rejected', userNotes)}
-                      className="flex-1"
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="pending">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredFeatures('pending').map((feature) => (
-                <Card key={feature.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                    <Badge variant="outline" className={getSeverityColor(feature.severity)}>
-                      {feature.severity}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="reviewed">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredFeatures('reviewed').map((feature) => (
-                <Card key={feature.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                    <Badge variant="outline" className={getSeverityColor(feature.severity)}>
-                      {feature.severity}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                    {feature.userNotes && (
-                      <div className="mt-3 p-2 bg-muted rounded text-sm">
-                        <strong>Notes:</strong> {feature.userNotes}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {features.map((feature) => (
+                          <div
+                            key={feature.id}
+                            className={`p-3 rounded-lg border cursor-pointer transition-all hover:bg-muted ${
+                              selectedElement === feature.id ? 'ring-2 ring-orange-500' : ''
+                            }`}
+                            onMouseEnter={() => {
+                              setSelectedElement(feature.id);
+                              highlightElement(feature.id);
+                            }}
+                            onMouseLeave={() => {
+                              setSelectedElement(null);
+                              clearHighlight();
+                            }}
+                            onClick={() => setSelectedFeature(feature)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h4 className="font-medium">{feature.title}</h4>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {feature.description}
+                                </p>
+                              </div>
+                              <Badge variant="outline" className={getSeverityColor(feature.severity)}>
+                                {feature.severity}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
 
-          <TabsContent value="approved">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredFeatures('approved').map((feature) => (
-                <Card key={feature.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                    <Badge variant="outline" className={getSeverityColor(feature.severity)}>
-                      {feature.severity}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                    <Button 
-                      onClick={() => handleGetRecommendations(feature)}
-                      className="w-full bg-orange-600 hover:bg-orange-700"
-                      size="sm"
-                    >
-                      <Lightbulb className="h-4 w-4 mr-2" />
-                      Get Recommendations
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+              <TabsContent value="pending">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredFeatures('pending').map((feature) => (
+                    <Card key={feature.id}>
+                      <CardHeader>
+                        <CardTitle className="text-lg">{feature.title}</CardTitle>
+                        <Badge variant="outline" className={getSeverityColor(feature.severity)}>
+                          {feature.severity}
+                        </Badge>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{feature.description}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="reviewed">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredFeatures('reviewed').map((feature) => (
+                    <Card key={feature.id}>
+                      <CardHeader>
+                        <CardTitle className="text-lg">{feature.title}</CardTitle>
+                        <Badge variant="outline" className={getSeverityColor(feature.severity)}>
+                          {feature.severity}
+                        </Badge>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{feature.description}</p>
+                        {feature.userNotes && (
+                          <div className="mt-3 p-2 bg-muted rounded text-sm">
+                            <strong>Notes:</strong> {feature.userNotes}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="approved">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredFeatures('approved').map((feature) => (
+                    <Card key={feature.id}>
+                      <CardHeader>
+                        <CardTitle className="text-lg">{feature.title}</CardTitle>
+                        <Badge variant="outline" className={getSeverityColor(feature.severity)}>
+                          {feature.severity}
+                        </Badge>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">{feature.description}</p>
+                        <Button 
+                          onClick={() => handleGetRecommendations(feature)}
+                          className="w-full bg-orange-600 hover:bg-orange-700"
+                          size="sm"
+                        >
+                          <Lightbulb className="h-4 w-4 mr-2" />
+                          Get Recommendations
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
             </Tabs>
           </div>
         </div>
