@@ -349,6 +349,9 @@ const FeatureReview = () => {
             <TabsTrigger value="approved">
               Approved ({filteredFeatures('approved').length})
             </TabsTrigger>
+            <TabsTrigger value="rejected">
+              Rejected ({filteredFeatures('rejected').length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -522,6 +525,29 @@ const FeatureReview = () => {
                       <Lightbulb className="h-4 w-4 mr-2" />
                       Get Recommendations
                     </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="rejected">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredFeatures('rejected').map((feature) => (
+                <Card key={feature.id}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{feature.title}</CardTitle>
+                    <Badge variant="outline" className={getSeverityColor(feature.severity)}>
+                      {feature.severity}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    {feature.userNotes && (
+                      <div className="mt-3 p-2 bg-muted rounded text-sm">
+                        <strong>Rejection Notes:</strong> {feature.userNotes}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
