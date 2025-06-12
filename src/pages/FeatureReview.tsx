@@ -22,6 +22,8 @@ interface Feature {
   userNotes?: string;
   screenshot?: string;
   isManual?: boolean;
+  section_title?: string;
+  section_description?: string;
 }
 
 const FeatureReview = () => {
@@ -173,6 +175,25 @@ const FeatureReview = () => {
 
   const filteredFeatures = (status?: Feature['status']) => {
     return status ? features.filter(f => f.status === status) : features;
+  };
+
+  // Helper to extract section and feature title from the feature title prefix
+  const getSectionAndTitle = (featureTitle: string) => {
+    const [section, ...rest] = featureTitle.split(" - ");
+    return {
+      section: section.trim(),
+      title: rest.join(" - ").trim() || section.trim(),
+    };
+  };
+
+  const groupFeaturesBySectionPrefix = (features: Feature[]) => {
+    const grouped: Record<string, Feature[]> = {};
+    features.forEach(feature => {
+      const { section } = getSectionAndTitle(feature.title);
+      if (!grouped[section]) grouped[section] = [];
+      grouped[section].push(feature);
+    });
+    return grouped;
   };
 
   return (
@@ -355,40 +376,55 @@ const FeatureReview = () => {
           </TabsList>
 
           <TabsContent value="all" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              {features.map((feature) => (
-                <Card 
-                  key={feature.id} 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedFeature?.id === feature.id ? 'ring-2 ring-orange-500' : ''
-                  }`}
-                  onClick={() => setSelectedFeature(feature)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {feature.title}
-                        {feature.isManual && (
-                          <Badge variant="outline" className="text-xs">
-                            Manual
-                          </Badge>
-                        )}
-                      </CardTitle>
-                      {getStatusIcon(feature.status)}
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className={getSeverityColor(feature.severity)}>
-                        {feature.severity}
-                      </Badge>
-                      <Badge variant="outline">
-                        {Math.round(feature.aiConfidence * 100)}% confidence
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
+            <div className="space-y-8">
+              {Object.entries(groupFeaturesBySectionPrefix(features)).map(([section, features]) => (
+                <div key={section} className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{section}</h3>
+                    <Badge variant="outline" className="mt-2">
+                      {features.length} {features.length === 1 ? 'feature' : 'features'}
+                    </Badge>
+                  </div>
+                  <div className="space-y-4">
+                    {features.map((feature) => {
+                      const { title } = getSectionAndTitle(feature.title);
+                      return (
+                        <Card
+                          key={feature.id}
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            selectedFeature?.id === feature.id ? 'ring-2 ring-orange-500' : ''
+                          }`}
+                          onClick={() => setSelectedFeature(feature)}
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                {title}
+                                {feature.isManual && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Manual
+                                  </Badge>
+                                )}
+                              </CardTitle>
+                              {getStatusIcon(feature.status)}
+                            </div>
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className={getSeverityColor(feature.severity)}>
+                                {feature.severity}
+                              </Badge>
+                              <Badge variant="outline">
+                                {Math.round(feature.aiConfidence * 100)}% confidence
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground">{feature.description}</p>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
 
