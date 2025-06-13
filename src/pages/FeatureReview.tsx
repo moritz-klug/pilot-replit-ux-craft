@@ -17,7 +17,7 @@ interface Feature {
   description: string;
   category: 'navigation' | 'forms' | 'content' | 'interactive' | 'visual';
   severity: 'low' | 'medium' | 'high';
-  status: 'pending' | 'reviewed' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected';
   aiConfidence: number;
   userNotes?: string;
   screenshot?: string;
@@ -99,7 +99,6 @@ const FeatureReview = () => {
     switch (status) {
       case 'approved': return <CheckCircle className="h-4 w-4 text-green-400" />;
       case 'rejected': return <XCircle className="h-4 w-4 text-red-400" />;
-      case 'reviewed': return <MessageSquare className="h-4 w-4 text-blue-400" />;
       default: return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
     }
   };
@@ -364,9 +363,6 @@ const FeatureReview = () => {
             <TabsTrigger value="pending">
               Pending ({filteredFeatures('pending').length})
             </TabsTrigger>
-            <TabsTrigger value="reviewed">
-              Reviewed ({filteredFeatures('reviewed').length})
-            </TabsTrigger>
             <TabsTrigger value="approved">
               Approved ({filteredFeatures('approved').length})
             </TabsTrigger>
@@ -480,13 +476,7 @@ const FeatureReview = () => {
                     >
                       Approve
                     </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => updateFeatureStatus(selectedFeature.id, 'reviewed', userNotes)}
-                      className="flex-1"
-                    >
-                      Mark Reviewed
-                    </Button>
+
                     <Button 
                       variant="destructive"
                       onClick={() => updateFeatureStatus(selectedFeature.id, 'rejected', userNotes)}
@@ -512,29 +502,6 @@ const FeatureReview = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="reviewed">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredFeatures('reviewed').map((feature) => (
-                <Card key={feature.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                    <Badge variant="outline" className={getSeverityColor(feature.severity)}>
-                      {feature.severity}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                    {feature.userNotes && (
-                      <div className="mt-3 p-2 bg-muted rounded text-sm">
-                        <strong>Notes:</strong> {feature.userNotes}
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               ))}
