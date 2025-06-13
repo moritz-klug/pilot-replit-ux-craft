@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ArrowLeft, CheckCircle, Eye, MoreHorizontal, Lightbulb, FileText, Palette, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { futureHouseService } from "@/services/futureHouseService";
+import { RecommendationsDisplay } from "@/components/RecommendationsDisplay";
 
 interface Recommendation {
   id: string;
@@ -24,12 +26,39 @@ const Recommendations = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const feature = location.state?.feature;
+  const [recommendations, setRecommendations] = useState<string[]>([]);
+  const [papers, setPapers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [mockupStates, setMockupStates] = useState<{[key: string]: 'before' | 'after'}>({});
 
-  if (!feature) {
-    navigate('/feature-review');
-    return null;
-  }
+  useEffect(() => {
+    if (!feature) {
+      navigate('/feature-review');
+      return;
+    }
+    setLoading(true);
+    // Always prompt for best UI/UX experiences for the UI element
+    const context = `What are the best UI and UX experiences, patterns, and scientific recommendations for a ${feature.title}?`;
+    futureHouseService.getRecommendations({
+      feature: feature.title,
+      currentDesign: feature.description,
+      context,
+    })
+      .then((res) => {
+        setRecommendations(res.recommendations);
+        setPapers(res.papers);
+      })
+      .catch((err) => {
+        toast({
+          title: "Error",
+          description: "Failed to get recommendations.",
+          variant: "destructive"
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [feature, navigate, toast]);
+
+  if (!feature) return null;
 
   // Mock recommendations data - in real app, this would come from API
   const allRecommendations: Recommendation[] = [
@@ -305,6 +334,12 @@ const Recommendations = () => {
             </p>
           </CardContent>
         </Card>
+
+        {loading ? (
+          <p>Loading...</p>
+        ) : (
+          <RecommendationsDisplay recommendations={recommendations} papers={papers} />
+        )}
       </div>
     </div>
   );
