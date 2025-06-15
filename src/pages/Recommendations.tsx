@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -216,22 +217,22 @@ const Recommendations = () => {
           <ScrollArea className="w-full whitespace-nowrap rounded-md">
             <div className="flex w-max space-x-6 p-4">
               {allRecommendations.map((recommendation, index) => (
-                <Card key={recommendation.id} className="w-[450px] flex-none">
+                <Card key={recommendation.id} className="w-[450px] flex-none overflow-hidden">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="bg-orange-500/20 p-2 rounded-lg">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className="bg-orange-500/20 p-2 rounded-lg flex-shrink-0">
                           {getCategoryIcon(recommendation.category)}
                         </div>
-                        <div>
-                          <CardTitle className="text-lg mb-2">
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-lg mb-2 break-words whitespace-normal hyphens-auto">
                             {index + 1}. {recommendation.title}
                           </CardTitle>
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className={getImpactColor(recommendation.impact)}>
+                          <div className="flex gap-2 flex-wrap">
+                            <Badge variant="outline" className={`${getImpactColor(recommendation.impact)} whitespace-nowrap`}>
                               {recommendation.impact} impact
                             </Badge>
-                            <Badge variant="outline" className="capitalize">
+                            <Badge variant="outline" className="capitalize whitespace-nowrap">
                               {recommendation.category}
                             </Badge>
                           </div>
@@ -239,39 +240,39 @@ const Recommendations = () => {
                       </div>
                       <Button
                         onClick={() => handleChooseRecommendation(recommendation)}
-                        className="bg-orange-600 hover:bg-orange-700"
+                        className="bg-orange-600 hover:bg-orange-700 flex-shrink-0 ml-2"
                         size="sm"
                       >
                         Choose This
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 overflow-hidden">
                     <div>
-                      <p className="text-sm text-muted-foreground break-words">{recommendation.description}</p>
+                      <p className="text-sm text-muted-foreground break-words whitespace-normal hyphens-auto overflow-wrap-anywhere">{recommendation.description}</p>
                     </div>
 
                     {/* Vertical Layout: Principle, Research, then Visual Mockup */}
                     <div className="space-y-4">
                       {/* UI/UX Principle */}
-                      <div>
+                      <div className="overflow-hidden">
                         <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
-                          <FileText className="h-4 w-4" />
-                          UI/UX Principle
+                          <FileText className="h-4 w-4 flex-shrink-0" />
+                          <span className="break-words">UI/UX Principle</span>
                         </h4>
-                        <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal">{recommendation.principle}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal hyphens-auto overflow-wrap-anywhere">{recommendation.principle}</p>
                       </div>
                       
                       {/* Research Citation */}
-                      <div>
-                        <h4 className="font-semibold mb-2 text-sm">Research Citation</h4>
-                        <p className="text-xs text-muted-foreground italic leading-relaxed break-words whitespace-normal">{recommendation.research}</p>
+                      <div className="overflow-hidden">
+                        <h4 className="font-semibold mb-2 text-sm break-words">Research Citation</h4>
+                        <p className="text-xs text-muted-foreground italic leading-relaxed break-words whitespace-normal hyphens-auto overflow-wrap-anywhere">{recommendation.research}</p>
                       </div>
 
                       {/* Visual Mockup */}
-                      <div>
+                      <div className="overflow-hidden">
                         <h4 className="font-semibold mb-2 text-sm">Visual Mockup</h4>
-                        <div className="bg-muted rounded-lg p-3 relative">
+                        <div className="bg-muted rounded-lg p-3 relative overflow-hidden">
                           <div className="relative">
                             <img 
                               src={getMockupUrl(recommendation)} 
@@ -302,10 +303,10 @@ const Recommendations = () => {
                           
                           {/* Before/After Label */}
                           <div className="flex justify-between items-center mt-2">
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground break-words">
                               {getMockupLabel(recommendation.id)}
                             </p>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 flex-shrink-0">
                               <div className={`w-2 h-2 rounded-full ${mockupStates[recommendation.id] !== 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
                               <div className={`w-2 h-2 rounded-full ${mockupStates[recommendation.id] === 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
                             </div>
