@@ -1,3 +1,4 @@
+
 import FireCrawlApp from '@mendable/firecrawl-js';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -91,32 +92,44 @@ export const extractUIElements = async (url: string): Promise<Feature[]> => {
       })).describe("All UI sections found on the website")
     });
     
-    // Convert to JSON Schema with additionalProperties: false
-    const jsonSchema = zodToJsonSchema(zodSchema);
+    // Convert to JSON Schema
+    const baseSchema = zodToJsonSchema(zodSchema);
     
-    // Ensure additionalProperties is false at all levels
-    const fixedSchema = {
-      ...jsonSchema,
+    // Create a properly typed schema with all required properties
+    const jsonSchema = {
+      type: "object",
       additionalProperties: false,
       properties: {
         ui_elements: {
-          ...jsonSchema.properties.ui_elements,
+          type: "array",
           items: {
-            ...jsonSchema.properties.ui_elements.items,
+            type: "object",
             additionalProperties: false,
             properties: {
-              ...jsonSchema.properties.ui_elements.items.properties,
+              section_title: { type: "string", description: "Title of the UI section" },
+              section_description: { type: "string", description: "Description of what this section contains" },
               elements: {
-                ...jsonSchema.properties.ui_elements.items.properties.elements,
+                type: "array",
                 items: {
-                  ...jsonSchema.properties.ui_elements.items.properties.elements.items,
-                  additionalProperties: false
-                }
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    element_title: { type: "string", description: "Title of the UI element" },
+                    element_description: { type: "string", description: "Description of the UI element" },
+                    confidence_score: { type: "number", description: "Confidence score 0-100" },
+                    priority: { type: "string", description: "Priority level: low, medium, or high" }
+                  },
+                  required: ["element_title", "element_description", "confidence_score", "priority"]
+                },
+                description: "List of UI elements in this section"
               }
-            }
-          }
+            },
+            required: ["section_title", "section_description", "elements"]
+          },
+          description: "All UI sections found on the website"
         }
-      }
+      },
+      required: ["ui_elements"]
     };
     
     
@@ -124,7 +137,7 @@ export const extractUIElements = async (url: string): Promise<Feature[]> => {
       [`${fullUrl}`], // Try without wildcard based on troubleshooting guide
       {
         prompt: "Extract all UI elements in sections from the website. Provide a title and description for each UI section and element. Include a confidence score in percentage (0-100) for how accurately each section and element is parsed. Assign a priority level (low, medium, high) for each feature on the website based on UX importance.",
-        schema: fixedSchema,
+        schema: jsonSchema,
         agent: {
           model: 'FIRE-1'
         }
@@ -139,12 +152,22 @@ export const extractUIElements = async (url: string): Promise<Feature[]> => {
       throw new Error('Extract failed - no result');
     }
     
+    // Type guard to check if result has data property
+    const hasData = (result: any): result is { data: any } => {
+      return result && typeof result === 'object' && 'data' in result;
+    };
+
+    // Type guard to check if result has ui_elements property
+    const hasUIElements = (result: any): result is { ui_elements: any } => {
+      return result && typeof result === 'object' && 'ui_elements' in result;
+    };
+    
     // Try different response structures
     let uiElements;
-    if (extractResult.data && extractResult.data.ui_elements) {
+    if (hasData(extractResult) && extractResult.data && extractResult.data.ui_elements) {
       uiElements = extractResult.data.ui_elements;
       console.log('UI Elements from data.ui_elements:', uiElements);
-    } else if (extractResult.ui_elements) {
+    } else if (hasUIElements(extractResult) && extractResult.ui_elements) {
       uiElements = extractResult.ui_elements;
       console.log('UI Elements from ui_elements:', uiElements);
     } else {
@@ -157,8 +180,8 @@ export const extractUIElements = async (url: string): Promise<Feature[]> => {
     let featureId = 1;
 
     
-    uiElements.forEach((section) => {
-      section.elements.forEach((element) => {
+    uiElements.forEach((section: any) => {
+      section.elements.forEach((element: any) => {
         features.push({
           id: featureId.toString(),
           title: `${section.section_title} - ${element.element_title}`,
