@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -60,8 +61,8 @@ const Hero = () => {
         </h1>
         
         <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Create beautiful, modern web applications at the speed of thought. Describe 
-          what you need and Replit's AI Agent builds it for you.
+          Get evidence-backed recommendations to improve your website's user experience. 
+          Our analysis is based on proven UX principles and research.
         </p>
         
         <div className="max-w-4xl mx-auto mb-12">
