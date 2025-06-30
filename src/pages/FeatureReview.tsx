@@ -1,206 +1,248 @@
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Upload, Camera, MessageSquare, CheckCircle, AlertTriangle, XCircle, Plus, Globe, X, Lightbulb, Download, Eye, Sparkles } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import StreamingAnalysis from "@/components/StreamingAnalysis";
+import React, { useEffect, useState, useRef } from 'react';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Loader2, Sparkles } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 
-interface UiComponent {
-  name: string;
-  description: string;
-  style_info: string;
-}
+const DEMO_MODE = false;
+const SCREENSHOT_API_BASE = 'http://localhost:8001';
+const MAIN_API_BASE = 'http://localhost:8000';
 
-const FeatureReview = () => {
-  const { toast } = useToast();
-  const navigate = useNavigate();
+const STATUS_OPTIONS = ['pending', 'confirmed', 'rejected'] as const;
+type Status = typeof STATUS_OPTIONS[number];
+
+const FeatureReview: React.FC = () => {
   const location = useLocation();
-  
-  // Updated data from the new analysis stream
-  const analyzedUrl = location.state?.url || '';
-  const analysisReport = location.state?.analysis?.report || {};
-  const screenshotId = location.state?.screenshotId || null;
+  const navigate = useNavigate();
+  const url = location.state?.url || 'https://www.apple.com';
 
-  const [features, setFeatures] = useState<UiComponent[]>(analysisReport.components || []);
-  const [showPreview, setShowPreview] = useState(true);
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSection, setSelectedSection] = useState<any>(null);
+  const [recommendation, setRecommendation] = useState<string | null>(null);
+  const [recommending, setRecommending] = useState(false);
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [tab, setTab] = useState('ui');
+  const [componentStatuses, setComponentStatuses] = useState<Record<string, Status>>({});
+  const [progressLog, setProgressLog] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const [isAddFeatureOpen, setIsAddFeatureOpen] = useState(false);
-  const [newFeature, setNewFeature] = useState({
-    name: '',
-    description: '',
-    style_info: ''
-  });
+  useEffect(() => {
+    setLoading(true);
+    setProgressLog([]);
+    setError(null);
+    setAnalysis(null);
+    setScreenshotUrl(null);
+    setComponentStatuses({});
+    setSelectedSection(null);
+    setRecommendation(null);
+    setRecommending(false);
 
-  const handleAddFeature = () => {
-    if (!newFeature.name.trim() || !newFeature.description.trim()) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const feature: UiComponent = { ...newFeature };
-    setFeatures(prev => [feature, ...prev]);
-    setIsAddFeatureOpen(false);
-    setNewFeature({ name: '', description: '', style_info: '' });
-
-    toast({
-      title: "Feature added",
-      description: "Manual feature has been added successfully",
+    const es = new EventSource(`${MAIN_API_BASE}/analyze-ui?url=${encodeURIComponent(url)}`, {
+      withCredentials: false
     });
+    eventSourceRef.current = es;
+
+    es.onopen = () => {
+      setProgressLog([]);
+    };
+    es.addEventListener('progress', (event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      setProgressLog(prev => [...prev, data.message]);
+    });
+    es.addEventListener('error', (event: MessageEvent) => {
+      const data = event.data ? JSON.parse(event.data) : { error: 'Unknown error' };
+      setError(data.error);
+      setProgressLog(prev => [...prev, `❌ Error: ${data.error}`]);
+      setLoading(false);
+      es.close();
+    });
+    es.addEventListener('result', (event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      setAnalysis(data);
+      setLoading(false);
+      if (data.screenshot_id) {
+        setScreenshotUrl(`${SCREENSHOT_API_BASE}/screenshot/${data.screenshot_id}`);
+      } else if (data.screenshot_url) {
+        setScreenshotUrl(data.screenshot_url);
+      } else {
+        setScreenshotUrl(null);
+      }
+      // Initialize statuses
+      if (data.sections) {
+        const initialStatuses: Record<string, Status> = {};
+        data.sections.forEach((section: any, idx: number) => {
+          initialStatuses[section.name || idx] = 'pending';
+        });
+        setComponentStatuses(initialStatuses);
+      }
+      es.close();
+    });
+    es.onerror = () => {
+      setError('Connection lost or server error.');
+      setLoading(false);
+      es.close();
+    };
+    return () => {
+      es.close();
+    };
+    // eslint-disable-next-line
+  }, [url]);
+
+  const handleStatusChange = (section: any, status: Status) => {
+    setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
   };
 
-  const downloadScreenshot = () => {
-    if (screenshotId) {
-      window.open(`http://localhost:8001/screenshot/${screenshotId}`, '_blank');
-    } else {
-        toast({
-            title: "No Screenshot ID",
-            description: "A screenshot ID was not found for this analysis.",
-            variant: "destructive"
-        })
+  const handleGetRecommendation = async (section: any) => {
+    setRecommending(true);
+    setRecommendation(null);
+    setSelectedSection(section);
+    try {
+      const context = {
+        section,
+        url,
+        global: analysis?.global,
+        ux: analysis?.ux,
+        business: analysis?.business,
+      };
+      const resp = await fetch(`${MAIN_API_BASE}/recommendations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feature: section.name,
+          currentDesign: JSON.stringify(context),
+          context: '',
+        }),
+      });
+      if (!resp.ok) throw new Error('Failed to get recommendations');
+      const data = await resp.json();
+      setRecommendation((data.recommendations || []).join('\n'));
+      navigate('/recommendations', { state: { section, context, recommendations: data.recommendations, papers: data.papers } });
+    } catch (e) {
+      setRecommendation('Failed to get recommendations.');
+    } finally {
+      setRecommending(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Analysis Review</h1>
-              <p className="text-muted-foreground">
-                Review AI-detected UI components and analysis for: <a href={analyzedUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{analyzedUrl}</a>
-                {!analysisReport.components && (
-                  <span className="text-yellow-500 text-sm block mt-1">
-                    (Showing demo data - analyze a real URL for actual results)
-                  </span>
-                )}
-              </p>
-            </div>
-            <Dialog open={isAddFeatureOpen} onOpenChange={setIsAddFeatureOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-orange-600 hover:bg-orange-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Component Manually
-                  </Button>
-                </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Add Component Manually</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Component Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="e.g., Primary Button"
-                      value={newFeature.name}
-                      onChange={(e) => setNewFeature({ ...newFeature, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Describe the component and its function..."
-                      value={newFeature.description}
-                      onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
-                    />
-                  </div>
-                   <div className="space-y-2">
-                    <Label htmlFor="style_info">Styling Info</Label>
-                    <Input
-                      id="style_info"
-                      placeholder="e.g., background: #007bff"
-                      value={newFeature.style_info}
-                      onChange={(e) => setNewFeature({ ...newFeature, style_info: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end pt-4">
-                    <Button onClick={handleAddFeature}>Add Component</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
+        <p className="text-lg mb-4">Analyzing UI and UX...</p>
+        <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4">
+          <h2 className="font-semibold mb-2 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Live Analysis Log
+          </h2>
+          <div className="font-mono text-sm space-y-1">
+            {progressLog.map((msg, i) => (
+              <div key={i}>{msg}</div>
+            ))}
+            {error && <div className="text-red-500">{error}</div>}
           </div>
         </div>
-        
-        <Tabs defaultValue="features" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="features">
-              <Sparkles className="h-4 w-4 mr-2" /> UI Components
-            </TabsTrigger>
-            <TabsTrigger value="analysis">
-                <Sparkles className="h-4 w-4 mr-2" /> AI Analysis
-            </TabsTrigger>
-            <TabsTrigger value="screenshot">
-                <Eye className="h-4 w-4 mr-2" /> Screenshot
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="features">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-              {features.map((feature, index) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <CardTitle>{feature.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">{feature.description}</p>
-                    <Badge variant="outline">{feature.style_info}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="analysis">
-            <Card className="mt-6">
-                <CardHeader>
-                    <CardTitle>{analysisReport.title || "AI Analysis"}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <StreamingAnalysis text={analysisReport.summary || "No summary provided."} />
-                </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="screenshot">
-            <Card className="mt-6">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Full Page Screenshot</CardTitle>
-                <Button variant="outline" size="sm" onClick={downloadScreenshot} disabled={!screenshotId}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {screenshotId ? (
-                  <img 
-                    src={`http://localhost:8001/screenshot/${screenshotId}`} 
-                    alt="Full page screenshot"
-                    className="rounded-lg border border-border"
-                  />
-                ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <p>No screenshot available for this analysis.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <p className="text-lg text-red-500">Failed to analyze the website. Please try again.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto py-10 px-4">
+      <h1 className="text-3xl font-bold mb-6">UI/UX Analysis Results</h1>
+      <Tabs value={tab} onValueChange={setTab} className="mb-8">
+        <TabsList>
+          <TabsTrigger value="ui">UI Components</TabsTrigger>
+          <TabsTrigger value="ai">AI Analysis</TabsTrigger>
+          <TabsTrigger value="screenshot">Screenshot</TabsTrigger>
+        </TabsList>
+        <TabsContent value="ui">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {analysis.sections?.map((section: any, idx: number) => (
+              <Card key={section.name || idx}>
+                <CardContent className="p-6">
+                  <div className="flex items-center mb-2">
+                    <img src={section.cropped_image_url} alt={section.name} className="w-20 h-20 object-cover rounded mr-4 border" />
+                    <div>
+                      <h3 className="text-lg font-semibold">{section.name}</h3>
+                      <div className="mt-2 flex gap-2 items-center">
+                        {STATUS_OPTIONS.map((status) => (
+                          <Button
+                            key={status}
+                            size="sm"
+                            variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
+                            onClick={() => handleStatusChange(section, status)}
+                          >
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mb-1"><b>Elements:</b> {section.elements}</div>
+                  <div className="mb-1"><b>Purpose:</b> {section.purpose}</div>
+                  <div className="mb-1"><b>Fonts:</b> {section.style?.fonts}</div>
+                  <div className="mb-1"><b>Colors:</b> {section.style?.colors}</div>
+                  <div className="mb-1"><b>Layouts:</b> {section.style?.layouts}</div>
+                  <div className="mb-1"><b>Interactions:</b> {section.style?.interactions}</div>
+                  <div className="mb-1"><b>Mobile:</b> {section.mobile}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        <TabsContent value="ai">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'confirmed').length === 0 && (
+              <div className="text-muted-foreground">No confirmed components. Confirm a component in the UI Components tab.</div>
+            )}
+            {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'confirmed').map((section: any, idx: number) => (
+              <Card key={section.name || idx}>
+                <CardContent className="p-6">
+                  <div className="flex items-center mb-2">
+                    <img src={section.cropped_image_url} alt={section.name} className="w-20 h-20 object-cover rounded mr-4 border" />
+                    <div>
+                      <h3 className="text-lg font-semibold">{section.name}</h3>
+                      <Button
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => handleGetRecommendation(section)}
+                        disabled={recommending}
+                      >
+                        {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                        Get Recommendations
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mb-1"><b>Elements:</b> {section.elements}</div>
+                  <div className="mb-1"><b>Purpose:</b> {section.purpose}</div>
+                  <div className="mb-1"><b>Fonts:</b> {section.style?.fonts}</div>
+                  <div className="mb-1"><b>Colors:</b> {section.style?.colors}</div>
+                  <div className="mb-1"><b>Layouts:</b> {section.style?.layouts}</div>
+                  <div className="mb-1"><b>Interactions:</b> {section.style?.interactions}</div>
+                  <div className="mb-1"><b>Mobile:</b> {section.mobile}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        <TabsContent value="screenshot">
+          {screenshotUrl && (
+            <div className="mb-8 text-center">
+              <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
+              <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px] border" />
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
