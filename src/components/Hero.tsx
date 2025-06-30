@@ -1,60 +1,108 @@
-
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Paperclip, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Paperclip, Loader2, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { extractUIElements } from "@/services/firecrawl";
+import { motion } from 'framer-motion';
 
-const Hero = () => {
-  const [url, setUrl] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+interface AnalysisStep {
+  message: string;
+  timestamp: number;
+}
+
+export const Hero = () => {
+  const [url, setUrl] = useState("https://www.apple.com");
+  const [isLoading, setIsLoading] = useState(false);
+  const [analysisLog, setAnalysisLog] = useState<string[]>([]);
+  const [finalAnalysis, setFinalAnalysis] = useState<any>(null);
+  const [screenshotId, setScreenshotId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleAnalysis = async () => {
+  const handleAnalyze = async () => {
     if (!url) {
       toast({
-        title: "Please enter a URL",
-        description: "Enter a website URL to start the analysis",
-        variant: "destructive",
+        title: 'URL is required',
+        description: 'Please enter a website URL to analyze.',
+        variant: 'destructive',
       });
       return;
     }
-    
-    setIsAnalyzing(true);
-    
+
+    setIsLoading(true);
+    setAnalysisLog([]);
+    setFinalAnalysis(null);
+    setScreenshotId(null);
+    setError(null);
+
     try {
-      toast({
-        title: "Analysis started!",
-        description: `Analyzing ${url} for UX improvements...`,
+      const response = await fetch('http://localhost:8000/analyze-with-screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
       });
 
-      // Call Firecrawl API to extract UI elements
-      const features = await extractUIElements(url);
-      
-      // Navigate with both URL and extracted features
-      navigate("/feature-review", { 
-        state: { 
-          url,
-          features 
-        } 
-      });
-    } catch (error) {
-      console.error('Analysis error:', error);
-      toast({
-        title: "Analysis failed",
-        description: "Failed to analyze the website. Please check the URL and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzing(false);
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      const processStream = async () => {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            setIsLoading(false);
+            break;
+          }
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n\n');
+
+          lines.forEach(line => {
+            if (line.startsWith('event: progress')) {
+              const data = JSON.parse(line.substring(line.indexOf('{'), line.lastIndexOf('}') + 1));
+              setAnalysisLog(prev => [...prev, data.message]);
+            } else if (line.startsWith('event: screenshot_id')) {
+              const data = JSON.parse(line.substring(line.indexOf('{'), line.lastIndexOf('}') + 1));
+              setScreenshotId(data.screenshot_id);
+            } else if (line.startsWith('event: analysis_complete')) {
+              const data = JSON.parse(line.substring(line.indexOf('{'), line.lastIndexOf('}') + 1));
+              setFinalAnalysis(data);
+              setAnalysisLog(prev => [...prev, '✨ Analysis complete!']);
+            } else if (line.startsWith('event: error')) {
+                const data = JSON.parse(line.substring(line.indexOf('{'), line.lastIndexOf('}') + 1));
+                setError(data.error);
+                setAnalysisLog(prev => [...prev, `❌ Error: ${data.error}`]);
+            }
+          });
+        }
+      };
+
+      await processStream();
+
+    } catch (e) {
+      console.error('Failed to fetch analysis:', e);
+      setError('Failed to connect to the server. Is it running?');
+      setIsLoading(false);
     }
   };
+  
+  useEffect(() => {
+    if (finalAnalysis && screenshotId) {
+      navigate('/feature-review', { state: { analysis: finalAnalysis, screenshotId: screenshotId, url: url } });
+    }
+  }, [finalAnalysis, screenshotId, navigate, url]);
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
+    <section className="relative w-full h-[80vh] flex flex-col items-center justify-center text-center px-4">
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight max-w-3xl mx-auto">
           Paste a link, get instant UX science.
@@ -66,53 +114,78 @@ const Hero = () => {
         </p>
         
         <div className="max-w-4xl mx-auto mb-12">
-          <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-6">
-            <Input
-              placeholder="Enter a public URL to analyze"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="border-0 bg-transparent text-base h-12 focus-visible:ring-0 mb-4 placeholder:text-muted-foreground/70 text-left"
-            />
-            
-            <div className="flex flex-wrap justify-center gap-2 mb-6">
-              <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-red-500/20 text-red-400 border border-red-500/30">
-                🛍️ Online shop
-              </span>
-              <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                📝 Personal blog
-              </span>
-              <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                🏃 Waitlist site
-              </span>
-              <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                💼 Workout tracker
-              </span>
-              <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                🤖 AI debate app
-              </span>
+          {!isLoading ? (
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-6">
+              <div className="flex w-full max-w-2xl items-center space-x-2">
+                <Input
+                  type="url"
+                  placeholder="https://apple.com"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
+                  disabled={isLoading}
+                  className="h-12 text-lg"
+                />
+                <Button onClick={handleAnalyze} disabled={isLoading} className="h-12 text-lg">
+                  {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Analyze'}
+                </Button>
+              </div>
+              
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-red-500/20 text-red-400 border border-red-500/30">
+                  🛍️ Online shop
+                </span>
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                  📝 Personal blog
+                </span>
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  🏃 Waitlist site
+                </span>
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                  💼 Workout tracker
+                </span>
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  🤖 AI debate app
+                </span>
+              </div>
             </div>
-            
-            <div className="flex justify-between items-center">
-              <Button variant="ghost" size="sm" className="text-muted-foreground text-sm h-10">
-                <Paperclip className="h-4 w-4 mr-2" />
-                Attach
-              </Button>
-              <Button 
-                onClick={handleAnalysis}
-                disabled={isAnalyzing}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-2 h-10 font-medium"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  'Analyze now'
+          ) : (
+            <Card className="w-full max-w-2xl text-left">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  <Sparkles className="w-5 h-5 mr-3 text-primary" />
+                  <h3 className="text-lg font-semibold">Live Analysis Log</h3>
+                </div>
+                <p className="font-mono text-sm text-left">
+                  {analysisLog.map((log, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="flex items-center gap-2"
+                    >
+                        {log.startsWith('✅') || log.startsWith('✨') ? <CheckCircle className="h-4 w-4 text-green-500" /> : 
+                         log.startsWith('❌') ? <XCircle className="h-4 w-4 text-red-500" /> :
+                         <Loader2 className="h-4 w-4 animate-spin" />
+                        }
+                      <span>{log}</span>
+                    </motion.div>
+                  ))}
+                </p>
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex items-center gap-2 mt-2 text-red-500"
+                    >
+                        <ServerCrash className="h-4 w-4" />
+                        <span className="font-mono text-sm text-left">{error}</span>
+                    </motion.div>
                 )}
-              </Button>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
         
         <p className="text-xs text-muted-foreground">
