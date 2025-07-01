@@ -2,11 +2,16 @@ import os
 import asyncio
 import requests
 import json
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi.responses import StreamingResponse
+import aiofiles
+import base64
+import uuid
+from fastapi.staticfiles import StaticFiles
+import glob
 
 # Correct import for the official client
 from futurehouse_client import FutureHouseClient, JobNames
@@ -143,6 +148,200 @@ def get_recommendations(request: RecommendationRequest):
         return RecommendationResponse(recommendations=recommendations, papers=papers)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FutureHouse API error: {str(e)}")
+
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', 'sk-...')  # Replace with your key or .env
+OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
+OPENROUTER_MODEL = 'openrouter/auto'  # Can be changed
+CROPS_DIR = os.path.join(os.path.dirname(__file__), 'section_crops')
+os.makedirs(CROPS_DIR, exist_ok=True)
+
+ANALYSIS_PROMPT = '''You are an advanced UI/UX analyst, visual design expert, and business intelligence extractor. Given website URL and screenshot, perform the following complete analysis pipeline:
+1. Visual Analysis & Cropping
+Identify and crop UI sections into separate labeled images
+2. Per-Section Structured Breakdown
+For each UI section, return a breakdown like:
+[Section Name]
+
+Elements: Describe visible UI elements (images, headings, icons, text, buttons).
+Purpose: What is this section trying to achieve from a UX or marketing perspective?
+Style Details:
+  - Fonts (family, size, weight)
+  - Colors (text, backgrounds, CTAs, hover)
+  - Layouts (columns, grids, containers)
+  - Interactions (hover, scroll animations, sticky behavior)
+Mobile Behavior: How is the section responsive or adaptive?
+3. Global Design System Summary
+Return the overall style architecture used across the website:
+Typography: Fonts used, heading/body hierarchy, font sizes
+Color Palette: Primary, accent, background, hover, and text colors (with hex codes)
+Button Styles: Shape, color, hover animation, font
+Spacing & Layout: Padding, margins, column layouts, responsive breakpoints
+Iconography: Style (line, solid), use of illustrations or imagery
+
+4. UX Architecture & Interaction Patterns
+Explain how the site is structured and what journey it guides the user through:
+Page Flow: (e.g. Introduction → Services → Proof → CTA → Contact)
+Emotional Strategy: Authenticity, authority, minimalism, playfulness, etc.
+Conversion Points: CTAs, forms, demos, lead magnets
+Design Trends: Glassmorphism, flat design, brutalism, etc.
+
+5. Business and Audience Analysis
+From content and meta-data, determine:
+What is this website about? (1-paragraph summary)
+Business Type: e.g. SaaS, Portfolio, Marketing Agency, eCommerce, Blog, Nonprofit
+Target Audience: Personas or demographic/industry focus
+Keywords & Topics: Extract product- or service-related keywords for SEO, based on:
+Navigation/menu
+Hero tagline
+Service/feature blocks
+Blog topics or product categories
+ Return ~10–20 keywords.
+
+Then as an outcome user receives the sections with cropped images and all the other details.
+Show sections with all the details etc. 
+'''
+
+class AnalyzeUIRequest(BaseModel):
+    url: str
+
+import time
+
+def sse_event(event: str, data: str) -> str:
+    return f"event: {event}\ndata: {data}\n\n"
+
+@app.get('/analyze-ui')
+async def analyze_ui(request: Request):
+    url = request.query_params.get('url')
+    if not url:
+        async def event_stream():
+            print('[DEBUG] Missing url parameter')
+            yield sse_event('error', '{"error": "Missing url parameter."}')
+            return
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
+    async def event_stream():
+        try:
+            print('[DEBUG] Requesting screenshot for URL:', url)
+            yield sse_event('progress', '{"message": "📸 Requesting screenshot..."}')
+            screenshot_payload = {"url": url, "full_page": True}
+            screenshot_response = requests.post("http://localhost:8001/screenshot", json=screenshot_payload, timeout=30)
+            screenshot_response.raise_for_status()
+            screenshot_id = screenshot_response.json().get("screenshot_id")
+            screenshots_dir = os.path.join(os.path.dirname(__file__), 'screenshots')
+            print('[DEBUG] Absolute screenshots_dir:', os.path.abspath(screenshots_dir))
+            pattern = f'_{screenshot_id}.png'
+            print('[DEBUG] Manual search for files ending with:', pattern)
+            screenshot_path = None
+            for i in range(30):
+                files_in_dir = os.listdir(screenshots_dir)
+                matching_files = [f for f in files_in_dir if f.endswith(pattern)]
+                print(f'[DEBUG] Attempt {i+1}: Files in screenshots_dir:', files_in_dir)
+                if matching_files:
+                    screenshot_path = os.path.abspath(os.path.normpath(os.path.join(screenshots_dir, matching_files[0])))
+                    print('[DEBUG] Found screenshot file:', screenshot_path)
+                    break
+                await asyncio.sleep(1)
+            if not screenshot_path:
+                print('[ERROR] Screenshot not ready after timeout (manual search)')
+                yield sse_event('error', '{"error": "Screenshot not ready after timeout."}')
+                return
+            print('[DEBUG] Screenshot requested, id:', screenshot_id)
+            print('[DEBUG] Checking for screenshot at:', screenshot_path)
+
+            # 2. Wait for screenshot to be ready
+            yield sse_event('progress', '{"message": "⏳ Waiting for screenshot to be ready..."}')
+            for i in range(30):
+                if os.path.exists(screenshot_path):
+                    print(f'[DEBUG] Screenshot file found after {i+1} seconds:', screenshot_path)
+                    break
+                await asyncio.sleep(1)
+            else:
+                print('[ERROR] Screenshot not ready after timeout')
+                yield sse_event('error', '{"error": "Screenshot not ready after timeout."}')
+                return
+            yield sse_event('progress', '{"message": "✅ Screenshot ready. Sending to LLM..."}')
+
+            # 3. Send screenshot + URL to OpenRouter LLM
+            try:
+                print('[DEBUG] Encoding screenshot as base64')
+                with open(screenshot_path, 'rb') as img_file:
+                    img_b64 = base64.b64encode(img_file.read()).decode('utf-8')
+                # Prepare vision API format for OpenRouter
+                image_data_url = f"data:image/png;base64,{img_b64}"
+                data = {
+                    'model': OPENROUTER_MODEL,
+                    'messages': [
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": f"Website URL: {url}. {ANALYSIS_PROMPT}"},
+                                {"type": "image_url", "image_url": {"url": image_data_url}}
+                            ]
+                        }
+                    ]
+                }
+                headers = {
+                    'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+                    'Content-Type': 'application/json',
+                }
+                print('[DEBUG] Sending request to OpenRouter LLM')
+                # Save request to file for debugging
+                import datetime
+                debug_filename = f'openrouter_request_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")}.txt'
+                debug_path = os.path.join(os.path.dirname(__file__), debug_filename)
+                with open(debug_path, 'w', encoding='utf-8') as f:
+                    f.write('MODEL: ' + str(OPENROUTER_MODEL) + '\n')
+                    f.write('HEADERS: ' + str(headers) + '\n')
+                    import json as _json
+                    f.write('DATA: ' + _json.dumps(data, indent=2))
+                yield sse_event('progress', '{"message": "🤖 Waiting for LLM analysis..."}')
+                resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
+                print('[DEBUG] LLM response status:', resp.status_code)
+                print('[DEBUG] LLM response text (first 500 chars):', resp.text[:500])
+                if resp.status_code != 200:
+                    print('[ERROR] OpenRouter error:', resp.text)
+                    yield sse_event('error', f'{{"error": "OpenRouter error: {resp.text}"}}')
+                    return
+                llm_result = resp.json()
+            except Exception as e:
+                print('[ERROR] Exception during LLM call:', e)
+                yield sse_event('error', f'{{"error": "Failed to call LLM: {str(e)}"}}')
+                return
+
+            # 4. Parse LLM response
+            try:
+                print('[DEBUG] Parsing LLM response')
+                analysis = json.loads(llm_result['choices'][0]['message']['content'])
+                print('[DEBUG] Parsed analysis:', str(analysis)[:500])
+            except Exception as e:
+                print('[ERROR] Failed to parse LLM response:', e)
+                yield sse_event('error', f'{{"error": "Failed to parse LLM response: {e}"}}')
+                return
+
+            # 5. Save cropped images to disk and replace base64 with URLs
+            for section in analysis.get('sections', []):
+                if 'cropped_image_base64' in section:
+                    img_bytes = base64.b64decode(section['cropped_image_base64'])
+                    crop_id = str(uuid.uuid4())
+                    crop_path = os.path.join(CROPS_DIR, f'section_{crop_id}.png')
+                    print('[DEBUG] Saving cropped image:', crop_path)
+                    async with aiofiles.open(crop_path, 'wb') as f:
+                        await f.write(img_bytes)
+                    section['cropped_image_url'] = f'/section-crops/section_{crop_id}.png'
+                    del section['cropped_image_base64']
+
+            analysis['screenshot_id'] = screenshot_id
+            print('[DEBUG] Yielding analysis result')
+            yield sse_event('progress', '{"message": "🎉 Analysis complete."}')
+            yield sse_event('result', json.dumps(analysis))
+        except Exception as e:
+            print('[ERROR] Exception in event_stream:', e)
+            yield sse_event('error', f'{{"error": "Internal server error: {e}"}}')
+            return
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+# Serve cropped images statically
+app.mount('/section-crops', StaticFiles(directory=CROPS_DIR), name='section-crops')
 
 if __name__ == "__main__":
     import uvicorn

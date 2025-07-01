@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Paperclip, Loader2, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
+import { analyzeWithScreenshot } from '../services/futureHouseService';
+import { useContext } from 'react';
+import { UITestModeContext } from '../App';
 
 interface AnalysisStep {
   message: string;
@@ -22,6 +25,7 @@ export const Hero = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const uiTest = useContext(UITestModeContext).uiTest;
 
   const handleAnalyze = async () => {
     if (!url) {
@@ -38,6 +42,28 @@ export const Hero = () => {
     setFinalAnalysis(null);
     setScreenshotId(null);
     setError(null);
+
+    if (uiTest) {
+      // Simulate progress log in UI Test Mode
+      const steps = [
+        '📸 Requesting screenshot...',
+        '⏳ Waiting for screenshot to be ready...',
+        '✅ Screenshot ready. Sending to LLM...',
+        '🤖 Waiting for LLM analysis...',
+        '✨ Analysis complete!'
+      ];
+      for (let i = 0; i < steps.length; i++) {
+        setAnalysisLog(prev => [...prev, steps[i]]);
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise(r => setTimeout(r, 500));
+      }
+      const mockAnalysis = await analyzeWithScreenshot(url, uiTest);
+      setFinalAnalysis(mockAnalysis);
+      setScreenshotId('mock123');
+      setIsLoading(false);
+      navigate('/feature-review', { state: { analysis: mockAnalysis, screenshotId: 'mock123', url } });
+      return;
+    }
 
     try {
       const response = await fetch('http://localhost:8000/analyze-with-screenshot', {
