@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -403,7 +404,7 @@ Would you like me to elaborate on any of these recommendations or provide more s
                           {getResultIcon(result.type)}
                         </div>
                         <h3 className="font-semibold capitalize">
-                          {result.type === 'code-recommendations' ? 'Code Recommendations' : result.type}
+                          {result.id === 'code-recommendations' ? 'Code Recommendations' : result.type}
                         </h3>
                         {result.severity && (
                           <Badge className={getSeverityColor(result.severity)}>
@@ -445,11 +446,12 @@ Would you like me to elaborate on any of these recommendations or provide more s
                     <div className="prose prose-sm max-w-none dark:prose-invert">
                       <ReactMarkdown
                         components={{
-                          code({ node, inline, className, children, ...props }) {
+                          code({ node, className, children, ...props }) {
                             const match = /language-(\w+)/.exec(className || '');
-                            return !inline && match ? (
+                            const isInline = !match;
+                            return !isInline ? (
                               <SyntaxHighlighter
-                                style={oneDark}
+                                style={oneDark as { [key: string]: React.CSSProperties }}
                                 language={match[1]}
                                 PreTag="div"
                                 {...props}
