@@ -444,11 +444,7 @@ def enrich_recommendation(request: EnrichRecommendationRequest):
         f"Feature: {request.feature}\n"
         f"Current Design: {request.currentDesign}\n"
         f"Recommendation: {request.recommendation}\n\n"
-        f"Respond ONLY with a valid JSON object with the fields 'prompt', 'html', 'react', 'vue', and 'angular'. "
-        f"- Each field must be a string. "
-        f"- Do NOT use markdown, triple backticks, or comments. "
-        f"- Do NOT include any explanation or text outside the JSON object. "
-        f"- The 'html', 'react', 'vue', and 'angular' fields must be plain code as a string."
+        f"Respond ONLY with a valid JSON object."
     )
     try:
         answer = call_mistral_via_openrouter(prompt)
@@ -468,7 +464,7 @@ def enrich_recommendation(request: EnrichRecommendationRequest):
     except Exception as e:
         print(f"[Mistral] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}") 
-
+        
 @app.post("/recommendation-to-llm", response_model=RecommendationToLLMResponse)
 def recommendation_to_llm(request: RecommendationToLLM):
     prompt = (

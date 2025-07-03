@@ -521,7 +521,7 @@ const Recommendations = () => {
                                 <div className="flex gap-1 flex-shrink-0">
                                     <div className={`w-2 h-2 rounded-full bg-orange-500`} />
                                     <div className={`w-2 h-2 rounded-full bg-muted-foreground/30`} />
-                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>

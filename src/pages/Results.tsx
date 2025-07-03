@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,6 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation} from "react-router-dom";
+
+function responseToCode(code: string): string {
+  if (!code) return '';
+  // Replace escaped newlines and double quotes
+  return code.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+}
 
 const Results = () => {
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -88,7 +93,7 @@ Please apply these improvements while maintaining the existing functionality and
 
   const handleCopyCode = async () => {
     try {
-      await navigator.clipboard.writeText(codeSnippets[selectedFramework as keyof typeof codeSnippets]);
+      await navigator.clipboard.writeText(responseToCode(codeSnippets[selectedFramework as keyof typeof codeSnippets]));
       setCodeCopied(true);
       toast({
         title: "Code copied!",
@@ -157,7 +162,7 @@ Please apply these improvements while maintaining the existing functionality and
                 </CardHeader>
                 <CardContent>
                   <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-x-auto">
-                    <code>{codeSnippets[selectedFramework as keyof typeof codeSnippets]}</code>
+                    <code>{responseToCode(codeSnippets[selectedFramework as keyof typeof codeSnippets])}</code>
                   </pre>
                   
                   <div className="mt-6 p-4 bg-blue-50 rounded-md">
