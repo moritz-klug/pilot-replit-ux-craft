@@ -6,15 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLocation} from "react-router-dom";
 
 const Results = () => {
   const [selectedFramework, setSelectedFramework] = useState('react');
   const [codeCopied, setCodeCopied] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
   const { toast } = useToast();
+  const location = useLocation();
+  const { response } = location.state;
 
   const codeSnippets = {
-    react: `import React from 'react';
+    react: response?.react || `import React from 'react';
 
 const ImprovedComponent = () => {
   return (
@@ -31,7 +34,7 @@ const ImprovedComponent = () => {
 };
 
 export default ImprovedComponent;`,
-    vue: `<template>
+    vue: response?.vue ||`<template>
   <div class="container mx-auto p-6">
     <h1 class="text-2xl font-bold mb-4">
       Improved UX Component
@@ -48,7 +51,7 @@ export default {
   name: 'ImprovedComponent'
 }
 </script>`,
-    angular: `import { Component } from '@angular/core';
+    angular: response?.angular || `import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-improved-component',
@@ -64,10 +67,10 @@ export default {
     </div>
   \`
 })
-export class ImprovedComponent { }`
+export class ImprovedComponent { }`,
   };
 
-  const promptText = `Please implement the following science-based UX improvements for my application:
+  const promptText = response?.prompt || `Please implement the following science-based UX improvements for my application:
 
 1. **Visual Hierarchy**: Improve the visual hierarchy by adjusting font sizes, spacing, and color contrast to guide user attention effectively.
 

@@ -12,16 +12,17 @@ import base64
 import uuid
 from fastapi.staticfiles import StaticFiles
 import glob
-
+from typing import List
+import openai
+import re
 # Correct import for the official client
 from futurehouse_client import FutureHouseClient, JobNames
 
 # Load environment variables from .env file
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
-print("DEBUG: FUTURE_HOUSE_API_KEY =", os.getenv('FUTURE_HOUSE_API_KEY'))
-
 FUTURE_HOUSE_API_KEY = os.getenv('FUTURE_HOUSE_API_KEY', '')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
 
 app = FastAPI()
 
@@ -113,6 +114,54 @@ class RecommendationResponse(BaseModel):
     recommendations: list[str]
     papers: list[Paper]
 
+class RelevantHeuristicsRequest(BaseModel):
+    feature: str
+    currentDesign: str
+
+class RelevantHeuristicsResponse(BaseModel):
+    relevant: List[int]
+
+class EnrichRecommendationRequest(BaseModel):
+    recommendation: str
+    feature: str
+    currentDesign: str
+
+class EnrichedRecommendation(BaseModel):
+    title: str
+    description: str
+    principle: str
+    research: str
+    impact: str = ''
+    category: str = ''
+
+class RecommendationToLLM(BaseModel):
+    featureName: str
+    currentDesign: str
+    recommendationTitle: str
+    recommendationDescription: str
+
+class RecommendationToLLMResponse(BaseModel):
+    prompt: str
+    react: str
+    vue: str
+    angular: str
+
+def call_mistral_via_openrouter(prompt: str) -> str:
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set. Please add OPENROUTER_API_KEY to your .env file.")
+    print("[Mistral] Connecting to OpenRouter with prompt:")
+    print(prompt)
+    print("[Mistral] Waiting for response...")
+    client = openai.OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
+    response = client.chat.completions.create(
+        model="mistralai/mistral-7b-instruct",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    content = response.choices[0].message.content
+    print("[Mistral] Got response:")
+    print(content)
+    return content if content is not None else ""
+
 @app.post("/recommendations", response_model=RecommendationResponse)
 def get_recommendations(request: RecommendationRequest):
     if not FUTURE_HOUSE_API_KEY:
@@ -132,10 +181,16 @@ def get_recommendations(request: RecommendationRequest):
         # The response may contain answer, formatted_answer, and references
         answer = getattr(task_response, 'answer', '')
         formatted_answer = getattr(task_response, 'formatted_answer', '')
-        # Extract references/papers if available
         papers = []
-        if hasattr(task_response, 'references') and task_response.references:
-            for ref in task_response.references:
+        # Fix: handle if task_response is a list
+        if isinstance(task_response, list):
+            response_obj = task_response[0] if task_response else None
+        else:
+            response_obj = task_response
+        # Use getattr to safely access 'references' and avoid linter errors
+        references = getattr(response_obj, 'references', None)
+        if references:
+            for ref in references:
                 papers.append(Paper(
                     title=ref.get('title', ''),
                     authors=ref.get('authors', []),
@@ -342,6 +397,151 @@ async def analyze_ui(request: Request):
 
 # Serve cropped images statically
 app.mount('/section-crops', StaticFiles(directory=CROPS_DIR), name='section-crops')
+
+
+@app.post("/relevant-heuristics", response_model=RelevantHeuristicsResponse)
+def get_relevant_heuristics(request: RelevantHeuristicsRequest):
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set. Please add OPENROUTER_API_KEY to your .env file.")
+
+    heuristics_list = [
+        "1. Visibility of system status",
+        "2. Match between system and the real world",
+        "3. User control and freedom",
+        "4. Consistency and standards",
+        "5. Error prevention",
+        "6. Recognition rather than recall",
+        "7. Flexibility and efficiency of use",
+        "8. Aesthetic and minimalist design",
+        "9. Help users recognize, diagnose, and recover from errors",
+        "10. Help and documentation"
+    ]
+    heuristics_str = '\n'.join(heuristics_list)
+    prompt = (
+        f"Given the following UI feature and its current design, select which of Nielsen's 10 Usability Heuristics are most relevant for improving this feature. "
+        f"Return only a comma-separated list of the numbers of the relevant heuristics (e.g., 1,3,5).\n\n"
+        f"Feature: {request.feature}\nCurrent Design: {request.currentDesign}\n\nHeuristics:\n{heuristics_str}"
+    )
+    try:
+        answer = call_mistral_via_openrouter(prompt)
+        numbers = re.findall(r'\b\d+\b', answer)
+        relevant = [int(n) for n in numbers if 1 <= int(n) <= 10]
+        return RelevantHeuristicsResponse(relevant=relevant)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
+
+@app.post("/enrich-recommendation", response_model=EnrichedRecommendation)
+def enrich_recommendation(request: EnrichRecommendationRequest):
+    print("[API] /enrich-recommendation called with:")
+    print(f"Feature: {request.feature}")
+    print(f"Current Design: {request.currentDesign}")
+    print(f"Recommendation: {request.recommendation}")
+    prompt = (
+        f"Given the following UI feature, its current design, and a scientific recommendation, extract the following fields as JSON: "
+        f"title, description, principle, research, impact (high/medium/low), and category (accessibility/usability/visual/interaction). "
+        f"If a field is not present, return an empty string for it.\n\n"
+        f"If the original recommendation is vague, clarify and expand it. Make the description actionable and user-friendly.\n\n"
+        f"Feature: {request.feature}\n"
+        f"Current Design: {request.currentDesign}\n"
+        f"Recommendation: {request.recommendation}\n\n"
+        f"Respond ONLY with a valid JSON object with the fields 'prompt', 'html', 'react', 'vue', and 'angular'. "
+        f"- Each field must be a string. "
+        f"- Do NOT use markdown, triple backticks, or comments. "
+        f"- Do NOT include any explanation or text outside the JSON object. "
+        f"- The 'html', 'react', 'vue', and 'angular' fields must be plain code as a string."
+    )
+    try:
+        answer = call_mistral_via_openrouter(prompt)
+        # Try to extract JSON from the answer
+        import json
+        try:
+            data = json.loads(answer)
+        except Exception:
+            # Try to extract JSON substring if LLM wraps it in text
+            import re
+            match = re.search(r'\{.*\}', answer, re.DOTALL)
+            if match:
+                data = json.loads(match.group(0))
+            else:
+                raise HTTPException(status_code=500, detail="Could not parse JSON from LLM response.")
+        return EnrichedRecommendation(**data)
+    except Exception as e:
+        print(f"[Mistral] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}") 
+
+@app.post("/recommendation-to-llm", response_model=RecommendationToLLMResponse)
+def recommendation_to_llm(request: RecommendationToLLM):
+    prompt = (
+        f"Given the following UI feature and its improvement recommendation:\n\n"
+        f"Feature Title: {request.featureName}\n"
+        f"Feature Description: {request.currentDesign}\n\n"
+        f"Improvement Recommendation: {request.recommendationTitle}\n"
+        f"Recommendation Description: {request.recommendationDescription}\n\n"
+        f"Please do the following:\n"
+        f"1. Rewrite the recommendation as a concise, actionable prompt suitable for Lovable/Cursor that clearly describes the UI improvement needed.\n"
+        f"2. Provide the complete code implementation for this recommendation in THREE separate formats:\n\n"
+        f"   React: Modern React component with TypeScript, hooks, and proper typing\n"
+        f"   Vue: Vue 3 component with Composition API and TypeScript\n"
+        f"   Angular: Angular component with TypeScript and proper decorators\n\n"
+        f"Requirements for each code format:\n"
+        f"- Each code field (react, vue, angular) must be a single JSON string.\n"
+        f"- All newlines in code must be represented as \\n.\n"
+        f"- All double quotes in code must be escaped as \\\".\n"
+        f"- Do NOT use multi-line strings or embedded unescaped double quotes.\n"
+        f"- Do NOT use markdown, triple backticks, or comments.\n"
+        f"- Do NOT include any explanation or text outside the JSON object.\n"
+        f"Respond ONLY with a valid JSON object with the fields 'prompt', 'react', 'vue', and 'angular'.\n"
+        f"For example, your response should look like:\n"
+        f"{{\n  \"prompt\": \"string\",\n  \"react\": \"import React from \\\"react\\\";\\nexport default function ...\",\n  \"vue\": \"<template>...</template>\",\n  \"angular\": \"import {{ Component }} from '@angular/core';\\n@Component(...)\"\n}}\n"
+    )
+    try:
+        response = call_mistral_via_openrouter(prompt)
+        try:
+            data = clean_json(response)
+        except Exception as e:
+            print(f"[Mistral] Post-processing error: {e}")
+            raise HTTPException(status_code=500, detail=f"Could not parse JSON from LLM response.")
+        return RecommendationToLLMResponse(**data)
+    
+    except Exception as e:
+        print(f"[Mistral] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}") 
+
+def clean_json(response: str) -> dict:
+    # Extract the first {...} block
+    match = re.search(r'\{.*\}', response, re.DOTALL)
+    if not match:
+        raise ValueError("No JSON object found in LLM response.")
+    json_str = match.group(0)
+
+    # Remove triple backticks and language tags
+    json_str = re.sub(r'```[a-zA-Z]*', '', json_str)
+    json_str = json_str.replace('```', '')
+
+    # Find all code fields and escape their contents
+    def escape_code_field(match):
+        key = match.group(1)
+        value = match.group(2)
+        # Escape backslashes, double quotes, and newlines
+        value = value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '').replace('\t', '\\t')
+        value = value.replace('\u201c', '\\"').replace('\u201d', '\\"')  # handle curly quotes
+        value = value.replace('\u2018', "'").replace('\u2019', "'")      # handle curly single quotes
+        value = value.replace('\n', '\\n')  # ensure all newlines are escaped
+        return f'"{key}": "{value}"'
+
+    # This regex matches "key": "value" where value can be multi-line
+    json_str = re.sub(r'"(react|vue|angular)":\s*"((?:[^"\\]|\\.)*)"', escape_code_field, json_str, flags=re.DOTALL)
+
+    # Remove trailing commas
+    json_str = re.sub(r',([\s\n]*[}\]])', r'\1', json_str)
+
+    # Try to parse as JSON
+    try:
+        data = json.loads(json_str)
+    except Exception as e:
+        raise ValueError(f"Failed to parse cleaned JSON: {e}\nCleaned string:\n{json_str}")
+
+    return data
 
 if __name__ == "__main__":
     import uvicorn
