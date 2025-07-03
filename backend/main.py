@@ -484,7 +484,7 @@ def recommendation_to_llm(request: RecommendationToLLM):
         f"- All newlines in code must be represented as \\n.\n"
         f"- All double quotes in code must be escaped as \\\".\n"
         f"- Do NOT use multi-line strings or embedded unescaped double quotes.\n"
-        f"- Do NOT use markdown, triple backticks, or comments.\n"
+        f"- Do NOT use markdown, triple backticks, or comments. \n"
         f"- Do NOT include any explanation or text outside the JSON object.\n"
         f"Respond ONLY with a valid JSON object with the fields 'prompt', 'react', 'vue', and 'angular'.\n"
         f"For example, your response should look like:\n"
