@@ -476,7 +476,7 @@ def recommendation_to_llm(request: RecommendationToLLM):
         f"Please do the following:\n"
         f"1. Rewrite the recommendation as a concise, actionable prompt suitable for Lovable/Cursor that clearly describes the UI improvement needed.\n"
         f"2. Provide the complete code implementation for this recommendation in THREE separate formats:\n\n"
-        f"   React: Modern React component with TypeScript, hooks, and proper typing\n"
+        f"   React: Modern React component with TypeScript, hooks, and proper typing \n"
         f"   Vue: Vue 3 component with Composition API and TypeScript\n"
         f"   Angular: Angular component with TypeScript and proper decorators\n\n"
         f"Requirements for each code format:\n"
