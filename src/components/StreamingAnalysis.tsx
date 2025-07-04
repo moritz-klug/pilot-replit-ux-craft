@@ -449,12 +449,14 @@ Would you like me to elaborate on any of these recommendations or provide more s
                           code({ node, className, children, ...props }) {
                             const match = /language-(\w+)/.exec(className || '');
                             const isInline = !match;
+                            // Remove ref from props to avoid conflicts
+                            const { ref, ...cleanProps } = props;
                             return !isInline ? (
                               <SyntaxHighlighter
-                                style={oneDark as { [key: string]: React.CSSProperties }}
+                                style={oneDark as any}
                                 language={match[1]}
                                 PreTag="div"
-                                {...props}
+                                {...cleanProps}
                               >
                                 {String(children).replace(/\n$/, '')}
                               </SyntaxHighlighter>

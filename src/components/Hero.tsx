@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { analyzeWithScreenshot } from '../services/futureHouseService';
 import { useContext } from 'react';
 import { UITestModeContext } from '../App';
+import { AiInput } from "@/components/ui/ai-input";
 
 interface AnalysisStep {
   message: string;
@@ -141,40 +142,12 @@ export const Hero = () => {
         
         <div className="max-w-4xl mx-auto mb-12">
           {!isLoading ? (
-            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-6">
-              <div className="flex w-full max-w-2xl items-center space-x-2">
-                <Input
-                  type="url"
-                  placeholder="https://apple.com"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
-                  disabled={isLoading}
-                  className="h-12 text-lg"
-                />
-                <Button onClick={handleAnalyze} disabled={isLoading} className="h-12 text-lg">
-                  {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Analyze'}
-                </Button>
-              </div>
-              
-              <div className="flex flex-wrap justify-center gap-2 mb-6">
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-red-500/20 text-red-400 border border-red-500/30">
-                  🛍️ Online shop
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                  📝 Personal blog
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                  🏃 Waitlist site
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                  💼 Workout tracker
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  🤖 AI debate app
-                </span>
-              </div>
-            </div>
+            <AiInput
+              value={url}
+              onChange={setUrl}
+              onSubmit={handleAnalyze}
+              disabled={isLoading}
+            />
           ) : (
             <Card className="w-full max-w-2xl text-left">
               <CardContent className="p-6">
