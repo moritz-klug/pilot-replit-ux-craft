@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
 import { UITestModeContext } from '../App';
 import { Dialog, DialogContent } from '../components/ui/dialog';
+import { Feature108 } from '../components/ui/shadcnblocks-com-feature108';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -201,6 +202,7 @@ const FeatureReview: React.FC = () => {
 
   return (
     <>
+      <Feature108 />
       <div className="max-w-5xl mx-auto py-10 px-4">
         <h1 className="text-3xl font-bold mb-6">UI/UX Analysis Results</h1>
 
