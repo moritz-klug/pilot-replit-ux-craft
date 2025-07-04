@@ -25,15 +25,6 @@ const App = () => {
         <Toaster />
         <Sonner />
         <UITestModeContext.Provider value={{ uiTest, setUITest }}>
-          <div className="app-header">
-            <button
-              style={{ marginLeft: 16, background: uiTest ? '#ffb347' : '#eee', color: uiTest ? '#222' : '#888', borderRadius: 4, padding: '4px 12px', border: 'none', fontWeight: 'bold' }}
-              onClick={() => setUITest((m) => !m)}
-            >
-              UI Test Mode: {uiTest ? 'ON' : 'OFF'}
-            </button>
-            {uiTest && <span style={{ color: '#ff9800', marginLeft: 8, fontWeight: 'bold' }}>[UI Test Mode Active]</span>}
-          </div>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />

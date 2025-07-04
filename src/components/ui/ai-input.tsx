@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, useContext } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { Globe, Paperclip, Plus, Send } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
+import { UITestModeContext } from "@/App"
 
 interface UseAutoResizeTextareaProps {
   minHeight: number
@@ -56,17 +57,17 @@ function useAutoResizeTextarea({
 const MIN_HEIGHT = 48
 const MAX_HEIGHT = 164
 
-const AnimatedPlaceholder = ({ showSearch }: { showSearch: boolean }) => (
+const AnimatedPlaceholder = ({ showUITest }: { showUITest: boolean }) => (
   <AnimatePresence mode="wait">
     <motion.p
-      key={showSearch ? "search" : "ask"}
+      key={showUITest ? "uitest" : "url"}
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -5 }}
       transition={{ duration: 0.1 }}
       className="pointer-events-none w-[150px] text-sm absolute text-muted-foreground"
     >
-      {showSearch ? "Search the web..." : "https://apple.com"}
+      {showUITest ? "UI Test Mode ON" : "https://apple.com"}
     </motion.p>
   </AnimatePresence>
 )
@@ -83,7 +84,7 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
     minHeight: MIN_HEIGHT,
     maxHeight: MAX_HEIGHT,
   })
-  const [showSearch, setShowSearch] = useState(true)
+  const { uiTest, setUITest } = useContext(UITestModeContext)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -146,7 +147,7 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
               />
               {!value && (
                 <div className="absolute left-4 top-3">
-                  <AnimatedPlaceholder showSearch={showSearch} />
+                  <AnimatedPlaceholder showUITest={uiTest} />
                 </div>
               )}
             </div>
@@ -194,23 +195,23 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
               <button
                 type="button"
                 onClick={() => {
-                  setShowSearch(!showSearch)
+                  setUITest(!uiTest)
                 }}
                 className={cn(
                   "rounded-full transition-all flex items-center gap-2 px-1.5 py-1 border h-8",
-                  showSearch
-                    ? "bg-primary/15 border-primary text-primary"
+                  uiTest
+                    ? "bg-orange-500/15 border-orange-500 text-orange-600"
                     : "bg-muted border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
                 <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
                   <motion.div
                     animate={{
-                      rotate: showSearch ? 180 : 0,
-                      scale: showSearch ? 1.1 : 1,
+                      rotate: uiTest ? 180 : 0,
+                      scale: uiTest ? 1.1 : 1,
                     }}
                     whileHover={{
-                      rotate: showSearch ? 180 : 15,
+                      rotate: uiTest ? 180 : 15,
                       scale: 1.1,
                       transition: {
                         type: "spring",
@@ -227,13 +228,13 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
                     <Globe
                       className={cn(
                         "w-4 h-4",
-                        showSearch ? "text-primary" : "text-inherit"
+                        uiTest ? "text-orange-600" : "text-inherit"
                       )}
                     />
                   </motion.div>
                 </div>
                 <AnimatePresence>
-                  {showSearch && (
+                  {uiTest && (
                     <motion.span
                       initial={{ width: 0, opacity: 0 }}
                       animate={{
@@ -242,9 +243,9 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
                       }}
                       exit={{ width: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="text-sm overflow-hidden whitespace-nowrap text-primary flex-shrink-0"
+                      className="text-sm overflow-hidden whitespace-nowrap text-orange-600 flex-shrink-0"
                     >
-                      Search
+                      UI Test
                     </motion.span>
                   )}
                 </AnimatePresence>
