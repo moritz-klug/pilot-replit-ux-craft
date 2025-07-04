@@ -12,6 +12,7 @@ import { useContext } from 'react';
 import { UITestModeContext } from '../App';
 import { AiInput } from "@/components/ui/ai-input";
 import { Particles } from "@/components/ui/particles";
+import { ShiningText } from "@/components/ui/shining-text";
 
 interface AnalysisStep {
   message: string;
@@ -159,7 +160,7 @@ export const Hero = () => {
               <CardContent className="p-6">
                 <div className="flex items-center mb-4">
                   <Sparkles className="w-5 h-5 mr-3 text-primary" />
-                  <h3 className="text-lg font-semibold">Live Analysis Log</h3>
+                  <ShiningText text="Live Analysis Log" />
                 </div>
                 <p className="font-mono text-sm text-left">
                   {analysisLog.map((log, index) => (
