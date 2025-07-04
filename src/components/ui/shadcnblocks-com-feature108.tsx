@@ -28,59 +28,59 @@ interface Feature108Props {
 }
 
 const Feature108 = ({
-  badge = "Auto UI Analysis",
-  heading = "Advanced UI/UX Analysis for Any Website",
-  description = "Get actionable insights and recommendations to improve your website's user experience and conversion rates.",
+  badge = "shadcnblocks.com",
+  heading = "A Collection of Components Built With Shadcn & Tailwind",
+  description = "Join us to build flawless web solutions.",
   tabs = [
     {
       value: "tab-1",
       icon: <Zap className="h-auto w-4 shrink-0" />,
-      label: "AI Analysis",
+      label: "Boost Revenue",
       content: {
-        badge: "Intelligent Insights",
-        title: "AI-powered design analysis.",
+        badge: "Modern Tactics",
+        title: "Make your site a true standout.",
         description:
-          "Our advanced AI analyzes your website's design patterns, user flow, and conversion points to provide actionable recommendations for improvement.",
-        buttonText: "Start Analysis",
+          "Discover new web trends that help you craft sleek, highly functional sites that drive traffic and convert leads into customers.",
+        buttonText: "See Plans",
         imageSrc:
           "https://shadcnblocks.com/images/block/placeholder-dark-1.svg",
-        imageAlt: "AI Analysis",
+        imageAlt: "placeholder",
       },
     },
     {
       value: "tab-2",
       icon: <Pointer className="h-auto w-4 shrink-0" />,
-      label: "UX Review",
+      label: "Higher Engagement",
       content: {
-        badge: "User Experience",
-        title: "Comprehensive UX evaluation.",
+        badge: "Expert Features",
+        title: "Boost your site with top-tier design.",
         description:
-          "Analyze user journeys, interaction patterns, and emotional triggers to create a seamless experience that converts visitors into customers.",
-        buttonText: "Get UX Report",
+          "Use stellar design to easily engage users and strengthen their loyalty. Create a seamless experience that keeps them coming back for more.",
+        buttonText: "See Tools",
         imageSrc:
           "https://shadcnblocks.com/images/block/placeholder-dark-2.svg",
-        imageAlt: "UX Review",
+        imageAlt: "placeholder",
       },
     },
     {
       value: "tab-3",
       icon: <Layout className="h-auto w-4 shrink-0" />,
-      label: "Design System",
+      label: "Stunning Layouts",
       content: {
-        badge: "Visual Identity",
-        title: "Analyze your design consistency.",
+        badge: "Elite Solutions",
+        title: "Build an advanced web experience.",
         description:
-          "Review typography, color palettes, spacing, and layout patterns to ensure a cohesive brand experience across all touchpoints.",
-        buttonText: "View Analysis",
+          "Lift your brand with modern tech that grabs attention and drives action. Create a digital experience that stands out from the crowd.",
+        buttonText: "See Options",
         imageSrc:
           "https://shadcnblocks.com/images/block/placeholder-dark-3.svg",
-        imageAlt: "Design System",
+        imageAlt: "placeholder",
       },
     },
   ],
 }: Feature108Props) => {
   return (
-    <section className="py-16">
+    <section className="py-32">
       <div className="container mx-auto">
         <div className="flex flex-col items-center gap-4 text-center">
           <Badge variant="outline">{badge}</Badge>
