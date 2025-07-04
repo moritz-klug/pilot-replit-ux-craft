@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Paperclip, Loader2, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle } from "lucide-react";
+import { Paperclip, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
 import { analyzeWithScreenshot } from '../services/futureHouseService';
@@ -13,6 +13,7 @@ import { UITestModeContext } from '../App';
 import { AiInput } from "@/components/ui/ai-input";
 import { Particles } from "@/components/ui/particles";
 import { ShiningText } from "@/components/ui/shining-text";
+import { Loader } from "@/components/ui/loader";
 
 interface AnalysisStep {
   message: string;
@@ -173,7 +174,7 @@ export const Hero = () => {
                     >
                         {log.startsWith('✅') || log.startsWith('✨') ? <CheckCircle className="h-4 w-4 text-green-500" /> : 
                          log.startsWith('❌') ? <XCircle className="h-4 w-4 text-red-500" /> :
-                         <Loader2 className="h-4 w-4 animate-spin" />
+                         <Loader size="sm" className="text-primary" />
                         }
                       <span>{log}</span>
                     </motion.div>
