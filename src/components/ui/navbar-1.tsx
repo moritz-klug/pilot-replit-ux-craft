@@ -13,7 +13,7 @@ const Navbar1 = () => {
 
   return (
     <div className="flex justify-center w-full py-6 px-4">
-      <div className="flex items-center justify-between px-6 py-3 bg-card rounded-full shadow-lg w-full max-w-6xl relative z-10 border">
+      <div className="flex items-center justify-between px-6 py-3 bg-white rounded-full shadow-lg w-full max-w-6xl relative z-10">
         <div className="flex items-center">
           <motion.div
             className="flex items-center space-x-2"
@@ -28,7 +28,7 @@ const Navbar1 = () => {
                 alt="Auto UI" 
                 className="w-8 h-8"
               />
-              <span className="text-xl font-semibold text-foreground hover:text-primary transition-colors">
+              <span className="text-xl font-semibold text-gray-900 hover:text-gray-600 transition-colors">
                 Auto UI
               </span>
             </Link>
@@ -52,7 +52,7 @@ const Navbar1 = () => {
             >
               <Link 
                 to={item.path} 
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+                className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium"
               >
                 {item.name}
               </Link>
@@ -68,7 +68,7 @@ const Navbar1 = () => {
             transition={{ duration: 0.3, delay: 0.1 }}
             whileHover={{ scale: 1.05 }}
           >
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">
+            <button className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium">
               Contact sales
             </button>
           </motion.div>
@@ -79,7 +79,7 @@ const Navbar1 = () => {
             transition={{ duration: 0.3, delay: 0.15 }}
             whileHover={{ scale: 1.05 }}
           >
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">
+            <button className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium">
               Log in
             </button>
           </motion.div>
@@ -92,7 +92,7 @@ const Navbar1 = () => {
           >
             <Link
               to="/feature-review"
-              className="inline-flex items-center justify-center px-5 py-2 text-sm text-primary-foreground bg-primary rounded-full hover:bg-primary/90 transition-colors font-medium"
+              className="inline-flex items-center justify-center px-5 py-2 text-sm text-white bg-black rounded-full hover:bg-gray-800 transition-colors font-medium"
             >
               Start analyzing
             </Link>
@@ -101,7 +101,7 @@ const Navbar1 = () => {
 
         {/* Mobile Menu Button */}
         <motion.button className="md:hidden flex items-center" onClick={toggleMenu} whileTap={{ scale: 0.9 }}>
-          <Menu className="h-6 w-6 text-foreground" />
+          <Menu className="h-6 w-6 text-gray-900" />
         </motion.button>
       </div>
 
@@ -109,7 +109,7 @@ const Navbar1 = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 bg-background z-50 pt-24 px-6 md:hidden"
+            className="fixed inset-0 bg-white z-50 pt-24 px-6 md:hidden"
             initial={{ opacity: 0, x: "100%" }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
@@ -123,7 +123,7 @@ const Navbar1 = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <X className="h-6 w-6 text-foreground" />
+              <X className="h-6 w-6 text-gray-900" />
             </motion.button>
             <div className="flex flex-col space-y-6">
               {[
@@ -141,7 +141,7 @@ const Navbar1 = () => {
                 >
                   <Link 
                     to={item.path} 
-                    className="text-base text-foreground font-medium" 
+                    className="text-base text-gray-900 font-medium" 
                     onClick={toggleMenu}
                   >
                     {item.name}
@@ -156,15 +156,15 @@ const Navbar1 = () => {
                 exit={{ opacity: 0, y: 20 }}
                 className="pt-6 space-y-4"
               >
-                <button className="text-base text-muted-foreground font-medium w-full text-left">
+                <button className="text-base text-gray-900 font-medium w-full text-left">
                   Contact sales
                 </button>
-                <button className="text-base text-muted-foreground font-medium w-full text-left">
+                <button className="text-base text-gray-900 font-medium w-full text-left">
                   Log in
                 </button>
                 <Link
                   to="/feature-review"
-                  className="inline-flex items-center justify-center w-full px-5 py-3 text-base text-primary-foreground bg-primary rounded-full hover:bg-primary/90 transition-colors font-medium"
+                  className="inline-flex items-center justify-center w-full px-5 py-3 text-base text-white bg-black rounded-full hover:bg-gray-800 transition-colors font-medium"
                   onClick={toggleMenu}
                 >
                   Start analyzing
