@@ -48,7 +48,7 @@ const Navbar1 = () => {
             <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
               Pages
             </MenubarTrigger>
-            <MenubarContent>
+            <MenubarContent className="z-50 bg-white border border-gray-200 shadow-lg">
               <MenubarItem asChild>
                 <Link to="/feature-review">Feature Review</Link>
               </MenubarItem>
@@ -68,7 +68,7 @@ const Navbar1 = () => {
             <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
               Tools
             </MenubarTrigger>
-            <MenubarContent>
+            <MenubarContent className="z-50 bg-white border border-gray-200 shadow-lg">
               <MenubarItem>Analytics</MenubarItem>
               <MenubarItem>Performance</MenubarItem>
               <MenubarItem>Accessibility</MenubarItem>
