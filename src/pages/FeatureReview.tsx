@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import { Loader2, Sparkles, LayoutDashboard, Camera } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
 import { UITestModeContext } from '../App';
 import { Dialog, DialogContent } from '../components/ui/dialog';
-import { Feature108 } from '../components/ui/shadcnblocks-com-feature108';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -202,22 +202,37 @@ const FeatureReview: React.FC = () => {
 
   return (
     <>
-      <Feature108 />
       <div className="max-w-5xl mx-auto py-10 px-4">
-        <h1 className="text-3xl font-bold mb-6">UI/UX Analysis Results</h1>
+        <div className="flex flex-col items-center gap-4 text-center mb-8">
+          <Badge variant="outline">Auto UI Analysis</Badge>
+          <h1 className="max-w-2xl text-3xl font-semibold md:text-4xl">
+            Advanced UI/UX Analysis Results
+          </h1>
+          <p className="text-muted-foreground">Get actionable insights and recommendations to improve your website's user experience and conversion rates.</p>
+        </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="bg-muted/40 grid w-full grid-cols-3">
-            <TabsTrigger value="ui" className="flex items-center gap-2 px-4 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-white">
-              <LayoutDashboard className="mr-2 h-4 w-4" /> UI Components
+          <TabsList className="container flex flex-col items-center justify-center gap-4 sm:flex-row md:gap-10">
+            <TabsTrigger 
+              value="ui" 
+              className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-primary"
+            >
+              <LayoutDashboard className="h-auto w-4 shrink-0" /> UI Components
             </TabsTrigger>
-            <TabsTrigger value="ai" className="flex items-center gap-2 px-4 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-white">
-              <Sparkles className="mr-2 h-4 w-4" /> AI Analysis
+            <TabsTrigger 
+              value="ai" 
+              className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-primary"
+            >
+              <Sparkles className="h-auto w-4 shrink-0" /> AI Analysis
             </TabsTrigger>
-            <TabsTrigger value="screenshot" className="flex items-center gap-2 px-4 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-white">
-              <Camera className="mr-2 h-4 w-4" /> Screenshot
+            <TabsTrigger 
+              value="screenshot" 
+              className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-primary"
+            >
+              <Camera className="h-auto w-4 shrink-0" /> Screenshot
             </TabsTrigger>
           </TabsList>
+          <div className="mx-auto mt-8 max-w-screen-xl rounded-2xl bg-muted/70 p-6 lg:p-16">
           <TabsContent value="ui">
             <div className="mb-4 flex gap-2">
               {SUBTABS.map((sub) => (
@@ -335,10 +350,11 @@ const FeatureReview: React.FC = () => {
               <div className="mb-8 text-center">
                 <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
                 <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px] border" />
-                      </div>
-                    )}
+              </div>
+            )}
           </TabsContent>
-            </Tabs>
+          </div>
+        </Tabs>
       </div>
       {showRecLog && (
         <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 my-8 mx-auto">
