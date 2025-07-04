@@ -5,6 +5,7 @@ import { Wrench, Paperclip, Plus, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
 import { UITestModeContext } from "@/App"
+import { Typewriter } from "@/components/ui/typewriter"
 
 interface UseAutoResizeTextareaProps {
   minHeight: number
@@ -58,18 +59,26 @@ const MIN_HEIGHT = 48
 const MAX_HEIGHT = 164
 
 const AnimatedPlaceholder = ({ showUITest }: { showUITest: boolean }) => (
-  <AnimatePresence mode="wait">
-    <motion.p
-      key={showUITest ? "uitest" : "url"}
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -5 }}
-      transition={{ duration: 0.1 }}
-      className="pointer-events-none w-[150px] text-sm absolute text-muted-foreground"
-    >
-      {showUITest ? "UI Test Mode ON" : "https://apple.com"}
-    </motion.p>
-  </AnimatePresence>
+  <div className="pointer-events-none text-sm absolute text-muted-foreground">
+    {showUITest ? (
+      <span>UI Test Mode ON</span>
+    ) : (
+      <Typewriter
+        text={[
+          "https://apple.com",
+          "https://google.com",
+          "https://github.com",
+          "https://youtube.com",
+          "https://netflix.com"
+        ]}
+        speed={60}
+        waitTime={2000}
+        deleteSpeed={40}
+        showCursor={false}
+        className="text-muted-foreground"
+      />
+    )}
+  </div>
 )
 
 interface AiInputProps {
