@@ -5,6 +5,13 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { Menu, X } from "lucide-react"
 import { Link } from "react-router-dom"
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarTrigger,
+} from "@/components/ui/menubar"
 
 const Navbar1 = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -36,29 +43,38 @@ const Navbar1 = () => {
         </div>
         
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
-          {[
-            { name: "Feature Review", path: "/feature-review" },
-            { name: "Recommendations", path: "/recommendations" },
-            { name: "Screenshot Tool", path: "/screenshot-tool" },
-            { name: "Results", path: "/results" }
-          ].map((item) => (
-            <motion.div
-              key={item.name}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Link 
-                to={item.path} 
-                className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium"
-              >
-                {item.name}
-              </Link>
-            </motion.div>
-          ))}
-        </nav>
+        <Menubar className="hidden md:flex bg-transparent border-none p-0 space-x-4">
+          <MenubarMenu>
+            <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
+              Pages
+            </MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem asChild>
+                <Link to="/feature-review">Feature Review</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link to="/recommendations">Recommendations</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link to="/screenshot-tool">Screenshot Tool</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link to="/results">Results</Link>
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+          
+          <MenubarMenu>
+            <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
+              Tools
+            </MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem>Analytics</MenubarItem>
+              <MenubarItem>Performance</MenubarItem>
+              <MenubarItem>Accessibility</MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+        </Menubar>
 
         {/* Desktop CTA Buttons */}
         <div className="hidden md:flex items-center space-x-4">
