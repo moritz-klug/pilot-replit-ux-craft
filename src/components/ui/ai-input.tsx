@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useContext } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { Globe, Paperclip, Plus, Send } from "lucide-react"
+import { Wrench, Paperclip, Plus, Send } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
@@ -225,7 +225,7 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
                       damping: 25,
                     }}
                   >
-                    <Globe
+                    <Wrench
                       className={cn(
                         "w-4 h-4",
                         uiTest ? "text-orange-600" : "text-inherit"
