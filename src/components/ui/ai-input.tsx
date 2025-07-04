@@ -122,7 +122,7 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
   return (
     <div className="w-full py-4">
       <div className="relative max-w-xl border rounded-[22px] border-border p-1 w-full mx-auto">
-        <div className="relative rounded-2xl border border-border bg-card/50 flex flex-col">
+        <div className="relative rounded-2xl border border-border bg-card/50 flex flex-col shadow-lg">
           <div
             className="overflow-y-auto"
             style={{ maxHeight: `${MAX_HEIGHT}px` }}
