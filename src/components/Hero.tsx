@@ -11,6 +11,7 @@ import { analyzeWithScreenshot } from '../services/futureHouseService';
 import { useContext } from 'react';
 import { UITestModeContext } from '../App';
 import { AiInput } from "@/components/ui/ai-input";
+import { Particles } from "@/components/ui/particles";
 
 interface AnalysisStep {
   message: string;
@@ -130,7 +131,12 @@ export const Hero = () => {
 
   return (
     <section className="relative w-full h-[80vh] flex flex-col items-center justify-center text-center px-4">
-      <div className="max-w-4xl mx-auto text-center">
+      {/* Particle Background */}
+      <div className="absolute inset-0 z-0">
+        <Particles quantity={200} className="h-full w-full" color="#000000" />
+      </div>
+      
+      <div className="max-w-4xl mx-auto text-center relative z-10">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight max-w-3xl mx-auto">
           Paste a link, get instant UX science.
         </h1>
