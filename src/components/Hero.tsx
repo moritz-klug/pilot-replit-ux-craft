@@ -207,9 +207,9 @@ export const Hero = () => {
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="mt-8 opacity-30"
+          className="mt-8 opacity-40"
         >
-          <ChevronDown className="w-5 h-5 mx-auto text-muted-foreground" />
+          <ChevronDown className="w-10 h-10 mx-auto text-muted-foreground" />
         </motion.div>
       </div>
     </section>
