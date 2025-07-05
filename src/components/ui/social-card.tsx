@@ -10,6 +10,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { useState } from "react";
+import { Button } from "./button";
 
 interface SocialCardProps {
   author?: {
@@ -33,7 +34,9 @@ interface SocialCardProps {
     isLiked?: boolean;
     isBookmarked?: boolean;
   };
-  statusButtons?: React.ReactNode;
+  statusOptions?: string[];
+  currentStatus?: string;
+  onStatusChange?: (status: string) => void;
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
@@ -47,7 +50,9 @@ export function SocialCard({
   author,
   content,
   engagement,
-  statusButtons,
+  statusOptions,
+  currentStatus,
+  onStatusChange,
   onLike,
   onComment,
   onShare,
@@ -59,6 +64,7 @@ export function SocialCard({
   const [isLiked, setIsLiked] = useState(engagement?.isLiked ?? false);
   const [isBookmarked, setIsBookmarked] = useState(engagement?.isBookmarked ?? false);
   const [likes, setLikes] = useState(engagement?.likes ?? 0);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -69,6 +75,19 @@ export function SocialCard({
   const handleBookmark = () => {
     setIsBookmarked(!isBookmarked);
     onBookmark?.();
+  };
+
+  const handleMoreClick = () => {
+    if (statusOptions) {
+      setShowStatusMenu(!showStatusMenu);
+    } else {
+      onMore?.();
+    }
+  };
+
+  const handleStatusSelect = (status: string) => {
+    onStatusChange?.(status);
+    setShowStatusMenu(false);
   };
 
   return (
@@ -99,13 +118,30 @@ export function SocialCard({
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onMore}
-              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
-            >
-              <MoreHorizontal className="w-5 h-5 text-zinc-400" />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={handleMoreClick}
+                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+              >
+                <MoreHorizontal className="w-5 h-5 text-zinc-400" />
+              </button>
+              {showStatusMenu && statusOptions && (
+                <div className="absolute right-0 top-12 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg p-2 z-10">
+                  {statusOptions.map((status) => (
+                    <Button
+                      key={status}
+                      size="sm"
+                      variant={currentStatus === status ? 'default' : 'ghost'}
+                      onClick={() => handleStatusSelect(status)}
+                      className="w-full justify-start mb-1 last:mb-0"
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Content section */}
@@ -136,8 +172,41 @@ export function SocialCard({
 
           {/* Engagement section */}
           <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-2">
-              {statusButtons}
+            <div className="flex items-center gap-6">
+              <button
+                type="button"
+                onClick={handleLike}
+                className={cn(
+                  "flex items-center gap-2 text-sm transition-colors",
+                  isLiked
+                    ? "text-rose-600"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-rose-600"
+                )}
+              >
+                <Heart
+                  className={cn(
+                    "w-5 h-5 transition-all",
+                    isLiked && "fill-current scale-110"
+                  )}
+                />
+                <span>{likes}</span>
+              </button>
+              <button
+                type="button"
+                onClick={onComment}
+                className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 hover:text-blue-500 transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>{engagement?.comments}</span>
+              </button>
+              <button
+                type="button"
+                onClick={onShare}
+                className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 hover:text-green-500 transition-colors"
+              >
+                <Share2 className="w-5 h-5" />
+                <span>{engagement?.shares}</span>
+              </button>
             </div>
             <button
               type="button"

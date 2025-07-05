@@ -339,20 +339,9 @@ const FeatureReview: React.FC = () => {
                                 icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
                               }
                             }}
-                            statusButtons={
-                              <div className="flex gap-2">
-                                {STATUS_OPTIONS.map((status) => (
-                                  <Button 
-                                    key={status}
-                                    size="sm"
-                                    variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
-                                    onClick={() => handleStatusChange(section, status)}
-                                  >
-                                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                                  </Button>
-                                ))}
-                              </div>
-                            }
+                            statusOptions={[...STATUS_OPTIONS]}
+                            currentStatus={componentStatuses[section.name || idx] || 'pending'}
+                            onStatusChange={(status) => handleStatusChange(section, status as Status)}
                             engagement={{
                               likes: 0,
                               comments: 0,
