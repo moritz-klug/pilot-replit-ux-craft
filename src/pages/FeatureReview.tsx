@@ -327,9 +327,9 @@ const FeatureReview: React.FC = () => {
                             key={section.name || idx}
                             author={{
                               name: section.name,
-                              username: "ui_component", 
+                              username: "", 
                               avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                              timeAgo: "analyzed"
+                              timeAgo: ""
                             }}
                             content={{
                               text: `${section.purpose || 'UI Component'}`,
@@ -355,6 +355,18 @@ const FeatureReview: React.FC = () => {
                               <div><b>Layouts:</b> {section.style?.layouts}</div>
                               <div><b>Interactions:</b> {section.style?.interactions}</div>
                               <div><b>Mobile:</b> {section.mobile}</div>
+                              <div className="flex gap-2 items-center mt-3">
+                                {STATUS_OPTIONS.map((status) => (
+                                  <Button 
+                                    key={status}
+                                    size="sm"
+                                    variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
+                                    onClick={() => handleStatusChange(section, status)}
+                                  >
+                                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                                  </Button>
+                                ))}
+                              </div>
                             </div>
                           </SocialCard>
                         ))}
