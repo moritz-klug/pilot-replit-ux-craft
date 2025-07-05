@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { CodeBlock, CodeBlockCode, CodeBlockGroup } from '@/components/ui/code-block';
 
 const Results = () => {
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -146,16 +147,26 @@ Please apply these improvements while maintaining the existing functionality and
                         <SelectItem value="angular">Angular</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button onClick={handleCopyCode} variant="outline" size="sm">
-                      {codeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {codeCopied ? 'Copied!' : 'Copy Code'}
-                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-x-auto">
-                    <code>{codeSnippets[selectedFramework as keyof typeof codeSnippets]}</code>
-                  </pre>
+                  <CodeBlock>
+                    <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
+                          {selectedFramework.charAt(0).toUpperCase() + selectedFramework.slice(1)}
+                        </div>
+                        <span className="text-muted-foreground text-sm">component.{selectedFramework === 'react' ? 'tsx' : selectedFramework === 'vue' ? 'vue' : 'ts'}</span>
+                      </div>
+                      <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
+                        {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </CodeBlockGroup>
+                    <CodeBlockCode 
+                      code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
+                      language={selectedFramework === 'angular' ? 'typescript' : selectedFramework}
+                    />
+                  </CodeBlock>
                   
                   <div className="mt-6 p-4 bg-blue-50 rounded-md">
                     <h3 className="font-semibold mb-2">Integration Instructions:</h3>
