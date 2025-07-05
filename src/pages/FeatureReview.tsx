@@ -9,6 +9,7 @@ import { UITestModeContext } from '../App';
 import { Dialog, DialogContent } from '../components/ui/dialog';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '../components/ui/sidebar';
 import { AppSidebar } from '../components/AppSidebar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -224,21 +225,19 @@ const FeatureReview: React.FC = () => {
               <div className="rounded-2xl bg-muted/70 p-6 lg:p-8">
                 {tab === 'ui' && (
                   <div>
-                    <div className="mb-4 flex flex-col items-center justify-center gap-4 sm:flex-row md:gap-10">
-                      {SUBTABS.map((sub) => (
-                        <button
-                          key={sub}
-                          onClick={() => setUiSubTab(sub)}
-                          className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
-                            uiSubTab === sub 
-                              ? 'bg-muted text-primary' 
-                              : 'text-muted-foreground hover:bg-muted/50'
-                          }`}
-                        >
-                          {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                        </button>
-                      ))}
-                    </div>
+                    <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
+                      <TabsList className="flex flex-col items-center justify-center gap-4 sm:flex-row md:gap-10 bg-transparent">
+                        {SUBTABS.map((sub) => (
+                          <TabsTrigger
+                            key={sub}
+                            value={sub}
+                            className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-primary"
+                          >
+                            {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                      <TabsContent value={uiSubTab} className="mt-4">
                     <div className="flex flex-col md:flex-row gap-8">
                       {/* Summary Panel */}
                       <div className="md:w-1/3 w-full">
@@ -299,10 +298,12 @@ const FeatureReview: React.FC = () => {
                               <div className="mb-1"><b>Mobile:</b> {section.mobile}</div>
                             </CardContent>
                           </Card>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                         ))}
+                       </div>
+                     </div>
+                       </TabsContent>
+                     </Tabs>
+                   </div>
                 )}
 
                 {tab === 'ai' && (
