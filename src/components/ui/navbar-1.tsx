@@ -43,27 +43,17 @@ const Navbar1 = () => {
         </div>
         
         {/* Desktop Navigation */}
-        <Menubar className="hidden md:flex bg-transparent border-none p-0 space-x-4">
-          <MenubarMenu>
-            <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
-              Company
-            </MenubarTrigger>
-            <MenubarContent className="z-50 bg-white border border-gray-200 shadow-lg">
-              <MenubarItem asChild>
-                <Link to="/about">About Us</Link>
-              </MenubarItem>
-              <MenubarItem asChild>
-                <Link to="/features">Features</Link>
-              </MenubarItem>
-              <MenubarItem asChild>
-                <Link to="/pricing">Pricing</Link>
-              </MenubarItem>
-              <MenubarItem asChild>
-                <Link to="/contact">Contact</Link>
-              </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
-
+        <Menubar className="hidden md:flex bg-transparent border-none p-0 space-x-6">
+          <Link to="/about" className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium">
+            About
+          </Link>
+          <Link to="/features" className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium">
+            Features
+          </Link>
+          <Link to="/pricing" className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium">
+            Pricing
+          </Link>
+          
           <MenubarMenu>
             <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
               Tools
@@ -83,6 +73,10 @@ const Navbar1 = () => {
               </MenubarItem>
             </MenubarContent>
           </MenubarMenu>
+          
+          <Link to="/contact" className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium">
+            Contact
+          </Link>
         </Menubar>
 
         {/* Desktop CTA Buttons */}
