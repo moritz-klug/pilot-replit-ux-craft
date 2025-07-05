@@ -482,9 +482,24 @@ Execute these improvements while preserving all current features and maintaining
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-md mb-4">
-                    <pre className="whitespace-pre-wrap text-sm">{promptText}</pre>
-                  </div>
+                  <CodeBlock>
+                    <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
+                          {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}
+                        </div>
+                        <span className="text-muted-foreground text-sm">prompt.txt</span>
+                      </div>
+                      <Button onClick={handleCopyPrompt} variant="ghost" size="icon" className="h-8 w-8">
+                        {promptCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </CodeBlockGroup>
+                    <CodeBlockCode 
+                      code={promptText} 
+                      language="text"
+                      theme="github-light"
+                    />
+                  </CodeBlock>
                   
                   <div className="space-y-4">
                     <div className="p-4 bg-green-50 rounded-md">
