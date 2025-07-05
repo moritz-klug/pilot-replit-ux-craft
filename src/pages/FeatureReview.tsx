@@ -339,17 +339,8 @@ const FeatureReview: React.FC = () => {
                                 icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
                               }
                             }}
-                            engagement={{
-                              likes: 0,
-                              comments: 0,
-                              shares: 0,
-                              isLiked: false,
-                              isBookmarked: false
-                            }}
-                            className="mb-4"
-                          >
-                            <div className="mt-4 space-y-2">
-                              <div className="flex gap-2 items-center mb-3">
+                            statusButtons={
+                              <div className="flex gap-2">
                                 {STATUS_OPTIONS.map((status) => (
                                   <Button 
                                     key={status}
@@ -361,11 +352,20 @@ const FeatureReview: React.FC = () => {
                                   </Button>
                                 ))}
                               </div>
-                              <div className="text-sm text-muted-foreground space-y-1">
-                                <div><b>Layouts:</b> {section.style?.layouts}</div>
-                                <div><b>Interactions:</b> {section.style?.interactions}</div>
-                                <div><b>Mobile:</b> {section.mobile}</div>
-                              </div>
+                            }
+                            engagement={{
+                              likes: 0,
+                              comments: 0,
+                              shares: 0,
+                              isLiked: false,
+                              isBookmarked: false
+                            }}
+                            className="mb-4"
+                          >
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <div><b>Layouts:</b> {section.style?.layouts}</div>
+                              <div><b>Interactions:</b> {section.style?.interactions}</div>
+                              <div><b>Mobile:</b> {section.mobile}</div>
                             </div>
                           </SocialCard>
                         ))}

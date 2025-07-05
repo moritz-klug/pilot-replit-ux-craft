@@ -33,6 +33,7 @@ interface SocialCardProps {
     isLiked?: boolean;
     isBookmarked?: boolean;
   };
+  statusButtons?: React.ReactNode;
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
@@ -46,6 +47,7 @@ export function SocialCard({
   author,
   content,
   engagement,
+  statusButtons,
   onLike,
   onComment,
   onShare,
@@ -134,41 +136,8 @@ export function SocialCard({
 
           {/* Engagement section */}
           <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-6">
-              <button
-                type="button"
-                onClick={handleLike}
-                className={cn(
-                  "flex items-center gap-2 text-sm transition-colors",
-                  isLiked
-                    ? "text-rose-600"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-rose-600"
-                )}
-              >
-                <Heart
-                  className={cn(
-                    "w-5 h-5 transition-all",
-                    isLiked && "fill-current scale-110"
-                  )}
-                />
-                <span>{likes}</span>
-              </button>
-              <button
-                type="button"
-                onClick={onComment}
-                className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 hover:text-blue-500 transition-colors"
-              >
-                <MessageCircle className="w-5 h-5" />
-                <span>{engagement?.comments}</span>
-              </button>
-              <button
-                type="button"
-                onClick={onShare}
-                className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 hover:text-green-500 transition-colors"
-              >
-                <Share2 className="w-5 h-5" />
-                <span>{engagement?.shares}</span>
-              </button>
+            <div className="flex items-center gap-2">
+              {statusButtons}
             </div>
             <button
               type="button"
