@@ -1,9 +1,85 @@
-import { useCallback, useContext } from "react"
+import { useCallback, useEffect, useRef, useState, useContext } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { Wrench } from "lucide-react"
+import { Wrench, Paperclip, Plus, Send } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { Textarea } from "@/components/ui/textarea"
 import { UITestModeContext } from "@/App"
+import { Typewriter } from "@/components/ui/typewriter"
+
+interface UseAutoResizeTextareaProps {
+  minHeight: number
+  maxHeight?: number
+}
+
+function useAutoResizeTextarea({
+  minHeight,
+  maxHeight,
+}: UseAutoResizeTextareaProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const adjustHeight = useCallback(
+    (reset?: boolean) => {
+      const textarea = textareaRef.current
+      if (!textarea) return
+
+      if (reset) {
+        textarea.style.height = `${minHeight}px`
+        return
+      }
+
+      textarea.style.height = `${minHeight}px`
+      const newHeight = Math.max(
+        minHeight,
+        Math.min(textarea.scrollHeight, maxHeight ?? Number.POSITIVE_INFINITY)
+      )
+
+      textarea.style.height = `${newHeight}px`
+    },
+    [minHeight, maxHeight]
+  )
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = `${minHeight}px`
+    }
+  }, [minHeight])
+
+  useEffect(() => {
+    const handleResize = () => adjustHeight()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [adjustHeight])
+
+  return { textareaRef, adjustHeight }
+}
+
+const MIN_HEIGHT = 48
+const MAX_HEIGHT = 164
+
+const AnimatedPlaceholder = ({ showUITest }: { showUITest: boolean }) => (
+  <div className="pointer-events-none text-sm absolute text-muted-foreground">
+    {showUITest ? (
+      <span>UI Test Mode ON</span>
+    ) : (
+      <Typewriter
+        text={[
+          "https://apple.com",
+          "https://google.com",
+          "https://github.com",
+          "https://youtube.com",
+          "https://netflix.com"
+        ]}
+        speed={60}
+        waitTime={2000}
+        deleteSpeed={40}
+        showCursor={false}
+        className="text-muted-foreground"
+      />
+    )}
+  </div>
+)
 
 interface AiInputProps {
   value: string
@@ -13,164 +89,193 @@ interface AiInputProps {
 }
 
 export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
+  const { textareaRef, adjustHeight } = useAutoResizeTextarea({
+    minHeight: MIN_HEIGHT,
+    maxHeight: MAX_HEIGHT,
+  })
   const { uiTest, setUITest } = useContext(UITestModeContext)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handelClose = (e: any) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+    setImagePreview(null)
+  }
+
+  const handelChange = (e: any) => {
+    const file = e.target.files ? e.target.files[0] : null
+    if (file) {
+      setImagePreview(URL.createObjectURL(file))
+    }
+  }
 
   const handleSubmit = () => {
     if (!disabled && value.trim()) {
       onSubmit()
+      adjustHeight(true)
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview)
+      }
+    }
+  }, [imagePreview])
+
   return (
     <div className="w-full py-4">
-      <div className="relative max-w-xl w-full mx-auto">
-        {/* Animated Glowing Search Bar */}
-        <div className="relative flex items-center justify-center">
-          <div className="absolute z-[-1] w-full h-min-screen"></div>
-          <div id="poda" className="relative flex items-center justify-center group">
-            <div className="absolute z-[-1] overflow-hidden h-full w-full max-h-[70px] max-w-[314px] rounded-xl blur-[3px] 
-                            before:absolute before:content-[''] before:z-[-2] before:w-[999px] before:h-[999px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-60
-                            before:bg-[conic-gradient(#000,#402fb5_5%,#000_38%,#000_50%,#cf30aa_60%,#000_87%)] before:transition-all before:duration-2000
-                            group-hover:before:rotate-[-120deg] group-focus-within:before:rotate-[420deg] group-focus-within:before:duration-[4000ms]">
-            </div>
-            <div className="absolute z-[-1] overflow-hidden h-full w-full max-h-[65px] max-w-[312px] rounded-xl blur-[3px] 
-                            before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[82deg]
-                            before:bg-[conic-gradient(rgba(0,0,0,0),#18116a,rgba(0,0,0,0)_10%,rgba(0,0,0,0)_50%,#6e1b60,rgba(0,0,0,0)_60%)] before:transition-all before:duration-2000
-                            group-hover:before:rotate-[-98deg] group-focus-within:before:rotate-[442deg] group-focus-within:before:duration-[4000ms]">
-            </div>
-            <div className="absolute z-[-1] overflow-hidden h-full w-full max-h-[65px] max-w-[312px] rounded-xl blur-[3px] 
-                            before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[82deg]
-                            before:bg-[conic-gradient(rgba(0,0,0,0),#18116a,rgba(0,0,0,0)_10%,rgba(0,0,0,0)_50%,#6e1b60,rgba(0,0,0,0)_60%)] before:transition-all before:duration-2000
-                            group-hover:before:rotate-[-98deg] group-focus-within:before:rotate-[442deg] group-focus-within:before:duration-[4000ms]">
-            </div>
-            <div className="absolute z-[-1] overflow-hidden h-full w-full max-h-[65px] max-w-[312px] rounded-xl blur-[3px] 
-                            before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[82deg]
-                            before:bg-[conic-gradient(rgba(0,0,0,0),#18116a,rgba(0,0,0,0)_10%,rgba(0,0,0,0)_50%,#6e1b60,rgba(0,0,0,0)_60%)] before:transition-all before:duration-2000
-                            group-hover:before:rotate-[-98deg] group-focus-within:before:rotate-[442deg] group-focus-within:before:duration-[4000ms]">
-            </div>
-
-            <div className="absolute z-[-1] overflow-hidden h-full w-full max-h-[63px] max-w-[307px] rounded-lg blur-[2px] 
-                            before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-[83deg]
-                            before:bg-[conic-gradient(rgba(0,0,0,0)_0%,#a099d8,rgba(0,0,0,0)_8%,rgba(0,0,0,0)_50%,#dfa2da,rgba(0,0,0,0)_58%)] before:brightness-140
-                            before:transition-all before:duration-2000 group-hover:before:rotate-[-97deg] group-focus-within:before:rotate-[443deg] group-focus-within:before:duration-[4000ms]">
-            </div>
-
-            <div className="absolute z-[-1] overflow-hidden h-full w-full max-h-[59px] max-w-[303px] rounded-xl blur-[0.5px] 
-                            before:absolute before:content-[''] before:z-[-2] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-70
-                            before:bg-[conic-gradient(#1c191c,#402fb5_5%,#1c191c_14%,#1c191c_50%,#cf30aa_60%,#1c191c_64%)] before:brightness-130
-                            before:transition-all before:duration-2000 group-hover:before:rotate-[-110deg] group-focus-within:before:rotate-[430deg] group-focus-within:before:duration-[4000ms]">
-            </div>
-
-            <div id="main" className="relative group">
-              <input 
-                placeholder="Enter website URL to analyze..." 
-                type="text" 
+      <div className="relative max-w-xl border rounded-[22px] border-border p-1 w-full mx-auto">
+        <div className="relative rounded-2xl border border-border bg-card/50 flex flex-col shadow-lg">
+          <div
+            className="overflow-y-auto"
+            style={{ maxHeight: `${MAX_HEIGHT}px` }}
+          >
+            <div className="relative">
+              <Textarea
                 value={value}
-                onChange={(e) => onChange(e.target.value)}
+                placeholder=""
+                className="w-full rounded-2xl rounded-b-none px-4 py-3 bg-card/50 border-none resize-none focus-visible:ring-0 leading-[1.2]"
+                ref={textareaRef}
+                disabled={disabled}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault()
                     handleSubmit()
                   }
                 }}
-                disabled={disabled}
-                className="bg-[#010201] border-none w-[301px] h-[56px] rounded-lg text-white px-[59px] text-lg focus:outline-none placeholder-gray-400" 
+                onChange={(e) => {
+                  onChange(e.target.value)
+                  adjustHeight()
+                }}
               />
-              <div id="input-mask" className="pointer-events-none w-[100px] h-[20px] absolute bg-gradient-to-r from-transparent to-black top-[18px] left-[70px] group-focus-within:hidden"></div>
-              <div id="pink-mask" className="pointer-events-none w-[30px] h-[20px] absolute bg-[#cf30aa] top-[10px] left-[5px] blur-2xl opacity-80 transition-all duration-2000 group-hover:opacity-0"></div>
-              <div className="absolute h-[42px] w-[40px] overflow-hidden top-[7px] right-[7px] rounded-lg
-                              before:absolute before:content-[''] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-90
-                              before:bg-[conic-gradient(rgba(0,0,0,0),#3d3a4f,rgba(0,0,0,0)_50%,rgba(0,0,0,0)_50%,#3d3a4f,rgba(0,0,0,0)_100%)]
-                              before:brightness-135 before:animate-spin-slow">
-              </div>
-              <div id="filter-icon" className="absolute top-2 right-2 flex items-center justify-center z-[2] max-h-10 max-w-[38px] h-full w-full [isolation:isolate] overflow-hidden rounded-lg bg-gradient-to-b from-[#161329] via-black to-[#1d1b4b] border border-transparent">
-                <svg preserveAspectRatio="none" height="27" width="27" viewBox="4.8 4.56 14.832 15.408" fill="none">
-                  <path d="M8.16 6.65002H15.83C16.47 6.65002 16.99 7.17002 16.99 7.81002V9.09002C16.99 9.56002 16.7 10.14 16.41 10.43L13.91 12.64C13.56 12.93 13.33 13.51 13.33 13.98V16.48C13.33 16.83 13.1 17.29 12.81 17.47L12 17.98C11.24 18.45 10.2 17.92 10.2 16.99V13.91C10.2 13.5 9.97 12.98 9.73 12.69L7.52 10.36C7.23 10.08 7 9.55002 7 9.20002V7.87002C7 7.17002 7.52 6.65002 8.16 6.65002Z" stroke="#d6d6e6" strokeWidth="1" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"></path>
-                </svg>
-              </div>
-              <div id="search-icon" className="absolute left-5 top-[15px]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" viewBox="0 0 24 24" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" height="24" fill="none" className="feather feather-search">
-                  <circle stroke="url(#search)" r="8" cy="11" cx="11"></circle>
-                  <line stroke="url(#searchl)" y2="16.65" y1="22" x2="16.65" x1="22"></line>
-                  <defs>
-                    <linearGradient gradientTransform="rotate(50)" id="search">
-                      <stop stopColor="#f8e7f8" offset="0%"></stop>
-                      <stop stopColor="#b6a9b7" offset="50%"></stop>
-                    </linearGradient>
-                    <linearGradient id="searchl">
-                      <stop stopColor="#b6a9b7" offset="0%"></stop>
-                      <stop stopColor="#837484" offset="50%"></stop>
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
+              {!value && (
+                <div className="absolute left-4 top-3">
+                  <AnimatedPlaceholder showUITest={uiTest} />
+                </div>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* UI Test Mode Toggle - Positioned below the search bar */}
-        <div className="flex justify-center mt-4">
-          <button
-            type="button"
-            onClick={() => {
-              setUITest(!uiTest)
-            }}
-            className={cn(
-              "rounded-full transition-all flex items-center gap-2 px-3 py-2 border",
-              uiTest
-                ? "bg-orange-500/15 border-orange-500 text-orange-600"
-                : "bg-muted border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-              <motion.div
-                animate={{
-                  rotate: uiTest ? 180 : 0,
-                  scale: uiTest ? 1.1 : 1,
-                }}
-                whileHover={{
-                  rotate: uiTest ? 180 : 15,
-                  scale: 1.1,
-                  transition: {
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 10,
-                  },
-                }}
-                transition={{
-                  type: "spring",
-                  stiffness: 260,
-                  damping: 25,
-                }}
+          <div className="h-12 bg-card/50 rounded-b-xl">
+            <div className="absolute left-3 bottom-3 flex items-center gap-2">
+              <label
+                className={cn(
+                  "cursor-pointer relative rounded-full p-2",
+                  imagePreview
+                    ? "bg-primary/15 border border-primary text-primary"
+                    : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                )}
               >
-                <Wrench
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handelChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+                <Paperclip
                   className={cn(
-                    "w-4 h-4",
-                    uiTest ? "text-orange-600" : "text-inherit"
+                    "w-4 h-4 transition-colors",
+                    imagePreview && "text-primary"
                   )}
                 />
-              </motion.div>
+                {imagePreview && (
+                  <div className="absolute w-[100px] h-[100px] top-14 -left-4">
+                    <img
+                      className="object-cover rounded-2xl w-full h-full"
+                      src={imagePreview}
+                      alt="Preview"
+                    />
+                    <button
+                      onClick={handelClose}
+                      className="bg-background border border-border absolute -top-1 -left-1 shadow-lg rounded-full rotate-45"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setUITest(!uiTest)
+                }}
+                className={cn(
+                  "rounded-full transition-all flex items-center gap-2 px-1.5 py-1 border h-8",
+                  uiTest
+                    ? "bg-orange-500/15 border-orange-500 text-orange-600"
+                    : "bg-muted border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                  <motion.div
+                    animate={{
+                      rotate: uiTest ? 180 : 0,
+                      scale: uiTest ? 1.1 : 1,
+                    }}
+                    whileHover={{
+                      rotate: uiTest ? 180 : 15,
+                      scale: 1.1,
+                      transition: {
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      },
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 260,
+                      damping: 25,
+                    }}
+                  >
+                    <Wrench
+                      className={cn(
+                        "w-4 h-4",
+                        uiTest ? "text-orange-600" : "text-inherit"
+                      )}
+                    />
+                  </motion.div>
+                </div>
+                <AnimatePresence>
+                  {uiTest && (
+                    <motion.span
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{
+                        width: "auto",
+                        opacity: 1,
+                      }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-sm overflow-hidden whitespace-nowrap text-orange-600 flex-shrink-0"
+                    >
+                      UI Test
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
             </div>
-            <AnimatePresence>
-              {uiTest && (
-                <motion.span
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{
-                    width: "auto",
-                    opacity: 1,
-                  }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-sm overflow-hidden whitespace-nowrap text-orange-600 flex-shrink-0"
-                >
-                  UI Test Mode
-                </motion.span>
-              )}
-            </AnimatePresence>
-            {!uiTest && (
-              <span className="text-sm">UI Test Mode</span>
-            )}
-          </button>
+            <div className="absolute right-3 bottom-3">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={disabled || !value.trim()}
+                className={cn(
+                  "rounded-full p-2 transition-colors",
+                  value.trim() && !disabled
+                    ? "bg-primary/15 text-primary"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
