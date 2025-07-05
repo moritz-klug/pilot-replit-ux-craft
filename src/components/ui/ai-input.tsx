@@ -105,7 +105,7 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
 
   return (
     <div className="w-full py-4">
-      <div className="relative max-w-xl border rounded-[22px] border-border p-1 w-full mx-auto before:absolute before:top-1/2 before:left-1/2 before:z-0 before:h-[60px] before:w-[90%] before:-translate-x-1/2 before:-translate-y-1/2 before:animate-rainbow before:bg-[linear-gradient(90deg,hsl(var(--color-1)),hsl(var(--color-5)),hsl(var(--color-3)),hsl(var(--color-4)),hsl(var(--color-2)))] before:bg-[length:200%] before:[filter:blur(8px)] before:rounded-[22px]">
+      <div className="relative max-w-xl border rounded-[22px] border-border p-1 w-full mx-auto before:absolute before:top-1/2 before:left-1/2 before:z-[-1] before:h-[70px] before:w-[102%] before:-translate-x-1/2 before:-translate-y-1/2 before:animate-rainbow before:bg-[linear-gradient(90deg,hsl(var(--color-1)),hsl(var(--color-5)),hsl(var(--color-3)),hsl(var(--color-4)),hsl(var(--color-2)))] before:bg-[length:200%] before:[filter:blur(12px)] before:rounded-[22px]">
         <div className="relative rounded-2xl border border-border bg-card/50 flex flex-col shadow-lg">
           <div
             className="overflow-y-auto"
