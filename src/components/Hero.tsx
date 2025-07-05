@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Paperclip, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle } from "lucide-react";
+import { Paperclip, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
 import { analyzeWithScreenshot } from '../services/futureHouseService';
@@ -198,6 +198,19 @@ export const Hero = () => {
         <p className="text-xs text-muted-foreground">
           Built with accessibility in mind and strict respect for your data privacy.
         </p>
+        
+        {/* Bouncing scroll indicator */}
+        <motion.div
+          animate={{ y: [0, 6, 0] }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="mt-8 opacity-30"
+        >
+          <ChevronDown className="w-5 h-5 mx-auto text-muted-foreground" />
+        </motion.div>
       </div>
     </section>
   );
