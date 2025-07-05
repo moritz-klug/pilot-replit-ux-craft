@@ -224,16 +224,19 @@ const FeatureReview: React.FC = () => {
               <div className="rounded-2xl bg-muted/70 p-6 lg:p-8">
                 {tab === 'ui' && (
                   <div>
-                    <div className="mb-4 flex gap-2">
+                    <div className="mb-4 flex flex-col items-center justify-center gap-4 sm:flex-row md:gap-10">
                       {SUBTABS.map((sub) => (
-                        <Button
+                        <button
                           key={sub}
-                          size="sm"
-                          variant={uiSubTab === sub ? 'default' : 'outline'}
                           onClick={() => setUiSubTab(sub)}
+                          className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                            uiSubTab === sub 
+                              ? 'bg-muted text-primary' 
+                              : 'text-muted-foreground hover:bg-muted/50'
+                          }`}
                         >
                           {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                        </Button>
+                        </button>
                       ))}
                     </div>
                     <div className="flex flex-col md:flex-row gap-8">
