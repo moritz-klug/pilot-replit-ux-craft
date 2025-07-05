@@ -12,6 +12,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '../components/ui/
 import { AppSidebar } from '../components/AppSidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
+import { SocialCard } from '../components/ui/social-card';
 import { cn } from '../lib/utils';
 
 const DEMO_MODE = false;
@@ -322,36 +323,52 @@ const FeatureReview: React.FC = () => {
                           if (uiSubTab === 'all') return true;
                           return status === uiSubTab;
                         }).map((section: any, idx: number) => (
-                          <Card key={section.name || idx}>
-                            <CardContent className="p-6">
-                              <div className="flex items-center mb-2">
-                                <img src={section.cropped_image_url} alt={section.name} className="w-20 h-20 object-cover rounded mr-4 border" />
-                                <div>
-                                  <h3 className="text-lg font-semibold">{section.name}</h3>
-                                  <div className="mt-2 flex gap-2 items-center">
-                                    {STATUS_OPTIONS.map((status) => (
-                                      <Button 
-                                        key={status}
-                                        size="sm"
-                                        variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
-                                        onClick={() => handleStatusChange(section, status)}
-                                      >
-                                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                                      </Button>
-                                    ))}
-                                  </div>
-                                </div>
+                          <SocialCard
+                            key={section.name || idx}
+                            author={{
+                              name: section.name,
+                              username: "ui_component", 
+                              avatar: section.cropped_image_url || "https://via.placeholder.com/40",
+                              timeAgo: "analyzed"
+                            }}
+                            content={{
+                              text: `${section.purpose || 'UI Component'}`,
+                              link: {
+                                title: `${section.elements || 'Component Elements'}`,
+                                description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                                icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
+                              }
+                            }}
+                            engagement={{
+                              likes: 0,
+                              comments: 0,
+                              shares: 0,
+                              isLiked: false,
+                              isBookmarked: false
+                            }}
+                            className="mb-4"
+                          >
+                            <div className="mt-4 space-y-2">
+                              <div className="flex gap-2 items-center mb-3">
+                                {STATUS_OPTIONS.map((status) => (
+                                  <Button 
+                                    key={status}
+                                    size="sm"
+                                    variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
+                                    onClick={() => handleStatusChange(section, status)}
+                                  >
+                                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                                  </Button>
+                                ))}
                               </div>
-                              <div className="mb-1"><b>Elements:</b> {section.elements}</div>
-                              <div className="mb-1"><b>Purpose:</b> {section.purpose}</div>
-                              <div className="mb-1"><b>Fonts:</b> {section.style?.fonts}</div>
-                              <div className="mb-1"><b>Colors:</b> {section.style?.colors}</div>
-                              <div className="mb-1"><b>Layouts:</b> {section.style?.layouts}</div>
-                              <div className="mb-1"><b>Interactions:</b> {section.style?.interactions}</div>
-                              <div className="mb-1"><b>Mobile:</b> {section.mobile}</div>
-                            </CardContent>
-                          </Card>
-                          ))}
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <div><b>Layouts:</b> {section.style?.layouts}</div>
+                                <div><b>Interactions:</b> {section.style?.interactions}</div>
+                                <div><b>Mobile:</b> {section.mobile}</div>
+                              </div>
+                            </div>
+                          </SocialCard>
+                        ))}
                         </div>
                         </TabsContent>
                       </Tabs>
@@ -367,32 +384,48 @@ const FeatureReview: React.FC = () => {
                       <div className="text-muted-foreground">No confirmed components. Confirm a component in the UI Components tab.</div>
                     )}
                     {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'confirmed').map((section: any, idx: number) => (
-                      <Card key={section.name || idx}>
-                        <CardContent className="p-6">
-                          <div className="flex items-center mb-2">
-                            <img src={section.cropped_image_url} alt={section.name} className="w-20 h-20 object-cover rounded mr-4 border" />
-                            <div>
-                              <h3 className="text-lg font-semibold">{section.name}</h3>
-                              <Button 
-                                size="sm"
-                                className="mt-2"
-                                onClick={() => handleGetRecommendation(section)}
-                                disabled={recommending}
-                              >
-                                {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                                Get Recommendations
-                              </Button>
-                            </div>
+                      <SocialCard
+                        key={section.name || idx}
+                        author={{
+                          name: section.name,
+                          username: "confirmed_component", 
+                          avatar: section.cropped_image_url || "https://via.placeholder.com/40",
+                          timeAgo: "confirmed"
+                        }}
+                        content={{
+                          text: `${section.purpose || 'Confirmed UI Component'}`,
+                          link: {
+                            title: `${section.elements || 'Component Elements'}`,
+                            description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                            icon: <LayoutDashboard className="w-5 h-5 text-green-500" />
+                          }
+                        }}
+                        engagement={{
+                          likes: 0,
+                          comments: 0,
+                          shares: 0,
+                          isLiked: false,
+                          isBookmarked: true
+                        }}
+                        className="mb-4"
+                      >
+                        <div className="mt-4 space-y-2">
+                          <Button 
+                            size="sm"
+                            className="mb-3"
+                            onClick={() => handleGetRecommendation(section)}
+                            disabled={recommending}
+                          >
+                            {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                            Get Recommendations
+                          </Button>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <div><b>Layouts:</b> {section.style?.layouts}</div>
+                            <div><b>Interactions:</b> {section.style?.interactions}</div>
+                            <div><b>Mobile:</b> {section.mobile}</div>
                           </div>
-                          <div className="mb-1"><b>Elements:</b> {section.elements}</div>
-                          <div className="mb-1"><b>Purpose:</b> {section.purpose}</div>
-                          <div className="mb-1"><b>Fonts:</b> {section.style?.fonts}</div>
-                          <div className="mb-1"><b>Colors:</b> {section.style?.colors}</div>
-                          <div className="mb-1"><b>Layouts:</b> {section.style?.layouts}</div>
-                          <div className="mb-1"><b>Interactions:</b> {section.style?.interactions}</div>
-                          <div className="mb-1"><b>Mobile:</b> {section.mobile}</div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </SocialCard>
                     ))}
                    </div>
                  )}
