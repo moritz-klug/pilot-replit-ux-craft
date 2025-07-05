@@ -12,6 +12,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '../components/ui/
 import { AppSidebar } from '../components/AppSidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
+import { BackgroundGradient } from '../components/ui/background-gradient';
 import { cn } from '../lib/utils';
 
 const DEMO_MODE = false;
@@ -227,7 +228,12 @@ const FeatureReview: React.FC = () => {
 
               <div className="space-y-8">
                 {/* Analysis Overview Accordion */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
+                <BackgroundGradient className="rounded-[22px] p-6 bg-white dark:bg-zinc-900">
+                  <img
+                    src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=120&fit=crop&crop=center"
+                    alt="Analysis Overview"
+                    className="object-cover w-full h-20 rounded-lg mb-4"
+                  />
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="global-design">
                       <AccordionTrigger className="text-xl font-semibold">
@@ -270,10 +276,15 @@ const FeatureReview: React.FC = () => {
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
-                </div>
+                </BackgroundGradient>
 
                 {/* UI Components Section */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
+                <BackgroundGradient className="rounded-[22px] p-6 bg-white dark:bg-zinc-900">
+                <img
+                  src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=120&fit=crop&crop=center"
+                  alt="UI Components"
+                  className="object-cover w-full h-20 rounded-lg mb-4"
+                />
                 {tab === 'ui' && (
                   <div>
                     <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
@@ -357,10 +368,15 @@ const FeatureReview: React.FC = () => {
                       </Tabs>
                     </div>
                  )}
-                </div>
+                </BackgroundGradient>
 
                 {/* AI Recommendations Section */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
+                <BackgroundGradient className="rounded-[22px] p-6 bg-white dark:bg-zinc-900">
+                <img
+                  src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=120&fit=crop&crop=center"
+                  alt="AI Recommendations"
+                  className="object-cover w-full h-20 rounded-lg mb-4"
+                />
                 {tab === 'ai' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'confirmed').length === 0 && (
@@ -396,10 +412,15 @@ const FeatureReview: React.FC = () => {
                     ))}
                    </div>
                  )}
-                </div>
+                </BackgroundGradient>
 
                 {/* Screenshot Section */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
+                <BackgroundGradient className="rounded-[22px] p-6 bg-white dark:bg-zinc-900">
+                <img
+                  src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=400&h=120&fit=crop&crop=center"
+                  alt="Screenshots"
+                  className="object-cover w-full h-20 rounded-lg mb-4"
+                />
                 {tab === 'screenshot' && (
                   <div>
                     {screenshotUrl && (
@@ -410,7 +431,7 @@ const FeatureReview: React.FC = () => {
                     )}
                    </div>
                  )}
-                </div>
+                </BackgroundGradient>
               </div>
 
               {showRecLog && (
