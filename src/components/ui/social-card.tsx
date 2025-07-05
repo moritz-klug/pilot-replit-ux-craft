@@ -145,20 +145,20 @@ export function SocialCard({
           </div>
 
           {/* Content section */}
-          <p className="text-zinc-600 dark:text-zinc-300 mb-4">
+          <p className="text-zinc-600 dark:text-zinc-300 mb-6">
             {content?.text}
           </p>
 
           {/* Link preview */}
           {content?.link && (
-            <div className="mb-4 rounded-2xl overflow-hidden">
+            <div className="mb-6 rounded-2xl overflow-hidden">
               <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-white dark:bg-zinc-700 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-white dark:bg-zinc-700 rounded-xl flex-shrink-0">
                     {content.link.icon}
                   </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
                       {content.link.title}
                     </h4>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -170,31 +170,9 @@ export function SocialCard({
             </div>
           )}
 
-          {/* Engagement section */}
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-6">
-              {/* Empty space for layout consistency */}
-            </div>
-            <button
-              type="button"
-              onClick={handleBookmark}
-              className={cn(
-                "p-2 rounded-full transition-all",
-                isBookmarked 
-                  ? "text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10" 
-                  : "text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              )}
-            >
-              <Bookmark className={cn(
-                "w-5 h-5 transition-transform",
-                isBookmarked && "fill-current scale-110"
-              )} />
-            </button>
-          </div>
-
           {/* Custom children content */}
           {children && (
-            <div className="mt-4">
+            <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
               {children}
             </div>
           )}
