@@ -46,7 +46,27 @@ const Navbar1 = () => {
         <Menubar className="hidden md:flex bg-transparent border-none p-0 space-x-4">
           <MenubarMenu>
             <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
-              Pages
+              Company
+            </MenubarTrigger>
+            <MenubarContent className="z-50 bg-white border border-gray-200 shadow-lg">
+              <MenubarItem asChild>
+                <Link to="/about">About Us</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link to="/features">Features</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link to="/pricing">Pricing</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link to="/contact">Contact</Link>
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+
+          <MenubarMenu>
+            <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
+              Tools
             </MenubarTrigger>
             <MenubarContent className="z-50 bg-white border border-gray-200 shadow-lg">
               <MenubarItem asChild>
@@ -61,17 +81,6 @@ const Navbar1 = () => {
               <MenubarItem asChild>
                 <Link to="/results">Results</Link>
               </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
-          
-          <MenubarMenu>
-            <MenubarTrigger className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium bg-transparent px-0">
-              Tools
-            </MenubarTrigger>
-            <MenubarContent className="z-50 bg-white border border-gray-200 shadow-lg">
-              <MenubarItem>Analytics</MenubarItem>
-              <MenubarItem>Performance</MenubarItem>
-              <MenubarItem>Accessibility</MenubarItem>
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
@@ -143,6 +152,10 @@ const Navbar1 = () => {
             </motion.button>
             <div className="flex flex-col space-y-6">
               {[
+                { name: "About Us", path: "/about" },
+                { name: "Features", path: "/features" },
+                { name: "Pricing", path: "/pricing" },
+                { name: "Contact", path: "/contact" },
                 { name: "Feature Review", path: "/feature-review" },
                 { name: "Recommendations", path: "/recommendations" },
                 { name: "Screenshot Tool", path: "/screenshot-tool" },
