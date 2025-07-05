@@ -21,7 +21,7 @@ interface AnalysisStep {
 }
 
 export const Hero = () => {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState("https://www.apple.com");
   const [isLoading, setIsLoading] = useState(false);
   const [analysisLog, setAnalysisLog] = useState<string[]>([]);
   const [finalAnalysis, setFinalAnalysis] = useState<any>(null);
