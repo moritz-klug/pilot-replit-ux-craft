@@ -31,7 +31,7 @@ const Navbar1 = () => {
           >
             <Link to="/" className="flex items-center space-x-2">
               <img 
-                src="/lovable-uploads/de1b37d7-39b9-4668-81d7-1b1d316fd42d.png" 
+                src="/lovable-uploads/cd20cbee-1b4b-4c73-b5b4-695229deeeb6.png" 
                 alt="Auto UI" 
                 className="w-8 h-8"
               />
