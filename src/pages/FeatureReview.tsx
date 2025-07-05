@@ -377,16 +377,16 @@ const FeatureReview: React.FC = () => {
                 </div>
 
                 {/* Design Recommendations Section */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
                 {tab === 'recommendations' && (
-                  <div className="text-center py-8">
-                    <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Design Recommendations</h3>
-                    <p className="text-muted-foreground mb-4">Get AI-powered recommendations for confirmed components</p>
-                    <p className="text-sm text-muted-foreground">Confirm components in the UI tab and get recommendations in the AI Analysis tab.</p>
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="text-center py-8">
+                      <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Design Recommendations</h3>
+                      <p className="text-muted-foreground mb-4">Get AI-powered recommendations for confirmed components</p>
+                      <p className="text-sm text-muted-foreground">Confirm components in the UI tab and get recommendations in the AI Analysis tab.</p>
+                    </div>
                   </div>
-                 )}
-                </div>
+                )}
 
                 {/* AI Recommendations Section */}
                 <div className="bg-white rounded-lg shadow-sm p-6">

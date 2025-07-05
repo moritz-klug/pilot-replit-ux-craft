@@ -1,4 +1,5 @@
 import { LayoutDashboard, Sparkles, Camera, Target } from "lucide-react"
+import { useNavigate, useLocation } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -20,27 +21,45 @@ const items = [
   { 
     title: "UI Components", 
     value: "ui", 
-    icon: LayoutDashboard 
+    icon: LayoutDashboard,
+    route: "/feature-review"
   },
   { 
     title: "AI Analysis", 
     value: "ai", 
-    icon: Sparkles 
+    icon: Sparkles,
+    route: "/feature-review"
   },
   { 
     title: "Design Recommendations", 
     value: "recommendations", 
-    icon: Target 
+    icon: Target,
+    route: "/recommendations"
   },
   { 
     title: "Screenshot", 
     value: "screenshot", 
-    icon: Camera 
+    icon: Camera,
+    route: "/feature-review"
   },
 ]
 
 export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
   const { state } = useSidebar()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const handleItemClick = (item: typeof items[0]) => {
+    if (item.value === "recommendations") {
+      // Navigate to recommendations page
+      navigate('/recommendations', { 
+        state: location.state 
+      });
+    } else {
+      // Change tab within current page
+      onTabChange(item.value);
+    }
+  }
 
   return (
     <Sidebar>
@@ -52,7 +71,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
               {items.map((item) => (
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton 
-                    onClick={() => onTabChange(item.value)}
+                    onClick={() => handleItemClick(item)}
                     isActive={activeTab === item.value}
                     className="w-full justify-start"
                   >
