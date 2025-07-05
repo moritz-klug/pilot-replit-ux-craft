@@ -10,6 +10,7 @@ import { Dialog, DialogContent } from '../components/ui/dialog';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '../components/ui/sidebar';
 import { AppSidebar } from '../components/AppSidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -223,6 +224,52 @@ const FeatureReview: React.FC = () => {
               </div>
 
               <div className="rounded-2xl bg-muted/70 p-6 lg:p-8">
+                {/* Analysis Overview Accordion */}
+                <div className="mb-8">
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="global-design">
+                      <AccordionTrigger className="text-xl font-semibold">
+                        Global Design System
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div><b>Typography:</b> {analysis.global?.typography}</div>
+                          <div><b>Color Palette:</b> {analysis.global?.color_palette}</div>
+                          <div><b>Button Styles:</b> {analysis.global?.button_styles}</div>
+                          <div><b>Spacing & Layout:</b> {analysis.global?.spacing_layout}</div>
+                          <div><b>Iconography:</b> {analysis.global?.iconography}</div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="ux-architecture">
+                      <AccordionTrigger className="text-xl font-semibold">
+                        UX Architecture
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div><b>Page Flow:</b> {analysis.ux?.page_flow}</div>
+                          <div><b>Emotional Strategy:</b> {analysis.ux?.emotional_strategy}</div>
+                          <div><b>Conversion Points:</b> {analysis.ux?.conversion_points}</div>
+                          <div><b>Design Trends:</b> {analysis.ux?.design_trends}</div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="business-audience">
+                      <AccordionTrigger className="text-xl font-semibold">
+                        Business & Audience
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div><b>Summary:</b> {analysis.business?.summary}</div>
+                          <div><b>Business Type:</b> {analysis.business?.business_type}</div>
+                          <div><b>Target Audience:</b> {analysis.business?.target_audience}</div>
+                          <div><b>Keywords:</b> {Array.isArray(analysis.business?.keywords) ? analysis.business.keywords.join(', ') : analysis.business?.keywords}</div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
+
                 {tab === 'ui' && (
                   <div>
                     <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
@@ -238,32 +285,7 @@ const FeatureReview: React.FC = () => {
                         ))}
                       </TabsList>
                       <TabsContent value={uiSubTab} className="mt-4">
-                    <div className="flex flex-col md:flex-row gap-8">
-                      {/* Summary Panel */}
-                      <div className="md:w-1/3 w-full">
-                        <Card className="mb-4">
-                          <CardContent className="p-4">
-                            <h2 className="text-xl font-semibold mb-2">Global Design System</h2>
-                            <div className="mb-2"><b>Typography:</b> {analysis.global?.typography}</div>
-                            <div className="mb-2"><b>Color Palette:</b> {analysis.global?.color_palette}</div>
-                            <div className="mb-2"><b>Button Styles:</b> {analysis.global?.button_styles}</div>
-                            <div className="mb-2"><b>Spacing & Layout:</b> {analysis.global?.spacing_layout}</div>
-                            <div className="mb-2"><b>Iconography:</b> {analysis.global?.iconography}</div>
-                            <h2 className="text-xl font-semibold mt-6 mb-2">UX Architecture</h2>
-                            <div className="mb-2"><b>Page Flow:</b> {analysis.ux?.page_flow}</div>
-                            <div className="mb-2"><b>Emotional Strategy:</b> {analysis.ux?.emotional_strategy}</div>
-                            <div className="mb-2"><b>Conversion Points:</b> {analysis.ux?.conversion_points}</div>
-                            <div className="mb-2"><b>Design Trends:</b> {analysis.ux?.design_trends}</div>
-                            <h2 className="text-xl font-semibold mt-6 mb-2">Business & Audience</h2>
-                            <div className="mb-2"><b>Summary:</b> {analysis.business?.summary}</div>
-                            <div className="mb-2"><b>Business Type:</b> {analysis.business?.business_type}</div>
-                            <div className="mb-2"><b>Target Audience:</b> {analysis.business?.target_audience}</div>
-                            <div className="mb-2"><b>Keywords:</b> {Array.isArray(analysis.business?.keywords) ? analysis.business.keywords.join(', ') : analysis.business?.keywords}</div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                      {/* Section Cards */}
-                      <div className="md:w-2/3 w-full grid grid-cols-1 gap-8">
+                      <div className="grid grid-cols-1 gap-8">
                         {analysis.sections?.filter((section: any, idx: number) => {
                           const status = componentStatuses[section.name || idx] || 'pending';
                           if (uiSubTab === 'all') return true;
@@ -298,13 +320,12 @@ const FeatureReview: React.FC = () => {
                               <div className="mb-1"><b>Mobile:</b> {section.mobile}</div>
                             </CardContent>
                           </Card>
-                         ))}
-                       </div>
-                     </div>
-                       </TabsContent>
-                     </Tabs>
-                   </div>
-                )}
+                          ))}
+                        </div>
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                 )}
 
                 {tab === 'ai' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
