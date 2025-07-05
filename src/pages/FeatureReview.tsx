@@ -6,11 +6,13 @@ import { Loader2, Sparkles, LayoutDashboard, Camera } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
 import { UITestModeContext } from '../App';
+import { motion } from 'framer-motion';
 import { Dialog, DialogContent } from '../components/ui/dialog';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '../components/ui/sidebar';
 import { AppSidebar } from '../components/AppSidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
+import { cn } from '../lib/utils';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -275,17 +277,44 @@ const FeatureReview: React.FC = () => {
                 {tab === 'ui' && (
                   <div>
                     <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
-                      <TabsList className="container flex flex-col items-center justify-center gap-4 sm:flex-row md:gap-10">
-                        {SUBTABS.map((sub) => (
-                          <TabsTrigger
-                            key={sub}
-                            value={sub}
-                            className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground data-[state=active]:bg-muted data-[state=active]:text-primary"
-                          >
-                            {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
+                      <div className="flex justify-center mb-6">
+                        <div className="flex items-center gap-3 bg-background/5 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+                          {SUBTABS.map((sub) => {
+                            const isActive = uiSubTab === sub;
+                            return (
+                              <button
+                                key={sub}
+                                onClick={() => setUiSubTab(sub as SubTab)}
+                                className={cn(
+                                  "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
+                                  "text-foreground/80 hover:text-primary",
+                                  isActive && "bg-muted text-primary",
+                                )}
+                              >
+                                {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                                {isActive && (
+                                  <motion.div
+                                    layoutId="lamp"
+                                    className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
+                                    initial={false}
+                                    transition={{
+                                      type: "spring",
+                                      stiffness: 300,
+                                      damping: 30,
+                                    }}
+                                  >
+                                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
+                                      <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
+                                      <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
+                                      <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <TabsContent value={uiSubTab} className="mt-4">
                       <div className="grid grid-cols-1 gap-8">
                         {analysis.sections?.filter((section: any, idx: number) => {
