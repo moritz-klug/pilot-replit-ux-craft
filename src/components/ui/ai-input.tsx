@@ -94,24 +94,6 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
     maxHeight: MAX_HEIGHT,
   })
   const { uiTest, setUITest } = useContext(UITestModeContext)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handelClose = (e: any) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
-    setImagePreview(null)
-  }
-
-  const handelChange = (e: any) => {
-    const file = e.target.files ? e.target.files[0] : null
-    if (file) {
-      setImagePreview(URL.createObjectURL(file))
-    }
-  }
 
   const handleSubmit = () => {
     if (!disabled && value.trim()) {
@@ -120,13 +102,6 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
     }
   }
 
-  useEffect(() => {
-    return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview)
-      }
-    }
-  }, [imagePreview])
 
   return (
     <div className="w-full py-4">
@@ -164,43 +139,6 @@ export function AiInput({ value, onChange, onSubmit, disabled }: AiInputProps) {
 
           <div className="h-12 bg-card/50 rounded-b-xl">
             <div className="absolute left-3 bottom-3 flex items-center gap-2">
-              <label
-                className={cn(
-                  "cursor-pointer relative rounded-full p-2",
-                  imagePreview
-                    ? "bg-primary/15 border border-primary text-primary"
-                    : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handelChange}
-                  className="hidden"
-                  accept="image/*"
-                />
-                <Paperclip
-                  className={cn(
-                    "w-4 h-4 transition-colors",
-                    imagePreview && "text-primary"
-                  )}
-                />
-                {imagePreview && (
-                  <div className="absolute w-[100px] h-[100px] top-14 -left-4">
-                    <img
-                      className="object-cover rounded-2xl w-full h-full"
-                      src={imagePreview}
-                      alt="Preview"
-                    />
-                    <button
-                      onClick={handelClose}
-                      className="bg-background border border-border absolute -top-1 -left-1 shadow-lg rounded-full rotate-45"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </label>
               <button
                 type="button"
                 onClick={() => {
