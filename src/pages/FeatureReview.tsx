@@ -355,7 +355,7 @@ const FeatureReview: React.FC = () => {
                               <div><b>Layouts:</b> {section.style?.layouts}</div>
                               <div><b>Interactions:</b> {section.style?.interactions}</div>
                               <div><b>Mobile:</b> {section.mobile}</div>
-                              <div className="flex gap-2 items-center mt-3">
+                              <div className="flex gap-2 items-center mt-6">
                                 {STATUS_OPTIONS.map((status) => (
                                   <Button 
                                     key={status}
