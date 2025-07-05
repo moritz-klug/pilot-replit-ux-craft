@@ -228,7 +228,7 @@ const FeatureReview: React.FC = () => {
 
               <div className="space-y-8">
                 {/* Analysis Overview Accordion */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="global-design">
                       <AccordionTrigger className="text-xl font-semibold">
@@ -274,12 +274,12 @@ const FeatureReview: React.FC = () => {
                 </div>
 
                 {/* UI Components Section */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                 {tab === 'ui' && (
                   <div>
                     <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
                       <div className="flex justify-center mb-6">
-                        <div className="flex items-center gap-3 bg-background/5 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+                        <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
                           {SUBTABS.map((sub) => {
                             const isActive = uiSubTab === sub;
                             return (
@@ -377,7 +377,7 @@ const FeatureReview: React.FC = () => {
                 </div>
 
                 {/* AI Recommendations Section */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                 {tab === 'ai' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'confirmed').length === 0 && (
@@ -432,13 +432,13 @@ const FeatureReview: React.FC = () => {
                 </div>
 
                 {/* Screenshot Section */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                 {tab === 'screenshot' && (
                   <div>
                     {screenshotUrl && (
                       <div className="mb-8 text-center">
                         <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
-                        <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px] border" />
+                        <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px]" />
                       </div>
                     )}
                    </div>
