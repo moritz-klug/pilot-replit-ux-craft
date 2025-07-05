@@ -226,7 +226,7 @@ const FeatureReview: React.FC = () => {
                 {tab === 'ui' && (
                   <div>
                     <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
-                      <TabsList className="flex flex-col items-center justify-center gap-4 sm:flex-row md:gap-10 bg-transparent">
+                      <TabsList className="container flex flex-col items-center justify-center gap-4 sm:flex-row md:gap-10">
                         {SUBTABS.map((sub) => (
                           <TabsTrigger
                             key={sub}
