@@ -227,56 +227,55 @@ const FeatureReview: React.FC = () => {
               </div>
 
               <div className="space-y-8">
-                {/* Analysis Overview Accordion */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="global-design">
-                      <AccordionTrigger className="text-xl font-semibold">
-                        Global Design System
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div><b>Typography:</b> {analysis.global?.typography}</div>
-                          <div><b>Color Palette:</b> {analysis.global?.color_palette}</div>
-                          <div><b>Button Styles:</b> {analysis.global?.button_styles}</div>
-                          <div><b>Spacing & Layout:</b> {analysis.global?.spacing_layout}</div>
-                          <div><b>Iconography:</b> {analysis.global?.iconography}</div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="ux-architecture">
-                      <AccordionTrigger className="text-xl font-semibold">
-                        UX Architecture
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div><b>Page Flow:</b> {analysis.ux?.page_flow}</div>
-                          <div><b>Emotional Strategy:</b> {analysis.ux?.emotional_strategy}</div>
-                          <div><b>Conversion Points:</b> {analysis.ux?.conversion_points}</div>
-                          <div><b>Design Trends:</b> {analysis.ux?.design_trends}</div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="business-audience">
-                      <AccordionTrigger className="text-xl font-semibold">
-                        Business & Audience
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div><b>Summary:</b> {analysis.business?.summary}</div>
-                          <div><b>Business Type:</b> {analysis.business?.business_type}</div>
-                          <div><b>Target Audience:</b> {analysis.business?.target_audience}</div>
-                          <div><b>Keywords:</b> {Array.isArray(analysis.business?.keywords) ? analysis.business.keywords.join(', ') : analysis.business?.keywords}</div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </div>
-
                 {/* UI Components Section */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                 {tab === 'ui' && (
                   <div>
+                    {/* Analysis Overview Accordion */}
+                    <div className="mb-8">
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="global-design">
+                          <AccordionTrigger className="text-xl font-semibold">
+                            Global Design System
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div><b>Typography:</b> {analysis.global?.typography}</div>
+                              <div><b>Color Palette:</b> {analysis.global?.color_palette}</div>
+                              <div><b>Button Styles:</b> {analysis.global?.button_styles}</div>
+                              <div><b>Spacing & Layout:</b> {analysis.global?.spacing_layout}</div>
+                              <div><b>Iconography:</b> {analysis.global?.iconography}</div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        <AccordionItem value="ux-architecture">
+                          <AccordionTrigger className="text-xl font-semibold">
+                            UX Architecture
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div><b>Page Flow:</b> {analysis.ux?.page_flow}</div>
+                              <div><b>Emotional Strategy:</b> {analysis.ux?.emotional_strategy}</div>
+                              <div><b>Conversion Points:</b> {analysis.ux?.conversion_points}</div>
+                              <div><b>Design Trends:</b> {analysis.ux?.design_trends}</div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        <AccordionItem value="business-audience">
+                          <AccordionTrigger className="text-xl font-semibold">
+                            Business & Audience
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div><b>Summary:</b> {analysis.business?.summary}</div>
+                              <div><b>Business Type:</b> {analysis.business?.business_type}</div>
+                              <div><b>Target Audience:</b> {analysis.business?.target_audience}</div>
+                              <div><b>Keywords:</b> {Array.isArray(analysis.business?.keywords) ? analysis.business.keywords.join(', ') : analysis.business?.keywords}</div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </div>
                     <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
                       <div className="flex justify-center mb-6">
                         <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
