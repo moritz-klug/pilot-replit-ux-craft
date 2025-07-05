@@ -136,6 +136,8 @@ Please apply these improvements while maintaining the existing functionality and
               <Card>
                 <CardHeader>
                   <CardTitle>Implementation Code</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex items-center gap-4">
                     <Select value={selectedFramework} onValueChange={setSelectedFramework}>
                       <SelectTrigger className="w-48">
@@ -148,8 +150,6 @@ Please apply these improvements while maintaining the existing functionality and
                       </SelectContent>
                     </Select>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-2">
                   <CodeBlock>
                     <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
                       <div className="flex items-center gap-2">
