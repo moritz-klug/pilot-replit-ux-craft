@@ -14,83 +14,101 @@ const Results = () => {
   const [promptCopied, setPromptCopied] = useState(false);
   const { toast } = useToast();
 
-  const codeSnippets = {
-    react: `import React from 'react';
+  const radioGroupCode = `"use client";
 
-const ImprovedComponent = () => {
+import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
+
+const RadioGroup = React.forwardRef<
+  React.ElementRef<typeof RadioGroupPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>
+>(({ className, ...props }, ref) => {
+  return <RadioGroupPrimitive.Root className={cn("grid gap-3", className)} {...props} ref={ref} />;
+});
+RadioGroup.displayName = RadioGroupPrimitive.Root.displayName;
+
+const RadioGroupItem = React.forwardRef<
+  React.ElementRef<typeof RadioGroupPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
+>(({ className, ...props }, ref) => {
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">
-        Improved UX Component
-      </h1>
-      <p className="text-gray-600">
-        This component implements science-based UX improvements
-        for better user experience and accessibility.
-      </p>
+    <RadioGroupPrimitive.Item
+      ref={ref}
+      className={cn(
+        "aspect-square size-4 rounded-full border border-input shadow-sm shadow-black/5 outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+        className,
+      )}
+      {...props}
+    >
+      <RadioGroupPrimitive.Indicator className="flex items-center justify-center text-current">
+        <svg
+          width="6"
+          height="6"
+          viewBox="0 0 6 6"
+          fill="currentcolor"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle cx="3" cy="3" r="3" />
+        </svg>
+      </RadioGroupPrimitive.Indicator>
+    </RadioGroupPrimitive.Item>
+  );
+});
+RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName;
+
+export { RadioGroup, RadioGroupItem };`;
+
+  const demoCode = `"use client";
+
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useId, useState } from "react";
+
+function Component() {
+  const id = useId();
+  const [selectedValue, setSelectedValue] = useState("on");
+
+  return (
+    <div className="inline-flex h-9 rounded-lg bg-input/50 p-0.5 max-w-[400px]">
+      <RadioGroup
+        value={selectedValue}
+        onValueChange={setSelectedValue}
+        className="group relative inline-grid grid-cols-[1fr_1fr] items-center gap-0 text-sm font-medium after:absolute after:inset-y-0 after:w-1/2 after:rounded-md after:bg-background after:shadow-sm after:shadow-black/5 after:outline-offset-2 after:transition-transform after:duration-300 after:[transition-timing-function:cubic-bezier(0.16,1,0.3,1)] has-[:focus-visible]:after:outline has-[:focus-visible]:after:outline-2 has-[:focus-visible]:after:outline-ring/70 data-[state=off]:after:translate-x-0 data-[state=on]:after:translate-x-full"
+        data-state={selectedValue}
+      >
+        <label className="relative z-10 inline-flex h-full min-w-8 cursor-pointer select-none items-center justify-center whitespace-nowrap px-4 transition-colors group-data-[state=on]:text-muted-foreground/70">
+          Bill Monthly
+          <RadioGroupItem id={\`\${id}-1\`} value="off" className="sr-only" />
+        </label>
+        <label className="relative z-10 inline-flex h-full min-w-8 cursor-pointer select-none items-center justify-center whitespace-nowrap px-4 transition-colors group-data-[state=off]:text-muted-foreground/70">
+          <span>
+            Bill Yearly{" "}
+            <span className="transition-colors group-data-[state=off]:text-muted-foreground/70 group-data-[state=on]:text-emerald-500">
+              -20%
+            </span>
+          </span>
+          <RadioGroupItem id={\`\${id}-2\`} value="on" className="sr-only" />
+        </label>
+      </RadioGroup>
     </div>
   );
-};
-
-export default ImprovedComponent;`,
-    vue: `<template>
-  <div class="container mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-4">
-      Improved UX Component
-    </h1>
-    <p class="text-gray-600">
-      This component implements science-based UX improvements
-      for better user experience and accessibility.
-    </p>
-  </div>
-</template>
-
-<script>
-export default {
-  name: 'ImprovedComponent'
 }
-</script>`,
-    angular: `import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-improved-component',
-  template: \`
-    <div class="container mx-auto p-6">
-      <h1 class="text-2xl font-bold mb-4">
-        Improved UX Component
-      </h1>
-      <p class="text-gray-600">
-        This component implements science-based UX improvements
-        for better user experience and accessibility.
-      </p>
-    </div>
-  \`
-})
-export class ImprovedComponent { }`
-  };
+export { Component };`;
 
-  const promptText = `Please implement the following science-based UX improvements for my application:
+  const installText = `Install NPM dependencies:
+\`\`\`bash
+@radix-ui/react-radio-group
+\`\`\``;
 
-1. **Visual Hierarchy**: Improve the visual hierarchy by adjusting font sizes, spacing, and color contrast to guide user attention effectively.
-
-2. **Accessibility Enhancements**: Ensure all interactive elements are keyboard accessible and have proper ARIA labels for screen readers.
-
-3. **Loading States**: Add skeleton loaders and progress indicators to provide feedback during data loading.
-
-4. **Error Handling**: Implement user-friendly error messages with clear action steps for recovery.
-
-5. **Responsive Design**: Optimize the layout for mobile devices with appropriate touch targets and spacing.
-
-6. **Micro-interactions**: Add subtle animations and hover effects to provide visual feedback for user actions.
-
-Please apply these improvements while maintaining the existing functionality and ensuring the code follows best practices for the chosen framework.`;
-
-  const handleCopyCode = async () => {
+  const handleCopyRadioGroup = async () => {
     try {
-      await navigator.clipboard.writeText(codeSnippets[selectedFramework as keyof typeof codeSnippets]);
+      await navigator.clipboard.writeText(radioGroupCode);
       setCodeCopied(true);
       toast({
         title: "Code copied!",
-        description: "The code snippet has been copied to your clipboard.",
+        description: "The radio-group component has been copied to your clipboard.",
       });
       setTimeout(() => setCodeCopied(false), 2000);
     } catch (err) {
@@ -102,19 +120,19 @@ Please apply these improvements while maintaining the existing functionality and
     }
   };
 
-  const handleCopyPrompt = async () => {
+  const handleCopyDemo = async () => {
     try {
-      await navigator.clipboard.writeText(promptText);
+      await navigator.clipboard.writeText(demoCode);
       setPromptCopied(true);
       toast({
-        title: "Prompt copied!",
-        description: "The prompt has been copied to your clipboard.",
+        title: "Demo copied!",
+        description: "The demo component has been copied to your clipboard.",
       });
       setTimeout(() => setPromptCopied(false), 2000);
     } catch (err) {
       toast({
         title: "Failed to copy",
-        description: "Please try copying the prompt manually.",
+        description: "Please try copying the demo manually.",
         variant: "destructive",
       });
     }
@@ -128,55 +146,40 @@ Please apply these improvements while maintaining the existing functionality and
           
           <Tabs defaultValue="code" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="code">Code</TabsTrigger>
-              <TabsTrigger value="prompt">Prompt</TabsTrigger>
+              <TabsTrigger value="code">radio-group.tsx</TabsTrigger>
+              <TabsTrigger value="prompt">demo.tsx</TabsTrigger>
             </TabsList>
             
             <TabsContent value="code" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Implementation Code</CardTitle>
+                  <CardTitle className="flex items-center justify-between">
+                    Copy-paste this component to /components/ui folder:
+                    <Button onClick={handleCopyRadioGroup} variant="outline" size="sm">
+                      {codeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {codeCopied ? 'Copied!' : 'Copy Code'}
+                    </Button>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Select value={selectedFramework} onValueChange={setSelectedFramework}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Select framework" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="react">React</SelectItem>
-                        <SelectItem value="vue">Vue</SelectItem>
-                        <SelectItem value="angular">Angular</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <CardContent>
                   <CodeBlock>
                     <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
                       <div className="flex items-center gap-2">
                         <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                          {selectedFramework.charAt(0).toUpperCase() + selectedFramework.slice(1)}
+                          TypeScript
                         </div>
-                        <span className="text-muted-foreground text-sm">component.{selectedFramework === 'react' ? 'tsx' : selectedFramework === 'vue' ? 'vue' : 'ts'}</span>
+                        <span className="text-muted-foreground text-sm">radio-group.tsx</span>
                       </div>
-                      <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
-                        {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                      </Button>
                     </CodeBlockGroup>
                     <CodeBlockCode 
-                      code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
-                      language={selectedFramework === 'angular' ? 'typescript' : selectedFramework === 'react' ? 'tsx' : selectedFramework}
+                      code={radioGroupCode} 
+                      language="tsx"
                       theme="github-light"
                     />
                   </CodeBlock>
                   
                   <div className="mt-6 p-4 bg-blue-50 rounded-md">
-                    <h3 className="font-semibold mb-2">Integration Instructions:</h3>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                      <li>Copy the code snippet above and integrate it into your project</li>
-                      <li>Ensure you have the necessary dependencies installed (Tailwind CSS for styling)</li>
-                      <li>Customize the component according to your specific requirements</li>
-                      <li>Test the implementation across different devices and screen sizes</li>
-                    </ul>
+                    <h3 className="font-semibold mb-2">{installText}</h3>
                   </div>
                 </CardContent>
               </Card>
@@ -186,37 +189,29 @@ Please apply these improvements while maintaining the existing functionality and
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
-                    AI Development Prompt
-                    <Button onClick={handleCopyPrompt} variant="outline" size="sm">
+                    Demo Component
+                    <Button onClick={handleCopyDemo} variant="outline" size="sm">
                       {promptCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {promptCopied ? 'Copied!' : 'Copy Prompt'}
+                      {promptCopied ? 'Copied!' : 'Copy Demo'}
                     </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-gray-50 p-4 rounded-md mb-4">
-                    <pre className="whitespace-pre-wrap text-sm">{promptText}</pre>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="p-4 bg-green-50 rounded-md">
-                      <h3 className="font-semibold mb-2">How to use this prompt:</h3>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                        <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>
-                        <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement</li>
-                        <li><strong>Windsurf:</strong> Apply this prompt to guide your UX optimization workflow</li>
-                      </ul>
-                    </div>
-                    
-                    <div className="p-4 bg-yellow-50 rounded-md">
-                      <h3 className="font-semibold mb-2">Expected Results:</h3>
-                      <p className="text-sm text-gray-700">
-                        This prompt will help AI tools understand the specific UX improvements needed 
-                        and generate code that follows evidence-based design principles, improving 
-                        user experience, accessibility, and overall usability of your application.
-                      </p>
-                    </div>
-                  </div>
+                  <CodeBlock>
+                    <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
+                          TypeScript
+                        </div>
+                        <span className="text-muted-foreground text-sm">demo.tsx</span>
+                      </div>
+                    </CodeBlockGroup>
+                    <CodeBlockCode 
+                      code={demoCode} 
+                      language="tsx"
+                      theme="github-light"
+                    />
+                  </CodeBlock>
                 </CardContent>
               </Card>
             </TabsContent>
