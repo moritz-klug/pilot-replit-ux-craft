@@ -223,9 +223,9 @@ const FeatureReview: React.FC = () => {
                 <p className="text-muted-foreground">Get actionable insights and recommendations to improve your website's user experience and conversion rates.</p>
               </div>
 
-              <div className="rounded-2xl bg-muted/70 p-6 lg:p-8">
+              <div className="space-y-8">
                 {/* Analysis Overview Accordion */}
-                <div className="mb-8">
+                <div className="bg-white rounded-lg border shadow-sm p-6">
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="global-design">
                       <AccordionTrigger className="text-xl font-semibold">
@@ -270,6 +270,8 @@ const FeatureReview: React.FC = () => {
                   </Accordion>
                 </div>
 
+                {/* UI Components Section */}
+                <div className="bg-white rounded-lg border shadow-sm p-6">
                 {tab === 'ui' && (
                   <div>
                     <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
@@ -326,7 +328,10 @@ const FeatureReview: React.FC = () => {
                       </Tabs>
                     </div>
                  )}
+                </div>
 
+                {/* AI Recommendations Section */}
+                <div className="bg-white rounded-lg border shadow-sm p-6">
                 {tab === 'ai' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'confirmed').length === 0 && (
@@ -360,9 +365,12 @@ const FeatureReview: React.FC = () => {
                         </CardContent>
                       </Card>
                     ))}
-                  </div>
-                )}
+                   </div>
+                 )}
+                </div>
 
+                {/* Screenshot Section */}
+                <div className="bg-white rounded-lg border shadow-sm p-6">
                 {tab === 'screenshot' && (
                   <div>
                     {screenshotUrl && (
@@ -371,8 +379,9 @@ const FeatureReview: React.FC = () => {
                         <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px] border" />
                       </div>
                     )}
-                  </div>
-                )}
+                   </div>
+                 )}
+                </div>
               </div>
 
               {showRecLog && (
