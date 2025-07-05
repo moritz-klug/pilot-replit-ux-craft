@@ -128,8 +128,8 @@ Please apply these improvements while maintaining the existing functionality and
           
           <Tabs defaultValue="code" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="code">Code Tab</TabsTrigger>
-              <TabsTrigger value="prompt">Prompt Tab</TabsTrigger>
+              <TabsTrigger value="code">Code</TabsTrigger>
+              <TabsTrigger value="prompt">Prompt</TabsTrigger>
             </TabsList>
             
             <TabsContent value="code" className="space-y-4">
