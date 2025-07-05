@@ -457,13 +457,9 @@ Execute these improvements while preserving all current features and maintaining
             <TabsContent value="prompt" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    AI Development Prompt
-                    <Button onClick={handleCopyPrompt} variant="outline" size="sm">
-                      {promptCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {promptCopied ? 'Copied!' : 'Copy Prompt'}
-                    </Button>
-                  </CardTitle>
+                   <CardTitle>
+                     AI Development Prompt
+                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-4 mb-4">
