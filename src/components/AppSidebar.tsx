@@ -1,4 +1,4 @@
-import { LayoutDashboard, Sparkles, Camera } from "lucide-react"
+import { LayoutDashboard, Sparkles, Camera, Target } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,11 @@ const items = [
     title: "AI Analysis", 
     value: "ai", 
     icon: Sparkles 
+  },
+  { 
+    title: "Design Recommendations", 
+    value: "recommendations", 
+    icon: Target 
   },
   { 
     title: "Screenshot", 

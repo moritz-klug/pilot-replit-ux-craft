@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Loader2, Sparkles, LayoutDashboard, Camera } from 'lucide-react';
+import { Loader2, Sparkles, LayoutDashboard, Camera, Target } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
 import { UITestModeContext } from '../App';
@@ -373,6 +373,18 @@ const FeatureReview: React.FC = () => {
                         </TabsContent>
                       </Tabs>
                     </div>
+                 )}
+                </div>
+
+                {/* Design Recommendations Section */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                {tab === 'recommendations' && (
+                  <div className="text-center py-8">
+                    <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Design Recommendations</h3>
+                    <p className="text-muted-foreground mb-4">Get AI-powered recommendations for confirmed components</p>
+                    <p className="text-sm text-muted-foreground">Confirm components in the UI tab and get recommendations in the AI Analysis tab.</p>
+                  </div>
                  )}
                 </div>
 
