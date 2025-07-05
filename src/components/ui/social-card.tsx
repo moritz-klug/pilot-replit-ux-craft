@@ -74,12 +74,11 @@ export function SocialCard({
       className={cn(
         "w-full max-w-2xl mx-auto",
         "bg-white dark:bg-zinc-900",
-        "border border-zinc-200 dark:border-zinc-800",
         "rounded-3xl shadow-xl",
         className
       )}
     >
-      <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+      <div>
         <div className="p-6">
           {/* Author section */}
           <div className="flex items-center justify-between mb-4">
@@ -114,7 +113,7 @@ export function SocialCard({
 
           {/* Link preview */}
           {content?.link && (
-            <div className="mb-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+            <div className="mb-4 rounded-2xl overflow-hidden">
               <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-white dark:bg-zinc-700 rounded-xl">
