@@ -164,7 +164,8 @@ Please apply these improvements while maintaining the existing functionality and
                     </CodeBlockGroup>
                     <CodeBlockCode 
                       code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
-                      language={selectedFramework === 'angular' ? 'typescript' : selectedFramework}
+                      language={selectedFramework === 'angular' ? 'typescript' : selectedFramework === 'react' ? 'tsx' : selectedFramework}
+                      theme="github-light"
                     />
                   </CodeBlock>
                   
