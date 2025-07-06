@@ -74,17 +74,10 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ isOpen, onClose, featur
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>{featureName} Assistant</DialogTitle>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </DialogHeader>
-        
-        <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
+        <div className="flex-1 flex flex-col space-y-4 overflow-hidden p-6">
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-muted/20 rounded-lg">
+          <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-muted/20 rounded-lg min-h-[300px]">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground py-8">
                 <h3 className="font-medium mb-2">Hi! I'm your {featureName} assistant</h3>

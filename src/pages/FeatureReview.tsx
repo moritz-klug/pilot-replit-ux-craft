@@ -15,8 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 import { SocialCard } from '../components/ui/social-card';
 import { cn } from '../lib/utils';
 import AnimatedLoadingSkeleton from '../components/ui/animated-loading-skeleton';
-import { PromptSuggestion } from '../components/ui/prompt-suggestion';
-import { PromptInput, PromptInputTextarea, PromptInputActions } from '../components/ui/prompt-input';
+import FeatureChatbot from '../components/FeatureChatbot';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -256,10 +255,14 @@ const FeatureReview: React.FC = () => {
           <div className="flex-1 p-6">
             <div className="max-w-6xl mx-auto">
               <div className="flex flex-col items-center gap-4 text-center mb-8">
-                <h1 className="max-w-2xl text-3xl font-semibold md:text-4xl">
-                  Advanced UI/UX Analysis Results
-                </h1>
-                <p className="text-muted-foreground">Get actionable insights and recommendations to improve your website's user experience and conversion rates.</p>
+                {tab !== 'chatbot' && (
+                  <>
+                    <h1 className="max-w-2xl text-3xl font-semibold md:text-4xl">
+                      Advanced UI/UX Analysis Results
+                    </h1>
+                    <p className="text-muted-foreground">Get actionable insights and recommendations to improve your website's user experience and conversion rates.</p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-8">
@@ -490,55 +493,11 @@ const FeatureReview: React.FC = () => {
                         </Button>
                       </div>
                       
-                      <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
-                        {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-muted/20 rounded-lg">
-                          <div className="text-center text-muted-foreground py-8">
-                            <h3 className="font-medium mb-2">Hi! I'm your {currentChatFeature} assistant</h3>
-                            <p className="text-sm">Ask me anything about improving this component or click a suggestion below.</p>
-                          </div>
-                        </div>
-
-                        {/* Functional Chat Interface */}
-                        <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
-                          {/* Messages Area */}
-                          <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-muted/20 rounded-lg">
-                            <div className="text-center text-muted-foreground py-8">
-                              <h3 className="font-medium mb-2">Hi! I'm your {currentChatFeature} assistant</h3>
-                              <p className="text-sm">Ask me anything about improving this component or click a suggestion below.</p>
-                            </div>
-                          </div>
-
-                          {/* Quick Suggestions */}
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Quick suggestions:</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
-                                How can I improve the {currentChatFeature}?
-                              </PromptSuggestion>
-                              <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
-                                What are best practices for {currentChatFeature} design?
-                              </PromptSuggestion>
-                              <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
-                                Show me examples of great {currentChatFeature} components
-                              </PromptSuggestion>
-                              <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
-                                What accessibility features should I add?
-                              </PromptSuggestion>
-                            </div>
-                          </div>
-
-                          {/* Input Area */}
-                          <PromptInput className="border-input bg-background border shadow-xs">
-                            <PromptInputTextarea placeholder={`Ask about ${currentChatFeature} improvements...`} />
-                            <PromptInputActions className="justify-end">
-                              <Button size="sm" className="size-9 cursor-pointer rounded-full" aria-label="Send">
-                                <ArrowUp className="h-4 w-4" />
-                              </Button>
-                            </PromptInputActions>
-                          </PromptInput>
-                        </div>
-                      </div>
+                      <FeatureChatbot
+                        isOpen={true}
+                        onClose={() => setTab('ui')}
+                        featureName={currentChatFeature}
+                      />
                     </div>
                   </div>
                 )}
