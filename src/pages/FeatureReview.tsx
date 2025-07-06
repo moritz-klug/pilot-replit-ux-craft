@@ -484,8 +484,12 @@ const FeatureReview: React.FC = () => {
 
                 {/* Chatbot Tab Content */}
                 {tab === 'chatbot' && currentChatFeature && (
-                  <div className="w-1/2 ml-auto">
-                    <FeatureChatbot featureName={currentChatFeature} />
+                  <div className="flex gap-4">
+                    <div className="w-1/2">
+                      <FeatureChatbot featureName={currentChatFeature} />
+                    </div>
+                    <div className="w-1/2 bg-gray-100 rounded-lg min-h-[600px]">
+                    </div>
                   </div>
                 )}
 
