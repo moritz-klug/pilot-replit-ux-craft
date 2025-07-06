@@ -61,10 +61,20 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
         setIsTyping(false);
         
       } catch (error) {
-        const errorMessage = "Sorry, I'm having trouble connecting. Please try again later.";
+        // Provide helpful fallback response
+        const fallbackResponse = `I understand you're asking about improving the ${featureName} component. Here are some general best practices:
+
+• **Accessibility**: Ensure proper ARIA labels, keyboard navigation, and color contrast
+• **Responsive Design**: Make sure it works well on mobile and desktop devices  
+• **Performance**: Optimize loading times and avoid unnecessary re-renders
+• **User Experience**: Keep interactions intuitive and provide clear feedback
+• **Modern Standards**: Use semantic HTML and follow current design patterns
+
+For specific technical recommendations, please ensure the backend server is running at localhost:8000.`;
+        
         const errorMessageId = (Date.now() + 1).toString();
-        setMessages(prev => [...prev, { text: errorMessage, isUser: false, id: errorMessageId }]);
-        setCurrentBotResponse(errorMessage);
+        setMessages(prev => [...prev, { text: fallbackResponse, isUser: false, id: errorMessageId }]);
+        setCurrentBotResponse(fallbackResponse);
         setIsTyping(false);
       }
     }
