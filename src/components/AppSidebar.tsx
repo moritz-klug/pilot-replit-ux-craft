@@ -1,4 +1,4 @@
-import { LayoutDashboard } from "lucide-react"
+import { LayoutDashboard, MessageSquare } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -15,6 +15,8 @@ import {
 interface AppSidebarProps {
   activeTab: string
   onTabChange: (tab: string) => void
+  activeChatbots?: Record<string, boolean>
+  onChatSelect?: (featureName: string) => void
 }
 
 const items = [
@@ -26,7 +28,7 @@ const items = [
   },
 ]
 
-export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
+export function AppSidebar({ activeTab, onTabChange, activeChatbots = {}, onChatSelect }: AppSidebarProps) {
   const { state } = useSidebar()
   const navigate = useNavigate()
   const location = useLocation()
@@ -65,6 +67,30 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Active Chats */}
+        {Object.keys(activeChatbots).some(key => activeChatbots[key]) && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Active Chats</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {Object.entries(activeChatbots)
+                  .filter(([_, isActive]) => isActive)
+                  .map(([featureName]) => (
+                  <SidebarMenuItem key={featureName}>
+                    <SidebarMenuButton 
+                      onClick={() => onChatSelect?.(featureName)}
+                      className="w-full justify-start"
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      {state !== "collapsed" && <span className="truncate">{featureName}</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   )

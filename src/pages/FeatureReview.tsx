@@ -15,6 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 import { SocialCard } from '../components/ui/social-card';
 import { cn } from '../lib/utils';
 import AnimatedLoadingSkeleton from '../components/ui/animated-loading-skeleton';
+import FeatureChatbot from '../components/FeatureChatbot';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -47,6 +48,8 @@ const FeatureReview: React.FC = () => {
   const [recProgressLog, setRecProgressLog] = useState<string[]>([]);
   const [showRecLog, setShowRecLog] = useState(false);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
+  const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -130,14 +133,22 @@ const FeatureReview: React.FC = () => {
   const handleStatusChange = (section: any, status: Status) => {
     if (status === 'improved') {
       setShowLoadingScreen(true);
-      // Simulate loading time then update status
+      // Simulate loading time then update status and open chatbot
       setTimeout(() => {
         setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
         setShowLoadingScreen(false);
+        // Open chatbot for this feature
+        const featureName = section.name || `Feature ${section.id}`;
+        setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
+        setCurrentChatFeature(featureName);
       }, 3000);
     } else {
       setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
     }
+  };
+
+  const handleCloseChatbot = (featureName: string) => {
+    setActiveChatbots(prev => ({ ...prev, [featureName]: false }));
   };
 
   const handleCloseLoadingScreen = () => {
@@ -224,7 +235,12 @@ const FeatureReview: React.FC = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AppSidebar activeTab={tab} onTabChange={setTab} />
+        <AppSidebar 
+          activeTab={tab} 
+          onTabChange={setTab} 
+          activeChatbots={activeChatbots}
+          onChatSelect={(featureName) => setCurrentChatFeature(featureName)}
+        />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
             <SidebarTrigger className="-ml-1" />
@@ -493,6 +509,15 @@ const FeatureReview: React.FC = () => {
       {/* Loading Screen Overlay */}
       {showLoadingScreen && (
         <AnimatedLoadingSkeleton onClose={handleCloseLoadingScreen} />
+      )}
+
+      {/* Feature Chatbots */}
+      {currentChatFeature && activeChatbots[currentChatFeature] && (
+        <FeatureChatbot
+          isOpen={activeChatbots[currentChatFeature]}
+          onClose={() => handleCloseChatbot(currentChatFeature)}
+          featureName={currentChatFeature}
+        />
       )}
     </SidebarProvider>
   )
