@@ -204,6 +204,14 @@ Show sections with all the details etc.
 class AnalyzeUIRequest(BaseModel):
     url: str
 
+class ChatRequest(BaseModel):
+    message: str
+    feature_name: str
+    context: str = ""
+
+class ChatResponse(BaseModel):
+    response: str
+
 import time
 
 def sse_event(event: str, data: str) -> str:
@@ -339,6 +347,73 @@ async def analyze_ui(request: Request):
             return
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat_with_feature(request: ChatRequest):
+    """
+    Chat endpoint that uses OpenRouter to provide feature-specific advice
+    """
+    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY.startswith('sk-...'):
+        raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
+    
+    # Create a specialized prompt for UI/UX assistance
+    system_prompt = f"""You are an expert UI/UX consultant specializing in the {request.feature_name} component. 
+    
+    Your role is to provide specific, actionable advice for improving this UI component based on:
+    - Modern design principles and best practices
+    - Accessibility guidelines (WCAG)
+    - User experience research
+    - Current design trends
+    - Performance considerations
+    
+    Context about this component: {request.context}
+    
+    Always provide:
+    1. Specific recommendations with reasoning
+    2. Code examples when applicable  
+    3. References to design principles
+    4. Accessibility considerations
+    5. Mobile responsiveness tips
+    
+    Keep responses practical and implementable."""
+
+    try:
+        data = {
+            'model': OPENROUTER_MODEL,
+            'messages': [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user", 
+                    "content": request.message
+                }
+            ],
+            'temperature': 0.7,
+            'max_tokens': 1000
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+            'Content-Type': 'application/json',
+        }
+        
+        print(f'[DEBUG] Sending chat request for {request.feature_name}')
+        resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
+        
+        if resp.status_code != 200:
+            print('[ERROR] OpenRouter chat error:', resp.text)
+            raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
+            
+        result = resp.json()
+        response_text = result['choices'][0]['message']['content']
+        
+        return ChatResponse(response=response_text)
+        
+    except Exception as e:
+        print('[ERROR] Exception during chat:', e)
+        raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
 
 # Serve cropped images statically
 app.mount('/section-crops', StaticFiles(directory=CROPS_DIR), name='section-crops')

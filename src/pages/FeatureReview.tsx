@@ -499,34 +499,45 @@ const FeatureReview: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Quick Suggestions */}
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium">Quick suggestions:</p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
-                              How can I improve the {currentChatFeature}?
-                            </PromptSuggestion>
-                            <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
-                              What are best practices for {currentChatFeature} design?
-                            </PromptSuggestion>
-                            <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
-                              Show me examples of great {currentChatFeature} components
-                            </PromptSuggestion>
-                            <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
-                              What accessibility features should I add?
-                            </PromptSuggestion>
+                        {/* Functional Chat Interface */}
+                        <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
+                          {/* Messages Area */}
+                          <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-muted/20 rounded-lg">
+                            <div className="text-center text-muted-foreground py-8">
+                              <h3 className="font-medium mb-2">Hi! I'm your {currentChatFeature} assistant</h3>
+                              <p className="text-sm">Ask me anything about improving this component or click a suggestion below.</p>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Input Area */}
-                        <PromptInput className="border-input bg-background border shadow-xs">
-                          <PromptInputTextarea placeholder={`Ask about ${currentChatFeature} improvements...`} />
-                          <PromptInputActions className="justify-end">
-                            <Button size="sm" className="size-9 cursor-pointer rounded-full" aria-label="Send">
-                              <ArrowUp className="h-4 w-4" />
-                            </Button>
-                          </PromptInputActions>
-                        </PromptInput>
+                          {/* Quick Suggestions */}
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Quick suggestions:</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
+                                How can I improve the {currentChatFeature}?
+                              </PromptSuggestion>
+                              <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
+                                What are best practices for {currentChatFeature} design?
+                              </PromptSuggestion>
+                              <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
+                                Show me examples of great {currentChatFeature} components
+                              </PromptSuggestion>
+                              <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
+                                What accessibility features should I add?
+                              </PromptSuggestion>
+                            </div>
+                          </div>
+
+                          {/* Input Area */}
+                          <PromptInput className="border-input bg-background border shadow-xs">
+                            <PromptInputTextarea placeholder={`Ask about ${currentChatFeature} improvements...`} />
+                            <PromptInputActions className="justify-end">
+                              <Button size="sm" className="size-9 cursor-pointer rounded-full" aria-label="Send">
+                                <ArrowUp className="h-4 w-4" />
+                              </Button>
+                            </PromptInputActions>
+                          </PromptInput>
+                        </div>
                       </div>
                     </div>
                   </div>

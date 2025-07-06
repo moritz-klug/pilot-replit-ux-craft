@@ -33,23 +33,43 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ isOpen, onClose, featur
     " "
   );
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (inputValue.trim()) {
-      setMessages(prev => [...prev, { text: inputValue, isUser: true }]);
+      const userMessage = inputValue;
+      setMessages(prev => [...prev, { text: userMessage, isUser: true }]);
       setInputValue("");
       setIsTyping(true);
       
-      // Simulate bot response
-      setTimeout(() => {
-        setMessages(prev => [...prev, { text: `Here are some recommendations for your ${featureName}: Consider improving the visual hierarchy, enhancing accessibility features, and optimizing for mobile responsiveness.`, isUser: false }]);
+      try {
+        const response = await fetch('http://localhost:8000/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: userMessage,
+            feature_name: featureName,
+            context: `UI component analysis and improvement suggestions`
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get response');
+        }
+
+        const data = await response.json();
+        setMessages(prev => [...prev, { text: data.response, isUser: false }]);
+      } catch (error) {
+        setMessages(prev => [...prev, { text: "Sorry, I'm having trouble connecting. Please try again later.", isUser: false }]);
+      } finally {
         setIsTyping(false);
-      }, 3000);
+      }
     }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
     setInputValue(suggestion);
-    handleSend();
+    setTimeout(() => handleSend(), 100); // Small delay to ensure state is updated
   };
 
   return (
