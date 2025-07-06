@@ -11,8 +11,9 @@ interface FeatureChatbotProps {
 
 const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
   const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean }>>([]);
+  const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean; id: string }>>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [currentBotResponse, setCurrentBotResponse] = useState("");
 
   const suggestions = [
     `How can I improve the ${featureName}?`,
@@ -21,17 +22,16 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
     `What accessibility features should I add?`
   ];
 
-  const botResponse = useAnimatedText(
-    isTyping ? "I'm analyzing your feature and generating recommendations based on modern UI/UX principles..." : "",
-    " "
-  );
+  const animatedBotResponse = useAnimatedText(currentBotResponse, " ");
 
   const handleSend = async () => {
     if (inputValue.trim()) {
       const userMessage = inputValue;
-      setMessages(prev => [...prev, { text: userMessage, isUser: true }]);
+      const messageId = Date.now().toString();
+      setMessages(prev => [...prev, { text: userMessage, isUser: true, id: messageId }]);
       setInputValue("");
       setIsTyping(true);
+      setCurrentBotResponse("");
       
       try {
         const response = await fetch('http://localhost:8000/chat', {
@@ -51,10 +51,20 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
         }
 
         const data = await response.json();
-        setMessages(prev => [...prev, { text: data.response, isUser: false }]);
+        const botMessageId = (Date.now() + 1).toString();
+        
+        // Add the bot message to messages list
+        setMessages(prev => [...prev, { text: data.response, isUser: false, id: botMessageId }]);
+        
+        // Start animating the response
+        setCurrentBotResponse(data.response);
+        setIsTyping(false);
+        
       } catch (error) {
-        setMessages(prev => [...prev, { text: "Sorry, I'm having trouble connecting. Please try again later.", isUser: false }]);
-      } finally {
+        const errorMessage = "Sorry, I'm having trouble connecting. Please try again later.";
+        const errorMessageId = (Date.now() + 1).toString();
+        setMessages(prev => [...prev, { text: errorMessage, isUser: false, id: errorMessageId }]);
+        setCurrentBotResponse(errorMessage);
         setIsTyping(false);
       }
     }
@@ -78,7 +88,7 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
         
         {messages.map((message, index) => (
           <div
-            key={index}
+            key={message.id || index}
             className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
           >
             <div
@@ -88,7 +98,14 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
                   : 'bg-background border'
               }`}
             >
-              {message.text}
+              {message.isUser ? (
+                message.text
+              ) : (
+                // Animate bot responses only for the most recent message
+                index === messages.length - 1 && !message.isUser ? 
+                  animatedBotResponse : 
+                  message.text
+              )}
             </div>
           </div>
         ))}
@@ -96,8 +113,14 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
         {isTyping && (
           <div className="flex justify-start">
             <div className="max-w-[80%] rounded-lg px-4 py-2 bg-background border">
-              {botResponse}
-              <span className="animate-pulse">|</span>
+              <div className="flex items-center space-x-2">
+                <div className="animate-pulse">Thinking...</div>
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+              </div>
             </div>
           </div>
         )}
