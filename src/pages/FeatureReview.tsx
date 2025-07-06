@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Loader2, Sparkles, LayoutDashboard, Camera, Target } from 'lucide-react';
+import { Loader2, Sparkles, LayoutDashboard, Camera, Target, ArrowUp } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
 import { UITestModeContext } from '../App';
@@ -15,7 +15,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 import { SocialCard } from '../components/ui/social-card';
 import { cn } from '../lib/utils';
 import AnimatedLoadingSkeleton from '../components/ui/animated-loading-skeleton';
-import FeatureChatbot from '../components/FeatureChatbot';
+import { PromptSuggestion } from '../components/ui/prompt-suggestion';
+import { PromptInput, PromptInputTextarea, PromptInputActions } from '../components/ui/prompt-input';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -50,11 +51,6 @@ const FeatureReview: React.FC = () => {
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
   const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
-
-  // Debug: Log state changes
-  useEffect(() => {
-    console.log('Chatbot state changed:', { currentChatFeature, activeChatbots });
-  }, [currentChatFeature, activeChatbots]);
 
   useEffect(() => {
     setLoading(true);
@@ -138,21 +134,15 @@ const FeatureReview: React.FC = () => {
   const handleStatusChange = (section: any, status: Status) => {
     if (status === 'improved') {
       setShowLoadingScreen(true);
-      // Simulate loading time then update status and open chatbot
+      // Simulate loading time then update status and show chatbot
       setTimeout(() => {
         setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
         setShowLoadingScreen(false);
-        // Open chatbot for this feature
+        // Directly set the tab to show the chatbot interface
+        setTab('chatbot');
         const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
-        console.log('Opening chatbot for:', featureName);
-        console.log('Section:', section);
-        setActiveChatbots(prev => {
-          const newState = { ...prev, [featureName]: true };
-          console.log('Active chatbots:', newState);
-          return newState;
-        });
         setCurrentChatFeature(featureName);
-        console.log('Current chat feature set to:', featureName);
+        setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
       }, 3000);
     } else {
       setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
@@ -251,7 +241,10 @@ const FeatureReview: React.FC = () => {
           activeTab={tab} 
           onTabChange={setTab} 
           activeChatbots={activeChatbots}
-          onChatSelect={(featureName) => setCurrentChatFeature(featureName)}
+          onChatSelect={(featureName) => {
+            setCurrentChatFeature(featureName);
+            setTab('chatbot');
+          }}
         />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
@@ -486,6 +479,59 @@ const FeatureReview: React.FC = () => {
                  )}
                 </div>
 
+                {/* Chatbot Tab Content */}
+                {tab === 'chatbot' && currentChatFeature && (
+                  <div className="bg-white rounded-lg shadow-sm p-6 h-[600px]">
+                    <div className="h-full flex flex-col">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-2xl font-semibold">{currentChatFeature} Assistant</h2>
+                        <Button variant="outline" onClick={() => setTab('ui')}>
+                          Back to Components
+                        </Button>
+                      </div>
+                      
+                      <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
+                        {/* Messages Area */}
+                        <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-muted/20 rounded-lg">
+                          <div className="text-center text-muted-foreground py-8">
+                            <h3 className="font-medium mb-2">Hi! I'm your {currentChatFeature} assistant</h3>
+                            <p className="text-sm">Ask me anything about improving this component or click a suggestion below.</p>
+                          </div>
+                        </div>
+
+                        {/* Quick Suggestions */}
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Quick suggestions:</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
+                              How can I improve the {currentChatFeature}?
+                            </PromptSuggestion>
+                            <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
+                              What are best practices for {currentChatFeature} design?
+                            </PromptSuggestion>
+                            <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
+                              Show me examples of great {currentChatFeature} components
+                            </PromptSuggestion>
+                            <PromptSuggestion size="sm" className="text-left justify-start h-auto py-2 px-3">
+                              What accessibility features should I add?
+                            </PromptSuggestion>
+                          </div>
+                        </div>
+
+                        {/* Input Area */}
+                        <PromptInput className="border-input bg-background border shadow-xs">
+                          <PromptInputTextarea placeholder={`Ask about ${currentChatFeature} improvements...`} />
+                          <PromptInputActions className="justify-end">
+                            <Button size="sm" className="size-9 cursor-pointer rounded-full" aria-label="Send">
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                          </PromptInputActions>
+                        </PromptInput>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Screenshot Section */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                 {tab === 'screenshot' && (
@@ -522,28 +568,6 @@ const FeatureReview: React.FC = () => {
       {showLoadingScreen && (
         <AnimatedLoadingSkeleton onClose={handleCloseLoadingScreen} />
       )}
-
-      {/* Feature Chatbots - Debug Version */}
-      {(() => {
-        console.log('=== CHATBOT DEBUG ===');
-        console.log('currentChatFeature:', currentChatFeature);
-        console.log('activeChatbots:', activeChatbots);
-        console.log('Should show chatbot:', currentChatFeature && activeChatbots[currentChatFeature]);
-        
-        if (currentChatFeature && activeChatbots[currentChatFeature]) {
-          console.log('Rendering FeatureChatbot for:', currentChatFeature);
-          return (
-            <FeatureChatbot
-              isOpen={true}
-              onClose={() => handleCloseChatbot(currentChatFeature)}
-              featureName={currentChatFeature}
-            />
-          );
-        } else {
-          console.log('NOT rendering chatbot');
-          return null;
-        }
-      })()}
     </SidebarProvider>
   )
 }
