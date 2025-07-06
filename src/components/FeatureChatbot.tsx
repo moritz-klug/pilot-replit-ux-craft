@@ -13,6 +13,10 @@ interface FeatureChatbotProps {
 }
 
 const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ isOpen, onClose, featureName }) => {
+  console.log('=== FeatureChatbot Component ===');
+  console.log('isOpen:', isOpen);
+  console.log('featureName:', featureName);
+  
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean }>>([]);
   const [isTyping, setIsTyping] = useState(false);

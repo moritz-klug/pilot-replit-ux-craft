@@ -523,14 +523,27 @@ const FeatureReview: React.FC = () => {
         <AnimatedLoadingSkeleton onClose={handleCloseLoadingScreen} />
       )}
 
-      {/* Feature Chatbots */}
-      {currentChatFeature && activeChatbots[currentChatFeature] && (
-        <FeatureChatbot
-          isOpen={activeChatbots[currentChatFeature]}
-          onClose={() => handleCloseChatbot(currentChatFeature)}
-          featureName={currentChatFeature}
-        />
-      )}
+      {/* Feature Chatbots - Debug Version */}
+      {(() => {
+        console.log('=== CHATBOT DEBUG ===');
+        console.log('currentChatFeature:', currentChatFeature);
+        console.log('activeChatbots:', activeChatbots);
+        console.log('Should show chatbot:', currentChatFeature && activeChatbots[currentChatFeature]);
+        
+        if (currentChatFeature && activeChatbots[currentChatFeature]) {
+          console.log('Rendering FeatureChatbot for:', currentChatFeature);
+          return (
+            <FeatureChatbot
+              isOpen={true}
+              onClose={() => handleCloseChatbot(currentChatFeature)}
+              featureName={currentChatFeature}
+            />
+          );
+        } else {
+          console.log('NOT rendering chatbot');
+          return null;
+        }
+      })()}
     </SidebarProvider>
   )
 }
