@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
 import { SocialCard } from '../components/ui/social-card';
 import { cn } from '../lib/utils';
+import AnimatedLoadingSkeleton from '../components/ui/animated-loading-skeleton';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -45,6 +46,7 @@ const FeatureReview: React.FC = () => {
   const [uiSubTab, setUiSubTab] = useState<SubTab>('all');
   const [recProgressLog, setRecProgressLog] = useState<string[]>([]);
   const [showRecLog, setShowRecLog] = useState(false);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -126,7 +128,20 @@ const FeatureReview: React.FC = () => {
   }, [url]);
 
   const handleStatusChange = (section: any, status: Status) => {
-    setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
+    if (status === 'improved') {
+      setShowLoadingScreen(true);
+      // Simulate loading time then update status
+      setTimeout(() => {
+        setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
+        setShowLoadingScreen(false);
+      }, 3000);
+    } else {
+      setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
+    }
+  };
+
+  const handleCloseLoadingScreen = () => {
+    setShowLoadingScreen(false);
   };
 
   const handleGetRecommendation = async (section: any) => {
@@ -474,6 +489,11 @@ const FeatureReview: React.FC = () => {
           </div>
         </SidebarInset>
       </div>
+      
+      {/* Loading Screen Overlay */}
+      {showLoadingScreen && (
+        <AnimatedLoadingSkeleton onClose={handleCloseLoadingScreen} />
+      )}
     </SidebarProvider>
   )
 }
