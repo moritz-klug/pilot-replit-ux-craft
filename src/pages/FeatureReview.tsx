@@ -253,274 +253,274 @@ const FeatureReview: React.FC = () => {
             </div>
           </header>
           <div className="flex-1 p-6">
-            <div className="max-w-6xl mx-auto">
-              <div className="flex flex-col items-center gap-4 text-center mb-8">
-                {tab !== 'chatbot' && (
-                  <>
-                    <h1 className="max-w-2xl text-3xl font-semibold md:text-4xl">
-                      Advanced UI/UX Analysis Results
-                    </h1>
-                    <p className="text-muted-foreground">Get actionable insights and recommendations to improve your website's user experience and conversion rates.</p>
-                  </>
-                )}
-              </div>
-
+            {tab === 'chatbot' ? (
+              // Full width layout for chatbot
               <div className="space-y-8">
-                {/* UI Components Section */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                {tab === 'ui' && (
-                  <div>
-                    {/* Analysis Overview Accordion */}
-                    <div className="mb-8">
-                      <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="global-design">
-                          <AccordionTrigger className="text-xl font-semibold">
-                            Global Design System
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div><b>Typography:</b> {analysis.global?.typography}</div>
-                              <div><b>Color Palette:</b> {analysis.global?.color_palette}</div>
-                              <div><b>Button Styles:</b> {analysis.global?.button_styles}</div>
-                              <div><b>Spacing & Layout:</b> {analysis.global?.spacing_layout}</div>
-                              <div><b>Iconography:</b> {analysis.global?.iconography}</div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="ux-architecture">
-                          <AccordionTrigger className="text-xl font-semibold">
-                            UX Architecture
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div><b>Page Flow:</b> {analysis.ux?.page_flow}</div>
-                              <div><b>Emotional Strategy:</b> {analysis.ux?.emotional_strategy}</div>
-                              <div><b>Conversion Points:</b> {analysis.ux?.conversion_points}</div>
-                              <div><b>Design Trends:</b> {analysis.ux?.design_trends}</div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="business-audience">
-                          <AccordionTrigger className="text-xl font-semibold">
-                            Business & Audience
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div><b>Summary:</b> {analysis.business?.summary}</div>
-                              <div><b>Business Type:</b> {analysis.business?.business_type}</div>
-                              <div><b>Target Audience:</b> {analysis.business?.target_audience}</div>
-                              <div><b>Keywords:</b> {Array.isArray(analysis.business?.keywords) ? analysis.business.keywords.join(', ') : analysis.business?.keywords}</div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    </div>
-                    <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
-                      <div className="flex justify-center mb-6">
-                        <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
-                          {SUBTABS.map((sub) => {
-                            const isActive = uiSubTab === sub;
-                            return (
-                              <button
-                                key={sub}
-                                onClick={() => setUiSubTab(sub as SubTab)}
-                                className={cn(
-                                  "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
-                                  "text-foreground/80 hover:text-primary",
-                                  isActive && "bg-muted text-primary",
-                                )}
-                              >
-                                {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                                {isActive && (
-                                  <motion.div
-                                    layoutId="lamp"
-                                    className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
-                                    initial={false}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 300,
-                                      damping: 30,
-                                    }}
-                                  >
-                                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
-                                      <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
-                                      <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
-                                      <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
+                {/* Chatbot Tab Content */}
+                <div className="flex gap-4">
+                  <div className="w-1/2">
+                    <FeatureChatbot featureName={currentChatFeature} />
+                  </div>
+                  <div className="w-1/2 bg-gray-100 rounded-lg min-h-[600px]">
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Constrained width layout for other tabs
+              <div className="max-w-6xl mx-auto">
+                <div className="flex flex-col items-center gap-4 text-center mb-8">
+                  <h1 className="max-w-2xl text-3xl font-semibold md:text-4xl">
+                    Advanced UI/UX Analysis Results
+                  </h1>
+                  <p className="text-muted-foreground">Get actionable insights and recommendations to improve your website's user experience and conversion rates.</p>
+                </div>
+
+                <div className="space-y-8">
+                  {/* UI Components Section */}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  {tab === 'ui' && (
+                    <div>
+                      {/* Analysis Overview Accordion */}
+                      <div className="mb-8">
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value="global-design">
+                            <AccordionTrigger className="text-xl font-semibold">
+                              Global Design System
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><b>Typography:</b> {analysis.global?.typography}</div>
+                                <div><b>Color Palette:</b> {analysis.global?.color_palette}</div>
+                                <div><b>Button Styles:</b> {analysis.global?.button_styles}</div>
+                                <div><b>Spacing & Layout:</b> {analysis.global?.spacing_layout}</div>
+                                <div><b>Iconography:</b> {analysis.global?.iconography}</div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                          <AccordionItem value="ux-architecture">
+                            <AccordionTrigger className="text-xl font-semibold">
+                              UX Architecture
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><b>Page Flow:</b> {analysis.ux?.page_flow}</div>
+                                <div><b>Emotional Strategy:</b> {analysis.ux?.emotional_strategy}</div>
+                                <div><b>Conversion Points:</b> {analysis.ux?.conversion_points}</div>
+                                <div><b>Design Trends:</b> {analysis.ux?.design_trends}</div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                          <AccordionItem value="business-audience">
+                            <AccordionTrigger className="text-xl font-semibold">
+                              Business & Audience
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><b>Summary:</b> {analysis.business?.summary}</div>
+                                <div><b>Business Type:</b> {analysis.business?.business_type}</div>
+                                <div><b>Target Audience:</b> {analysis.business?.target_audience}</div>
+                                <div><b>Keywords:</b> {Array.isArray(analysis.business?.keywords) ? analysis.business.keywords.join(', ') : analysis.business?.keywords}</div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
                       </div>
-                      <TabsContent value={uiSubTab} className="mt-4">
-                      <div className="grid grid-cols-1 gap-8">
-                        {analysis.sections?.filter((section: any, idx: number) => {
-                          const status = componentStatuses[section.name || idx] || 'rejected';
-                          if (uiSubTab === 'all') return true;
-                          return status === uiSubTab;
-                        }).map((section: any, idx: number) => (
-                          <SocialCard
-                            key={section.name || idx}
-                            author={{
-                              name: section.name,
-                              username: "", 
-                              avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                              timeAgo: ""
-                            }}
-                            content={{
-                              text: `${section.purpose || 'UI Component'}`,
-                              link: {
-                                title: `${section.elements || 'Component Elements'}`,
-                                description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                                icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
-                              }
-                            }}
-                            statusOptions={[...STATUS_OPTIONS]}
-                            currentStatus={componentStatuses[section.name || idx] || 'rejected'}
-                            onStatusChange={(status) => handleStatusChange(section, status as Status)}
-                            engagement={{
-                              likes: 0,
-                              comments: 0,
-                              shares: 0,
-                              isLiked: false,
-                              isBookmarked: false
-                            }}
-                            className="mb-4"
-                          >
+                      <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
+                        <div className="flex justify-center mb-6">
+                          <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+                            {SUBTABS.map((sub) => {
+                              const isActive = uiSubTab === sub;
+                              return (
+                                <button
+                                  key={sub}
+                                  onClick={() => setUiSubTab(sub as SubTab)}
+                                  className={cn(
+                                    "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
+                                    "text-foreground/80 hover:text-primary",
+                                    isActive && "bg-muted text-primary",
+                                  )}
+                                >
+                                  {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                                  {isActive && (
+                                    <motion.div
+                                      layoutId="lamp"
+                                      className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
+                                      initial={false}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 300,
+                                        damping: 30,
+                                      }}
+                                    >
+                                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
+                                        <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
+                                        <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
+                                        <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <TabsContent value={uiSubTab} className="mt-4">
+                        <div className="grid grid-cols-1 gap-8">
+                          {analysis.sections?.filter((section: any, idx: number) => {
+                            const status = componentStatuses[section.name || idx] || 'rejected';
+                            if (uiSubTab === 'all') return true;
+                            return status === uiSubTab;
+                          }).map((section: any, idx: number) => (
+                            <SocialCard
+                              key={section.name || idx}
+                              author={{
+                                name: section.name,
+                                username: "", 
+                                avatar: section.cropped_image_url || "https://via.placeholder.com/40",
+                                timeAgo: ""
+                              }}
+                              content={{
+                                text: `${section.purpose || 'UI Component'}`,
+                                link: {
+                                  title: `${section.elements || 'Component Elements'}`,
+                                  description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                                  icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
+                                }
+                              }}
+                              statusOptions={[...STATUS_OPTIONS]}
+                              currentStatus={componentStatuses[section.name || idx] || 'rejected'}
+                              onStatusChange={(status) => handleStatusChange(section, status as Status)}
+                              engagement={{
+                                likes: 0,
+                                comments: 0,
+                                shares: 0,
+                                isLiked: false,
+                                isBookmarked: false
+                              }}
+                              className="mb-4"
+                            >
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <div><b>Layouts:</b> {section.style?.layouts}</div>
+                                <div><b>Interactions:</b> {section.style?.interactions}</div>
+                                <div><b>Mobile:</b> {section.mobile}</div>
+                                <div className="flex gap-2 items-center mt-6">
+                                  {STATUS_OPTIONS.map((status) => (
+                                    <Button 
+                                      key={status}
+                                      size="sm"
+                                      variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
+                                      onClick={() => handleStatusChange(section, status)}
+                                    >
+                                      {status === 'rejected' ? 'Reject' : 'Improve'}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            </SocialCard>
+                          ))}
+                          </div>
+                          </TabsContent>
+                        </Tabs>
+                      </div>
+                   )}
+                  </div>
+
+                  {/* Design Recommendations Section */}
+                  {tab === 'recommendations' && (
+                    <div className="bg-white rounded-lg shadow-sm p-6">
+                      <div className="text-center py-8">
+                        <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium mb-2">Design Recommendations</h3>
+                        <p className="text-muted-foreground mb-4">Get AI-powered recommendations for confirmed components</p>
+                        <p className="text-sm text-muted-foreground">Confirm components in the UI tab and get recommendations in the AI Analysis tab.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Recommendations Section */}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  {tab === 'ai' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
+                        <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
+                      )}
+                      {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
+                        <SocialCard
+                          key={section.name || idx}
+                          author={{
+                            name: section.name,
+                            username: "confirmed_component", 
+                            avatar: section.cropped_image_url || "https://via.placeholder.com/40",
+                            timeAgo: "confirmed"
+                          }}
+                          content={{
+                            text: `${section.purpose || 'Confirmed UI Component'}`,
+                            link: {
+                              title: `${section.elements || 'Component Elements'}`,
+                              description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                              icon: <LayoutDashboard className="w-5 h-5 text-green-500" />
+                            }
+                          }}
+                          engagement={{
+                            likes: 0,
+                            comments: 0,
+                            shares: 0,
+                            isLiked: false,
+                            isBookmarked: true
+                          }}
+                          className="mb-4"
+                        >
+                          <div className="mt-4 space-y-2">
+                            <Button 
+                              size="sm"
+                              className="mb-3"
+                              onClick={() => handleGetRecommendation(section)}
+                              disabled={recommending}
+                            >
+                              {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                              Get Recommendations
+                            </Button>
                             <div className="text-sm text-muted-foreground space-y-1">
                               <div><b>Layouts:</b> {section.style?.layouts}</div>
                               <div><b>Interactions:</b> {section.style?.interactions}</div>
                               <div><b>Mobile:</b> {section.mobile}</div>
-                              <div className="flex gap-2 items-center mt-6">
-                                {STATUS_OPTIONS.map((status) => (
-                                  <Button 
-                                    key={status}
-                                    size="sm"
-                                    variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
-                                    onClick={() => handleStatusChange(section, status)}
-                                  >
-                                    {status === 'rejected' ? 'Reject' : 'Improve'}
-                                  </Button>
-                                ))}
-                              </div>
                             </div>
-                          </SocialCard>
-                        ))}
-                        </div>
-                        </TabsContent>
-                      </Tabs>
-                    </div>
-                 )}
-                </div>
-
-                {/* Design Recommendations Section */}
-                {tab === 'recommendations' && (
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="text-center py-8">
-                      <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Design Recommendations</h3>
-                      <p className="text-muted-foreground mb-4">Get AI-powered recommendations for confirmed components</p>
-                      <p className="text-sm text-muted-foreground">Confirm components in the UI tab and get recommendations in the AI Analysis tab.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* AI Recommendations Section */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                {tab === 'ai' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
-                      <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
-                    )}
-                    {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
-                      <SocialCard
-                        key={section.name || idx}
-                        author={{
-                          name: section.name,
-                          username: "confirmed_component", 
-                          avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                          timeAgo: "confirmed"
-                        }}
-                        content={{
-                          text: `${section.purpose || 'Confirmed UI Component'}`,
-                          link: {
-                            title: `${section.elements || 'Component Elements'}`,
-                            description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                            icon: <LayoutDashboard className="w-5 h-5 text-green-500" />
-                          }
-                        }}
-                        engagement={{
-                          likes: 0,
-                          comments: 0,
-                          shares: 0,
-                          isLiked: false,
-                          isBookmarked: true
-                        }}
-                        className="mb-4"
-                      >
-                        <div className="mt-4 space-y-2">
-                          <Button 
-                            size="sm"
-                            className="mb-3"
-                            onClick={() => handleGetRecommendation(section)}
-                            disabled={recommending}
-                          >
-                            {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                            Get Recommendations
-                          </Button>
-                          <div className="text-sm text-muted-foreground space-y-1">
-                            <div><b>Layouts:</b> {section.style?.layouts}</div>
-                            <div><b>Interactions:</b> {section.style?.interactions}</div>
-                            <div><b>Mobile:</b> {section.mobile}</div>
                           </div>
+                        </SocialCard>
+                      ))}
+                     </div>
+                   )}
+                  </div>
+
+                  {/* Screenshot Section */}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  {tab === 'screenshot' && (
+                    <div>
+                      {screenshotUrl && (
+                        <div className="mb-8 text-center">
+                          <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
+                          <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px]" />
                         </div>
-                      </SocialCard>
-                    ))}
-                   </div>
-                 )}
+                      )}
+                     </div>
+                   )}
+                  </div>
                 </div>
 
-                {/* Chatbot Tab Content */}
-                {tab === 'chatbot' && currentChatFeature && (
-                  <div className="flex gap-4">
-                    <div className="w-1/2">
-                      <FeatureChatbot featureName={currentChatFeature} />
-                    </div>
-                    <div className="w-1/2 bg-gray-100 rounded-lg min-h-[600px]">
+                {showRecLog && (
+                  <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 my-8 mx-auto">
+                    <h2 className="font-semibold mb-2 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" /> Recommendation Progress Log
+                    </h2>
+                    <div className="font-mono text-sm space-y-1">
+                      {recProgressLog.map((msg, i) => (
+                        <div key={i}>{msg}</div>
+                      ))}
                     </div>
                   </div>
                 )}
-
-                {/* Screenshot Section */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                {tab === 'screenshot' && (
-                  <div>
-                    {screenshotUrl && (
-                      <div className="mb-8 text-center">
-                        <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
-                        <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px]" />
-                      </div>
-                    )}
-                   </div>
-                 )}
-                </div>
               </div>
-
-              {showRecLog && (
-                <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 my-8 mx-auto">
-                  <h2 className="font-semibold mb-2 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" /> Recommendation Progress Log
-                  </h2>
-                  <div className="font-mono text-sm space-y-1">
-                    {recProgressLog.map((msg, i) => (
-                      <div key={i}>{msg}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </SidebarInset>
       </div>
