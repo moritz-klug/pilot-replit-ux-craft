@@ -1,4 +1,4 @@
-import { LayoutDashboard, Sparkles, Camera, Target } from "lucide-react"
+import { LayoutDashboard } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -22,24 +22,6 @@ const items = [
     title: "UI Components", 
     value: "ui", 
     icon: LayoutDashboard,
-    route: "/feature-review"
-  },
-  { 
-    title: "AI Analysis", 
-    value: "ai", 
-    icon: Sparkles,
-    route: "/feature-review"
-  },
-  { 
-    title: "Design Recommendations", 
-    value: "recommendations", 
-    icon: Target,
-    route: "/recommendations"
-  },
-  { 
-    title: "Screenshot", 
-    value: "screenshot", 
-    icon: Camera,
     route: "/feature-review"
   },
 ]

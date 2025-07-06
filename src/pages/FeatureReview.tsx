@@ -19,10 +19,10 @@ const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
 const MAIN_API_BASE = 'http://localhost:8000';
 
-const STATUS_OPTIONS = ['pending', 'confirmed', 'rejected'] as const;
+const STATUS_OPTIONS = ['rejected', 'improved'] as const;
 type Status = typeof STATUS_OPTIONS[number];
 
-const SUBTABS = ['all', 'pending', 'confirmed', 'rejected'] as const;
+const SUBTABS = ['all', 'rejected', 'improved'] as const;
 type SubTab = typeof SUBTABS[number];
 
 const FeatureReview: React.FC = () => {
@@ -66,7 +66,7 @@ const FeatureReview: React.FC = () => {
         if (mockAnalysis.sections) {
           const initialStatuses: Record<string, Status> = {};
           mockAnalysis.sections.forEach((section: any, idx: number) => {
-            initialStatuses[section.name || idx] = 'pending';
+            initialStatuses[section.name || idx] = 'rejected';
           });
           setComponentStatuses(initialStatuses);
         }
@@ -108,7 +108,7 @@ const FeatureReview: React.FC = () => {
       if (data.sections) {
         const initialStatuses: Record<string, Status> = {};
         data.sections.forEach((section: any, idx: number) => {
-          initialStatuses[section.name || idx] = 'pending';
+          initialStatuses[section.name || idx] = 'rejected';
         });
         setComponentStatuses(initialStatuses);
       }
@@ -318,7 +318,7 @@ const FeatureReview: React.FC = () => {
                       <TabsContent value={uiSubTab} className="mt-4">
                       <div className="grid grid-cols-1 gap-8">
                         {analysis.sections?.filter((section: any, idx: number) => {
-                          const status = componentStatuses[section.name || idx] || 'pending';
+                          const status = componentStatuses[section.name || idx] || 'rejected';
                           if (uiSubTab === 'all') return true;
                           return status === uiSubTab;
                         }).map((section: any, idx: number) => (
@@ -339,7 +339,7 @@ const FeatureReview: React.FC = () => {
                               }
                             }}
                             statusOptions={[...STATUS_OPTIONS]}
-                            currentStatus={componentStatuses[section.name || idx] || 'pending'}
+                            currentStatus={componentStatuses[section.name || idx] || 'rejected'}
                             onStatusChange={(status) => handleStatusChange(section, status as Status)}
                             engagement={{
                               likes: 0,
@@ -362,7 +362,7 @@ const FeatureReview: React.FC = () => {
                                     variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
                                     onClick={() => handleStatusChange(section, status)}
                                   >
-                                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                                    {status === 'rejected' ? 'Reject' : 'Improve'}
                                   </Button>
                                 ))}
                               </div>
@@ -392,10 +392,10 @@ const FeatureReview: React.FC = () => {
                 <div className="bg-white rounded-lg shadow-sm p-6">
                 {tab === 'ai' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'confirmed').length === 0 && (
-                      <div className="text-muted-foreground">No confirmed components. Confirm a component in the UI Components tab.</div>
+                    {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
+                      <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
                     )}
-                    {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'confirmed').map((section: any, idx: number) => (
+                    {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
                       <SocialCard
                         key={section.name || idx}
                         author={{
