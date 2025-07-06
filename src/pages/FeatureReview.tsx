@@ -255,13 +255,13 @@ const FeatureReview: React.FC = () => {
           <div className="flex-1 p-6">
             {tab === 'chatbot' ? (
               // Full width layout for chatbot
-              <div className="space-y-8">
+              <div className="h-[calc(100vh-8rem)]">
                 {/* Chatbot Tab Content */}
-                <div className="flex gap-4">
-                  <div className="w-1/2">
+                <div className="flex gap-4 h-full">
+                  <div className="w-1/2 h-full">
                     <FeatureChatbot featureName={currentChatFeature} />
                   </div>
-                  <div className="w-1/2 bg-gray-100 rounded-lg min-h-[600px]">
+                  <div className="w-1/2 bg-gray-100 rounded-lg h-full">
                   </div>
                 </div>
               </div>
