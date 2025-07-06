@@ -14,7 +14,7 @@ const PromptInput = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "relative flex min-h-[60px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+        "relative flex min-h-[60px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-within:ring-1 focus-within:ring-ring focus-within:ring-offset-1",
         className
       )}
       {...props}
@@ -53,7 +53,7 @@ const PromptInputTextarea = React.forwardRef<
     <Textarea
       ref={ref}
       className={cn(
-        "min-h-[40px] flex-1 resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0",
+        "min-h-[40px] flex-1 resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 outline-none",
         className
       )}
       value={value}
