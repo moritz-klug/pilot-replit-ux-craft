@@ -830,7 +830,140 @@ Execute these improvements while preserving all current features and maintaining
                           </Tabs>
                         </div>
                       )}
-                      {chatbotTab === 'sources' && <div className="h-full p-4 bg-white/50 rounded-lg">Sources content coming soon...</div>}
+{chatbotTab === 'sources' && (
+                        <div className="h-full overflow-y-auto bg-background rounded-lg">
+                          <div className="p-6">
+                            <h3 className="text-lg font-semibold mb-6 text-foreground">References</h3>
+                            <div className="space-y-4">
+                              {/* Reference 1 */}
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">1</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      The role of artificial intelligence algorithms in information systems research: a conceptual overview and avenues for research
+                                      <span className="ml-2 text-primary text-sm">↗</span>
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
+                                      <span>📄 David Bendig, Antonio Bränunche</span>
+                                      <span>•</span>
+                                      <span>📊 Management Review Quarterly, June 2024</span>
+                                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">PEER REVIEWED</span>
+                                      <span>•</span>
+                                      <span>📈 citations 5</span>
+                                    </div>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">1.1</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.2</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.3</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.4</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.5</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.6</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.7</span>
+                                      <span className="text-muted-foreground ml-1">Unused </span>
+                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">1.8</span>
+                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700 ml-1">1.9</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Reference 2 */}
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">2</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      Selected Essays on the Role of Emotions in Information Systems Research and Use
+                                      <span className="ml-2 text-primary text-sm">↗</span>
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
+                                      <span>📄 O Hornung</span>
+                                      <span>•</span>
+                                      <span>📅 2024</span>
+                                    </div>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">2.1</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Reference 3 */}
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">3</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      Selected Essays on the Role of Emotions in Information Systems Research and Use
+                                      <span className="ml-2 text-primary text-sm">↗</span>
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
+                                      <span>📄 O Hornung</span>
+                                      <span>•</span>
+                                      <span>📅 2024</span>
+                                    </div>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">3.1</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Reference 4 */}
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">4</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      UNDERSTANDING CUSTOMER JOURNEYS: A SYSTEMATIC LITERATURE REVIEW OF AI-POWERED MARKETING PERSONALIZATION
+                                      <span className="ml-2 text-primary text-sm">↗</span>
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
+                                      <span>📄 H Mulyono</span>
+                                      <span>•</span>
+                                      <span>📅 2024</span>
+                                    </div>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">4.1</span>
+                                      <span className="text-muted-foreground ml-1">Unused </span>
+                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">4.2</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Reference 5 */}
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">5</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      UNDERSTANDING CUSTOMER JOURNEYS: A SYSTEMATIC LITERATURE REVIEW OF AI-POWERED MARKETING PERSONALIZATION
+                                      <span className="ml-2 text-primary text-sm">↗</span>
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
+                                      <span>📄 H Mulyono</span>
+                                      <span>•</span>
+                                      <span>📅 2024</span>
+                                    </div>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">5.1</span>
+                                      <span className="text-muted-foreground ml-1">Unused </span>
+                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">5.2</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
