@@ -27,6 +27,9 @@ type Status = typeof STATUS_OPTIONS[number];
 const SUBTABS = ['all', 'rejected', 'improved'] as const;
 type SubTab = typeof SUBTABS[number];
 
+const CHATBOT_TABS = ['mockups', 'code', 'sources'] as const;
+type ChatbotTab = typeof CHATBOT_TABS[number];
+
 const FeatureReview: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -50,6 +53,7 @@ const FeatureReview: React.FC = () => {
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
   const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
+  const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
 
   useEffect(() => {
     setLoading(true);
@@ -256,10 +260,52 @@ const FeatureReview: React.FC = () => {
             {tab === 'chatbot' ? (
               // Full width layout for chatbot
               <div className="h-[calc(100vh-8rem)]">
+                {/* Chatbot Tab Design */}
+                <div className="flex justify-center mb-6">
+                  <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+                    {CHATBOT_TABS.map((chatTab) => {
+                      const isActive = chatbotTab === chatTab;
+                      return (
+                        <button
+                          key={chatTab}
+                          onClick={() => setChatbotTab(chatTab as ChatbotTab)}
+                          className={cn(
+                            "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
+                            "text-foreground/80 hover:text-primary",
+                            isActive && "bg-muted text-primary",
+                          )}
+                        >
+                          {chatTab.charAt(0).toUpperCase() + chatTab.slice(1)}
+                          {isActive && (
+                            <motion.div
+                              layoutId="chatbot-lamp"
+                              className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
+                              initial={false}
+                              transition={{
+                                type: "spring",
+                                stiffness: 300,
+                                damping: 30,
+                              }}
+                            >
+                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
+                                <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
+                                <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
+                                <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
+                              </div>
+                            </motion.div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
                 {/* Chatbot Tab Content */}
-                <div className="flex gap-4 h-full">
+                <div className="flex gap-4 h-[calc(100%-4rem)]">
                   <div className="w-1/2 h-full">
-                    <FeatureChatbot featureName={currentChatFeature} />
+                    {chatbotTab === 'mockups' && <FeatureChatbot featureName={currentChatFeature} />}
+                    {chatbotTab === 'code' && <div className="h-full p-4 bg-muted/20 rounded-lg">Code content coming soon...</div>}
+                    {chatbotTab === 'sources' && <div className="h-full p-4 bg-muted/20 rounded-lg">Sources content coming soon...</div>}
                   </div>
                   <div className="w-1/2 bg-gray-100 rounded-lg h-full">
                   </div>
