@@ -484,17 +484,8 @@ const FeatureReview: React.FC = () => {
 
                 {/* Chatbot Tab Content */}
                 {tab === 'chatbot' && currentChatFeature && (
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-semibold">{currentChatFeature} Assistant</h2>
-                      <Button variant="outline" onClick={() => setTab('ui')}>
-                        Back to Components
-                      </Button>
-                    </div>
-                    
-                    <div className="h-[600px]">
-                      <FeatureChatbot featureName={currentChatFeature} />
-                    </div>
+                  <div className="w-1/2 ml-auto">
+                    <FeatureChatbot featureName={currentChatFeature} />
                   </div>
                 )}
 
