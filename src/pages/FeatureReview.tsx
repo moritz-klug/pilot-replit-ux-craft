@@ -51,6 +51,11 @@ const FeatureReview: React.FC = () => {
   const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
   const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
 
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('Chatbot state changed:', { currentChatFeature, activeChatbots });
+  }, [currentChatFeature, activeChatbots]);
+
   useEffect(() => {
     setLoading(true);
     setProgressLog([]);
@@ -138,9 +143,16 @@ const FeatureReview: React.FC = () => {
         setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
         setShowLoadingScreen(false);
         // Open chatbot for this feature
-        const featureName = section.name || `Feature ${section.id}`;
-        setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
+        const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
+        console.log('Opening chatbot for:', featureName);
+        console.log('Section:', section);
+        setActiveChatbots(prev => {
+          const newState = { ...prev, [featureName]: true };
+          console.log('Active chatbots:', newState);
+          return newState;
+        });
         setCurrentChatFeature(featureName);
+        console.log('Current chat feature set to:', featureName);
       }, 3000);
     } else {
       setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
