@@ -19,10 +19,10 @@ const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
 const MAIN_API_BASE = 'http://localhost:8000';
 
-const STATUS_OPTIONS = ['rejected', 'improved'] as const;
+const STATUS_OPTIONS = ['pending', 'confirmed', 'rejected'] as const;
 type Status = typeof STATUS_OPTIONS[number];
 
-const SUBTABS = ['all', 'rejected', 'improved'] as const;
+const SUBTABS = ['all', 'pending', 'confirmed', 'rejected'] as const;
 type SubTab = typeof SUBTABS[number];
 
 const FeatureReview: React.FC = () => {
@@ -66,7 +66,7 @@ const FeatureReview: React.FC = () => {
         if (mockAnalysis.sections) {
           const initialStatuses: Record<string, Status> = {};
           mockAnalysis.sections.forEach((section: any, idx: number) => {
-            initialStatuses[section.name || idx] = 'rejected';
+            initialStatuses[section.name || idx] = 'pending';
           });
           setComponentStatuses(initialStatuses);
         }
@@ -108,7 +108,7 @@ const FeatureReview: React.FC = () => {
       if (data.sections) {
         const initialStatuses: Record<string, Status> = {};
         data.sections.forEach((section: any, idx: number) => {
-          initialStatuses[section.name || idx] = 'rejected';
+          initialStatuses[section.name || idx] = 'pending';
         });
         setComponentStatuses(initialStatuses);
       }
@@ -318,7 +318,7 @@ const FeatureReview: React.FC = () => {
                       <TabsContent value={uiSubTab} className="mt-4">
                       <div className="grid grid-cols-1 gap-8">
                         {analysis.sections?.filter((section: any, idx: number) => {
-                          const status = componentStatuses[section.name || idx] || 'rejected';
+                          const status = componentStatuses[section.name || idx] || 'pending';
                           if (uiSubTab === 'all') return true;
                           return status === uiSubTab;
                         }).map((section: any, idx: number) => (
@@ -339,7 +339,7 @@ const FeatureReview: React.FC = () => {
                               }
                             }}
                             statusOptions={[...STATUS_OPTIONS]}
-                            currentStatus={componentStatuses[section.name || idx] || 'rejected'}
+                            currentStatus={componentStatuses[section.name || idx] || 'pending'}
                             onStatusChange={(status) => handleStatusChange(section, status as Status)}
                             engagement={{
                               likes: 0,
@@ -361,9 +361,9 @@ const FeatureReview: React.FC = () => {
                                     size="sm"
                                     variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
                                     onClick={() => handleStatusChange(section, status)}
-                                  >
-                                    {status === 'rejected' ? 'Reject' : 'Improve'}
-                                  </Button>
+                                   >
+                                     {status === 'rejected' ? 'Reject' : status === 'confirmed' ? 'Improve' : 'Pending'}
+                                   </Button>
                                 ))}
                               </div>
                             </div>
@@ -376,86 +376,6 @@ const FeatureReview: React.FC = () => {
                  )}
                 </div>
 
-                {/* Design Recommendations Section */}
-                {tab === 'recommendations' && (
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="text-center py-8">
-                      <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Design Recommendations</h3>
-                      <p className="text-muted-foreground mb-4">Get AI-powered recommendations for confirmed components</p>
-                      <p className="text-sm text-muted-foreground">Confirm components in the UI tab and get recommendations in the AI Analysis tab.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* AI Recommendations Section */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                {tab === 'ai' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
-                      <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
-                    )}
-                    {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
-                      <SocialCard
-                        key={section.name || idx}
-                        author={{
-                          name: section.name,
-                          username: "confirmed_component", 
-                          avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                          timeAgo: "confirmed"
-                        }}
-                        content={{
-                          text: `${section.purpose || 'Confirmed UI Component'}`,
-                          link: {
-                            title: `${section.elements || 'Component Elements'}`,
-                            description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                            icon: <LayoutDashboard className="w-5 h-5 text-green-500" />
-                          }
-                        }}
-                        engagement={{
-                          likes: 0,
-                          comments: 0,
-                          shares: 0,
-                          isLiked: false,
-                          isBookmarked: true
-                        }}
-                        className="mb-4"
-                      >
-                        <div className="mt-4 space-y-2">
-                          <Button 
-                            size="sm"
-                            className="mb-3"
-                            onClick={() => handleGetRecommendation(section)}
-                            disabled={recommending}
-                          >
-                            {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                            Get Recommendations
-                          </Button>
-                          <div className="text-sm text-muted-foreground space-y-1">
-                            <div><b>Layouts:</b> {section.style?.layouts}</div>
-                            <div><b>Interactions:</b> {section.style?.interactions}</div>
-                            <div><b>Mobile:</b> {section.mobile}</div>
-                          </div>
-                        </div>
-                      </SocialCard>
-                    ))}
-                   </div>
-                 )}
-                </div>
-
-                {/* Screenshot Section */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                {tab === 'screenshot' && (
-                  <div>
-                    {screenshotUrl && (
-                      <div className="mb-8 text-center">
-                        <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
-                        <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px]" />
-                      </div>
-                    )}
-                   </div>
-                 )}
-                </div>
               </div>
 
               {showRecLog && (
