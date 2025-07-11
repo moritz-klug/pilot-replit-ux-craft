@@ -611,7 +611,7 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
             'Content-Type': 'application/json',
         }
         
-        print(f'[DEBUG] Data: {data}')
+        print(f'[DEBUG] Requesting code and prompt for {request.featureName}')
         resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
         
         if resp.status_code != 200:
@@ -620,7 +620,6 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
             
         result = resp.json()
         response_text = result['choices'][0]['message']['content']
-        print('[DEBUG] LLM response received', result)
         
         try:
             sections = ['LOVABLE', 'CURSOR', 'BOLT', 'VERCEL', 'REPLIT', 'MAGIC', 'SITEBREW', 'REACT', 'VUE', 'ANGULAR']
@@ -642,6 +641,14 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
             for framework_code in ['react_code', 'vue_code', 'angular_code']:
                 result[framework_code] = encode_code_block(clean_code(result[framework_code]))
             
+            # Just to check if a code or prompt could not be extracted
+            has_error = any(
+                value in ['Could not generate prompt', 'Could not generate code']
+                for value in result.values()
+            )
+            if has_error:
+                print('[DEBUG] LLM response received with errors:', result)
+
             return RecommendationPromptCodeResponse(**result)
                 
         except Exception as e:
