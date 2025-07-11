@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 
 interface FeatureChatbotProps {
   featureName: string;
+  onChatUpdate?: (messages: Array<{ text: string; isUser: boolean; id: string }>) => void;
+  onTypingChange?: (isTyping: boolean) => void;
 }
 
-const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
+const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName, onChatUpdate, onTypingChange }) => {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean; id: string }>>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -24,6 +26,18 @@ const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName }) => {
 
   const animatedBotResponse = useAnimatedText(currentBotResponse, " ");
 
+  React.useEffect(() => {
+    if (onChatUpdate) {
+      onChatUpdate(messages);
+    }
+  }, [messages, onChatUpdate]);
+
+  React.useEffect(() => {
+    if (onTypingChange) {
+      onTypingChange(isTyping);
+    }
+  }, [isTyping, onTypingChange]);
+  
   const handleSend = async () => {
     if (inputValue.trim()) {
       const userMessage = inputValue;

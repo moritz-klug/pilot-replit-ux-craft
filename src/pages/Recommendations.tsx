@@ -59,7 +59,6 @@ const Recommendations = () => {
   const [recProgressLog, setRecProgressLog] = useState<string[]>([]);
   const [showRecLog, setShowRecLog] = useState(!!location.state?.showRecLog);
   const [tab, setTab] = useState('recommendations');
-  const [tab, setTab] = useState<'scientific' | 'heuristics'>('scientific');
   const [heuristicSuggestions, setHeuristicSuggestions] = useState<{ [key: number]: string }>({});
   const [heuristicLoading, setHeuristicLoading] = useState<{ [key: number]: boolean }>({});
   const [relevantHeuristics, setRelevantHeuristics] = useState<number[]>([]);

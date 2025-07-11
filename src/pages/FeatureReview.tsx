@@ -31,7 +31,7 @@ type Status = typeof STATUS_OPTIONS[number];
 const SUBTABS = ['all', 'rejected', 'improved'] as const;
 type SubTab = typeof SUBTABS[number];
 
-const CHATBOT_TABS = ['mockups', 'code', 'sources'] as const;
+const CHATBOT_TABS = ['mockups', 'improvements', 'sources'] as const;
 type ChatbotTab = typeof CHATBOT_TABS[number];
 
 const FeatureReview: React.FC = () => {
@@ -57,7 +57,9 @@ const FeatureReview: React.FC = () => {
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
   const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
+  const [currentFeatureDescription, setCurrentFeatureDescription] = useState<string | null>(null);
   const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
+  const [chatHistory, setChatHistory] = useState([]);
   
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -66,9 +68,20 @@ const FeatureReview: React.FC = () => {
   const [promptCopied, setPromptCopied] = useState(false);
   const { toast } = useToast();
 
+  const [reactCode, setReactCode] = useState('');
+  const [vueCode, setVueCode] = useState('');
+  const [angularCode, setAngularCode] = useState('');
+  const [lovablePrompt, setLovablePrompt] = useState('');
+  const [cursorPrompt, setCursorPrompt] = useState('');
+  const [boltPrompt, setBoltPrompt] = useState('');
+  const [vercelPrompt, setVercelPrompt] = useState('');
+  const [replitPrompt, setReplitPrompt] = useState('');
+  const [magicPrompt, setMagicPrompt] = useState('');
+  const [sitebrewPrompt, setSitebrewPrompt] = useState('');
+
   // Code snippets from Results page
   const codeSnippets = {
-    react: `import React from 'react';
+    react: reactCode ||`import React from 'react';
 
 const ImprovedComponent = () => {
   return (
@@ -85,7 +98,7 @@ const ImprovedComponent = () => {
 };
 
 export default ImprovedComponent;`,
-    vue: `<template>
+    vue: vueCode || `<template>
   <div class="container mx-auto p-6">
     <h1 class="text-2xl font-bold mb-4">
       Improved UX Component
@@ -102,7 +115,7 @@ export default {
   name: 'ImprovedComponent'
 }
 </script>`,
-    angular: `import { Component } from '@angular/core';
+    angular: angularCode || `import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-improved-component',
@@ -122,7 +135,7 @@ export class ImprovedComponent { }`
   };
 
   const platformPrompts = {
-    lovable: `Please implement the following science-based UX improvements for my application:
+    lovable: lovablePrompt || `Please implement the following science-based UX improvements for my application:
 
 1. **Visual Hierarchy**: Improve the visual hierarchy by adjusting font sizes, spacing, and color contrast to guide user attention effectively.
 
@@ -137,7 +150,7 @@ export class ImprovedComponent { }`
 6. **Micro-interactions**: Add subtle animations and hover effects to provide visual feedback for user actions.
 
 Please apply these improvements while maintaining the existing functionality and ensuring the code follows best practices for React and TypeScript.`,
-    cursor: `// UX Improvement Instructions for Cursor AI IDE
+    cursor: cursorPrompt || `// UX Improvement Instructions for Cursor AI IDE
 
 Implement the following science-based UX improvements:
 
@@ -172,7 +185,7 @@ Implement the following science-based UX improvements:
    - Use CSS transitions for smooth interactions
 
 Focus on maintainable code with proper TypeScript types and component composition.`,
-    bolt: `## UX Enhancement Request for Bolt.new
+    bolt: boltPrompt || `## UX Enhancement Request for Bolt.new
 
 Create an improved version of the current component with these evidence-based UX enhancements:
 
@@ -213,7 +226,7 @@ Create an improved version of the current component with these evidence-based UX
 - Create delightful interaction feedback
 
 Please maintain existing functionality while applying these improvements using modern React patterns and TypeScript.`,
-    vercel: `# UX Improvement Specification for v0
+    vercel: vercelPrompt || `# UX Improvement Specification for v0
 
 Transform the current interface with science-backed UX enhancements:
 
@@ -248,7 +261,7 @@ Transform the current interface with science-backed UX enhancements:
 - **State Changes**: Animated transitions between states
 
 Generate clean, performant React components with TypeScript support and modern CSS practices.`,
-    replit: `"""
+    replit: replitPrompt || `"""
 UX Enhancement Script for Replit
 
 Improve the current component with research-backed UX principles
@@ -295,7 +308,7 @@ Improve the current component with research-backed UX principles
 - Ensure backward compatibility
 
 Execute these improvements while preserving all current features and maintaining code quality standards.`,
-    magic: `{
+    magic: magicPrompt || `{
   "ux_improvement_request": {
     "target": "Enhanced User Experience Implementation",
     "frameworks": ["React", "TypeScript", "Tailwind CSS"],
@@ -346,7 +359,7 @@ Execute these improvements while preserving all current features and maintaining
     }
   }
 }`,
-    sitebrew: `<!-- UX Enhancement Brief for sitebrew.ai -->
+    sitebrew: sitebrewPrompt || `<!-- UX Enhancement Brief for sitebrew.ai -->
 
 <ux-improvement-specification>
   <project-context>
@@ -534,6 +547,7 @@ Execute these improvements while preserving all current features and maintaining
         setTab('chatbot');
         const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
         setCurrentChatFeature(featureName);
+        setCurrentFeatureDescription(section.description || section.purpose || 'No design description available');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
       }, 3000);
     } else {
@@ -598,8 +612,85 @@ Execute these improvements while preserving all current features and maintaining
     }
   };
 
+  const handleChatUpdate = (newChatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
+    setChatHistory(newChatHistory);
+  };
+
+  const [lastChatLength, setLastChatLength] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+
+  // Effect to fetch code/prompt when needed
+  React.useEffect(() => {
+    if (chatbotTab === 'improvements' && chatHistory.length > 0 && currentChatFeature && currentFeatureDescription && !isFetching) {
+      const hasUserMessages = chatHistory.some(msg => msg.isUser);
+      const hasNewChat = chatHistory.length > lastChatLength;
+      if (hasUserMessages && hasNewChat && !isTyping) {
+        fetchCodeAndPrompt(chatHistory);
+      }
+    }
+  }, [chatbotTab, chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription]);
+
+  const fetchCodeAndPrompt = async (chatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
+    if (isFetching) return;
+    setIsFetching(true);
+
+    try {
+      const latestRecommendation = chatHistory
+        .filter(msg => !msg.isUser)
+        .pop()?.text || "No LLM response available";
+      
+      const requestBody = {
+        featureName: currentChatFeature,
+        currentDesign: currentFeatureDescription,
+        latestRecommendation: latestRecommendation
+      };
+      
+      const response = await fetch(`${MAIN_API_BASE}/recommendation-prompt-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch code and prompt');
+      }
+
+      const data = await response.json();
+
+      const decodeBase64 = (encoded: string): string => {
+        try {
+          return atob(encoded);
+        } catch (e) {
+          console.warn('Failed to decode base64, using as-is:', e);
+          return encoded;
+        }
+      };
+      
+
+      setReactCode(decodeBase64(data.react_code) || '');
+      setVueCode(decodeBase64(data.vue_code) || '');
+      setAngularCode(decodeBase64(data.angular_code) || '');
+      setLovablePrompt(data.lovable_prompt || '');
+      setCursorPrompt(data.cursor_prompt || '');
+      setBoltPrompt(data.bolt_prompt || '');
+      setVercelPrompt(data.vercel_prompt || '');
+      setReplitPrompt(data.replit_prompt || '');
+      setMagicPrompt(data.magic_prompt || '');
+      setSitebrewPrompt(data.sitebrew_prompt || '');
+      
+      setLastChatLength(chatHistory.length);
+      
+    } catch (error) {
+      console.error('Error fetching code and prompt:', error);
+    } finally {
+      setIsFetching(false);
+      setLastChatLength(chatHistory.length);
+    }
+  };
+
   if (loading) {
-  return (
+    return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
         <p className="text-lg mb-4">Analyzing UI and UX...</p>
@@ -614,7 +705,7 @@ Execute these improvements while preserving all current features and maintaining
             {error && <div className="text-red-500">{error}</div>}
           </div>
         </div>
-                    </div>
+      </div>
     );
   }
 
@@ -652,7 +743,11 @@ Execute these improvements while preserving all current features and maintaining
                 {/* Chatbot Content */}
                 <div className="flex gap-4 h-full">
                   <div className="w-1/2 h-full">
-                    <FeatureChatbot featureName={currentChatFeature} />
+                    <FeatureChatbot 
+                    featureName={currentChatFeature}
+                    onChatUpdate={handleChatUpdate}
+                    onTypingChange={setIsTyping}
+                    />
                   </div>
                   <div className="w-1/2 bg-gray-100 rounded-lg h-full p-4">
                     {/* Chatbot Tab Design */}
@@ -698,7 +793,7 @@ Execute these improvements while preserving all current features and maintaining
                     {/* Tab Content */}
                     <div className="h-[calc(100%-5rem)]">
                       {chatbotTab === 'mockups' && <div className="h-full p-4 bg-white/50 rounded-lg">Mockups content coming soon...</div>}
-                      {chatbotTab === 'code' && (
+                      {chatbotTab === 'improvements' && (
                         <div className="h-full overflow-y-auto">
                           <h3 className="text-xl font-bold mb-4 text-center">UX Improvement Results</h3>
                           

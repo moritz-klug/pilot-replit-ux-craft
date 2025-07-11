@@ -22,7 +22,6 @@ from futurehouse_client import FutureHouseClient, JobNames
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
 FUTURE_HOUSE_API_KEY = os.getenv('FUTURE_HOUSE_API_KEY', '')
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
 
 app = FastAPI()
 
@@ -134,18 +133,6 @@ class EnrichedRecommendation(BaseModel):
     impact: str = ''
     category: str = ''
 
-class RecommendationToLLM(BaseModel):
-    featureName: str
-    currentDesign: str
-    recommendationTitle: str
-    recommendationDescription: str
-
-class RecommendationToLLMResponse(BaseModel):
-    prompt: str
-    react: str
-    vue: str
-    angular: str
-
 def call_mistral_via_openrouter(prompt: str) -> str:
     if not OPENROUTER_API_KEY:
         raise HTTPException(status_code=500, detail="OpenRouter API key not set. Please add OPENROUTER_API_KEY to your .env file.")
@@ -206,7 +193,7 @@ def get_recommendations(request: RecommendationRequest):
 
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', 'sk-...')  # Replace with your key or .env
 OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-OPENROUTER_MODEL = 'openrouter/auto'  # Can be changed
+OPENROUTER_MODEL = 'mistralai/mistral-small-3.2-24b-instruct'  # Can be changed
 CROPS_DIR = os.path.join(os.path.dirname(__file__), 'section_crops')
 os.makedirs(CROPS_DIR, exist_ok=True)
 
@@ -539,80 +526,138 @@ def enrich_recommendation(request: EnrichRecommendationRequest):
     except Exception as e:
         print(f"[Mistral] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}") 
-        
-@app.post("/recommendation-to-llm", response_model=RecommendationToLLMResponse)
-def recommendation_to_llm(request: RecommendationToLLM):
+
+class RecommendationPromptCodeRequest(BaseModel):
+    featureName: str
+    currentDesign: str
+    latestRecommendation: str
+
+class RecommendationPromptCodeResponse(BaseModel):
+    lovable_prompt: str
+    cursor_prompt: str
+    bolt_prompt: str
+    vercel_prompt: str
+    replit_prompt: str
+    magic_prompt: str
+    sitebrew_prompt: str
+    react_code: str  
+    vue_code: str    
+    angular_code: str 
+
+def encode_code_block(code: str) -> str:
+    if not code:
+        return ""
+    return base64.b64encode(code.encode('utf-8')).decode('utf-8')
+
+@app.post("/recommendation-prompt-code", response_model=RecommendationPromptCodeResponse)
+def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set")
+    
     prompt = (
-        f"Given the following UI feature and its improvement recommendation:\n\n"
-        f"Feature Title: {request.featureName}\n"
-        f"Feature Description: {request.currentDesign}\n\n"
-        f"Improvement Recommendation: {request.recommendationTitle}\n"
-        f"Recommendation Description: {request.recommendationDescription}\n\n"
-        f"Please do the following:\n"
-        f"1. Rewrite the recommendation as a concise, actionable prompt suitable for Lovable/Cursor that clearly describes the UI improvement needed.\n"
-        f"2. Provide the complete code implementation for this recommendation in THREE separate formats:\n\n"
-        f"   React: Modern React component with TypeScript, hooks, and proper typing \n"
-        f"   Vue: Vue 3 component with Composition API and TypeScript\n"
-        f"   Angular: Angular component with TypeScript and proper decorators\n\n"
-        f"Requirements for each code format:\n"
-        f"- Each code field (react, vue, angular) must be a single JSON string.\n"
-        f"- All newlines in code must be represented as \\n.\n"
-        f"- All double quotes in code must be escaped as \\\".\n"
-        f"- Do NOT use multi-line strings or embedded unescaped double quotes.\n"
-        f"- Do NOT use markdown, triple backticks, or comments. \n"
-        f"- Do NOT include any explanation or text outside the JSON object.\n"
-        f"Respond ONLY with a valid JSON object with the fields 'prompt', 'react', 'vue', and 'angular'.\n"
-        f"For example, your response should look like:\n"
-        f"{{\n  \"prompt\": \"string\",\n  \"react\": \"import React from \\\"react\\\";\\nexport default function ...\",\n  \"vue\": \"<template>...</template>\",\n  \"angular\": \"import {{ Component }} from '@angular/core';\\n@Component(...)\"\n}}\n"
+        f"Feature: {request.featureName}\n"
+        f"Latest recommendation:\n{request.latestRecommendation}\n\n"
+        f"Generate platform-specific prompts and code:\n\n"
+        f"1. React component (TypeScript + styles)\n"
+        f"2. Vue 3 component (Composition API + styles)\n"
+        f"3. Angular component (TypeScript + styles)\n"
+        f"4. Lovable prompt: Optimized for Lovable AI with UX focus\n"
+        f"5. Cursor prompt: For Cursor IDE with technical details\n"
+        f"6. Bolt prompt: For Bolt.new with design trends\n"
+        f"7. Vercel prompt: For v0 with production focus\n"
+        f"8. Replit prompt: For Replit with documentation\n"
+        f"9. Magic prompt: For Magic Patterns with advanced UI\n"
+        f"10. Sitebrew prompt: For sitebrew.ai with enterprise focus\n\n"
+        f"Return ONLY code without markdown or file names.\n\n"
+        f"Format:\n"
+        f"---REACT---\n"
+        f"[React code]\n"
+        f"---VUE---\n"
+        f"[Vue code]\n"
+        f"---ANGULAR---\n"
+        f"[Angular code]\n"
+        f"---LOVABLE---\n"
+        f"[Lovable prompt]\n"
+        f"---CURSOR---\n"
+        f"[Cursor prompt]\n"
+        f"---BOLT---\n"
+        f"[Bolt prompt]\n"
+        f"---VERCEL---\n"
+        f"[Vercel prompt]\n"
+        f"---REPLIT---\n"
+        f"[Replit prompt]\n"
+        f"---MAGIC---\n"
+        f"[Magic prompt]\n"
+        f"---SITEBREW---\n"
+        f"[Sitebrew prompt]\n"
+        f"---END---\n"
     )
+
     try:
-        response = call_mistral_via_openrouter(prompt)
+        data = {
+            'model': OPENROUTER_MODEL,
+            'messages': [
+                {
+                    "role": "user",
+                    "content": prompt
+                },
+            ],
+            'temperature': 0.7,
+            'max_tokens': 8000
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+            'Content-Type': 'application/json',
+        }
+        
+        print(f'[DEBUG] Data: {data}')
+        resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
+        
+        if resp.status_code != 200:
+            print('[ERROR] OpenRouter error:', resp.text)
+            raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
+            
+        result = resp.json()
+        response_text = result['choices'][0]['message']['content']
+        print('[DEBUG] LLM response received', result)
+        
         try:
-            data = clean_json(response)
+            sections = ['LOVABLE', 'CURSOR', 'BOLT', 'VERCEL', 'REPLIT', 'MAGIC', 'SITEBREW', 'REACT', 'VUE', 'ANGULAR']
+            result = {}
+            
+            for i, section in enumerate(sections):
+                pattern = rf'---{section}---\n(.*?)\n---(?!{section})'
+                match = re.search(pattern, response_text, re.DOTALL)
+                content = match.group(1).strip() if match else ("Could not generate prompt" if i < 7 else "Could not generate code")
+                result[section.lower() + ('_prompt' if i < 7 else '_code')] = content
+            
+            def clean_code(code: str) -> str:
+                code = re.sub(r'```[a-zA-Z]*\s*\n?|```[a-zA-Z]*$|```', '', code)
+                code = re.sub(r'^(Angular|React|Vue)\s+(with\s+TypeScript|component):\s*$', '', code, flags=re.MULTILINE | re.IGNORECASE)
+                code = re.sub(r'^[A-Za-z0-9_-]+\.(vue|tsx|ts|jsx|js|css|html)\s*$', '', code, flags=re.MULTILINE)
+                code = re.sub(r'^(vue|tsx|ts|jsx|js|css|html)\s*$', '', code, flags=re.MULTILINE)
+                return '\n'.join(line for line in code.split('\n') if line.strip()).strip()
+            
+            for framework_code in ['react_code', 'vue_code', 'angular_code']:
+                result[framework_code] = encode_code_block(clean_code(result[framework_code]))
+            
+            return RecommendationPromptCodeResponse(**result)
+                
         except Exception as e:
-            print(f"[Mistral] Post-processing error: {e}")
-            raise HTTPException(status_code=500, detail=f"Could not parse JSON from LLM response.")
-        return RecommendationToLLMResponse(**data)
+            print(f"[ERROR] Failed to parse response sections: {e}")
+            print(f"[ERROR] Response text: {response_text}")
+            error_result = {}
+            for platform in ['lovable', 'cursor', 'bolt', 'vercel', 'replit', 'magic', 'sitebrew']:
+                error_result[f"{platform}_prompt"] = "Could not generate prompt"
+            for framework in ['react', 'vue', 'angular']:
+                error_result[f"{framework}_code"] = encode_code_block("Could not generate code")
+            return RecommendationPromptCodeResponse(**error_result)
     
     except Exception as e:
-        print(f"[Mistral] Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}") 
+        print(f"[ERROR] Exception during recommendation generation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
-def clean_json(response: str) -> dict:
-    # Extract the first {...} block
-    match = re.search(r'\{.*\}', response, re.DOTALL)
-    if not match:
-        raise ValueError("No JSON object found in LLM response.")
-    json_str = match.group(0)
-
-    # Remove triple backticks and language tags
-    json_str = re.sub(r'```[a-zA-Z]*', '', json_str)
-    json_str = json_str.replace('```', '')
-
-    # Find all code fields and escape their contents
-    def escape_code_field(match):
-        key = match.group(1)
-        value = match.group(2)
-        # Escape backslashes, double quotes, and newlines
-        value = value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '').replace('\t', '\\t')
-        value = value.replace('\u201c', '\\"').replace('\u201d', '\\"')  # handle curly quotes
-        value = value.replace('\u2018', "'").replace('\u2019', "'")      # handle curly single quotes
-        value = value.replace('\n', '\\n')  # ensure all newlines are escaped
-        return f'"{key}": "{value}"'
-
-    # This regex matches "key": "value" where value can be multi-line
-    json_str = re.sub(r'"(react|vue|angular)":\s*"((?:[^"\\]|\\.)*)"', escape_code_field, json_str, flags=re.DOTALL)
-
-    # Remove trailing commas
-    json_str = re.sub(r',([\s\n]*[}\]])', r'\1', json_str)
-
-    # Try to parse as JSON
-    try:
-        data = json.loads(json_str)
-    except Exception as e:
-        raise ValueError(f"Failed to parse cleaned JSON: {e}\nCleaned string:\n{json_str}")
-
-    return data
 
 if __name__ == "__main__":
     import uvicorn
