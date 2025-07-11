@@ -8,6 +8,8 @@ import { ArrowLeft, CheckCircle, Eye, MoreHorizontal, Lightbulb, FileText, Palet
 import { useToast } from "@/hooks/use-toast";
 import { futureHouseService } from "@/services/futureHouseService";
 import { RecommendationsDisplay } from "@/components/RecommendationsDisplay";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 
 interface Recommendation {
   id: string;
@@ -32,6 +34,7 @@ const Recommendations = () => {
   const [mockupStates, setMockupStates] = useState<{ [key: string]: 'before' | 'after' }>({});
   const [recProgressLog, setRecProgressLog] = useState<string[]>([]);
   const [showRecLog, setShowRecLog] = useState(!!location.state?.showRecLog);
+  const [tab, setTab] = useState('recommendations');
 
   useEffect(() => {
     if (showRecLog) {
@@ -178,8 +181,18 @@ const Recommendations = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar activeTab={tab} onTabChange={setTab} />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
+            <SidebarTrigger className="-ml-1" />
+            <div className="flex flex-col">
+              <Badge variant="outline" className="w-fit">Design Recommendations</Badge>
+            </div>
+          </header>
+          <div className="flex-1 p-6">
+            <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -373,8 +386,11 @@ const Recommendations = () => {
           </>
 
         )}
+            </div>
+          </div>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 

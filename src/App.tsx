@@ -5,6 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import About from "./pages/About";
+import Features from "./pages/Features";
+import Pricing from "./pages/Pricing";
+import Contact from "./pages/Contact";
 import FeatureReview from "./pages/FeatureReview";
 import Recommendations from "./pages/Recommendations";
 import Results from "./pages/Results";
@@ -25,18 +29,13 @@ const App = () => {
         <Toaster />
         <Sonner />
         <UITestModeContext.Provider value={{ uiTest, setUITest }}>
-          <div className="app-header">
-            <button
-              style={{ marginLeft: 16, background: uiTest ? '#ffb347' : '#eee', color: uiTest ? '#222' : '#888', borderRadius: 4, padding: '4px 12px', border: 'none', fontWeight: 'bold' }}
-              onClick={() => setUITest((m) => !m)}
-            >
-              UI Test Mode: {uiTest ? 'ON' : 'OFF'}
-            </button>
-            {uiTest && <span style={{ color: '#ff9800', marginLeft: 8, fontWeight: 'bold' }}>[UI Test Mode Active]</span>}
-          </div>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/features" element={<Features />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/feature-review" element={<FeatureReview />} />
               <Route path="/recommendations" element={<Recommendations />} />
               <Route path="/results" element={<Results />} />

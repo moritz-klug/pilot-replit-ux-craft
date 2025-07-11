@@ -4,12 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Paperclip, Loader2, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle } from "lucide-react";
+import { Paperclip, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
 import { analyzeWithScreenshot } from '../services/futureHouseService';
 import { useContext } from 'react';
 import { UITestModeContext } from '../App';
+import { AiInput } from "@/components/ui/ai-input";
+import { Particles } from "@/components/ui/particles";
+import { ShiningText } from "@/components/ui/shining-text";
+import { Loader } from "@/components/ui/loader";
 
 interface AnalysisStep {
   message: string;
@@ -17,7 +21,7 @@ interface AnalysisStep {
 }
 
 export const Hero = () => {
-  const [url, setUrl] = useState("https://www.apple.com");
+  const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [analysisLog, setAnalysisLog] = useState<string[]>([]);
   const [finalAnalysis, setFinalAnalysis] = useState<any>(null);
@@ -129,7 +133,12 @@ export const Hero = () => {
 
   return (
     <section className="relative w-full h-[80vh] flex flex-col items-center justify-center text-center px-4">
-      <div className="max-w-4xl mx-auto text-center">
+      {/* Particle Background */}
+      <div className="absolute inset-0 z-0">
+        <Particles quantity={200} className="h-full w-full" color="#000000" />
+      </div>
+      
+      <div className="max-w-4xl mx-auto text-center relative z-10">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight max-w-3xl mx-auto">
           Paste a link, get instant UX science.
         </h1>
@@ -141,46 +150,18 @@ export const Hero = () => {
         
         <div className="max-w-4xl mx-auto mb-12">
           {!isLoading ? (
-            <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-6">
-              <div className="flex w-full max-w-2xl items-center space-x-2">
-                <Input
-                  type="url"
-                  placeholder="https://apple.com"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
-                  disabled={isLoading}
-                  className="h-12 text-lg"
-                />
-                <Button onClick={handleAnalyze} disabled={isLoading} className="h-12 text-lg">
-                  {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Analyze'}
-                </Button>
-              </div>
-              
-              <div className="flex flex-wrap justify-center gap-2 mb-6">
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-red-500/20 text-red-400 border border-red-500/30">
-                  🛍️ Online shop
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                  📝 Personal blog
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                  🏃 Waitlist site
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                  💼 Workout tracker
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  🤖 AI debate app
-                </span>
-              </div>
-            </div>
+            <AiInput
+              value={url}
+              onChange={setUrl}
+              onSubmit={handleAnalyze}
+              disabled={isLoading}
+            />
           ) : (
             <Card className="w-full max-w-2xl text-left">
               <CardContent className="p-6">
                 <div className="flex items-center mb-4">
                   <Sparkles className="w-5 h-5 mr-3 text-primary" />
-                  <h3 className="text-lg font-semibold">Live Analysis Log</h3>
+                  <ShiningText text="Live Analysis Log" />
                 </div>
                 <p className="font-mono text-sm text-left">
                   {analysisLog.map((log, index) => (
@@ -193,7 +174,7 @@ export const Hero = () => {
                     >
                         {log.startsWith('✅') || log.startsWith('✨') ? <CheckCircle className="h-4 w-4 text-green-500" /> : 
                          log.startsWith('❌') ? <XCircle className="h-4 w-4 text-red-500" /> :
-                         <Loader2 className="h-4 w-4 animate-spin" />
+                         <Loader size="sm" className="text-primary" />
                         }
                       <span>{log}</span>
                     </motion.div>
@@ -217,6 +198,19 @@ export const Hero = () => {
         <p className="text-xs text-muted-foreground">
           Built with accessibility in mind and strict respect for your data privacy.
         </p>
+        
+        {/* Bouncing scroll indicator */}
+        <motion.div
+          animate={{ y: [0, 6, 0] }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="mt-8 opacity-40"
+        >
+          <ChevronDown className="w-10 h-10 mx-auto text-muted-foreground" />
+        </motion.div>
       </div>
     </section>
   );
