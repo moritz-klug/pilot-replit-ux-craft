@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Paperclip, Sparkles, CheckCircle, Camera, Bot, ServerCrash, XCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
-import { analyzeWithScreenshot } from '../services/futureHouseService';
+import { analyzeWithScreenshot } from '../services/featureExtractionService';
 import { useContext } from 'react';
 import { UITestModeContext } from '../App';
 import { AiInput } from "@/components/ui/ai-input";
@@ -61,7 +61,7 @@ export const Hero = () => {
         // eslint-disable-next-line no-await-in-loop
         await new Promise(r => setTimeout(r, 500));
       }
-      const mockAnalysis = await analyzeWithScreenshot(url, uiTest);
+      const mockAnalysis = await analyzeWithScreenshot({ url: url });
       setFinalAnalysis(mockAnalysis);
       setScreenshotId('mock123');
       setIsLoading(false);
@@ -70,54 +70,138 @@ export const Hero = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/analyze-with-screenshot', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      });
-
-      if (!response.body) {
-        throw new Error('Response body is null');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-
-      const processStream = async () => {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            setIsLoading(false);
-            break;
-          }
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n\n');
-
-          lines.forEach(line => {
-            if (line.startsWith('event: progress')) {
-              const data = JSON.parse(line.substring(line.indexOf('{'), line.lastIndexOf('}') + 1));
-              setAnalysisLog(prev => [...prev, data.message]);
-            } else if (line.startsWith('event: screenshot_id')) {
-              const data = JSON.parse(line.substring(line.indexOf('{'), line.lastIndexOf('}') + 1));
-              setScreenshotId(data.screenshot_id);
-            } else if (line.startsWith('event: analysis_complete')) {
-              const data = JSON.parse(line.substring(line.indexOf('{'), line.lastIndexOf('}') + 1));
-              setFinalAnalysis(data);
-              setAnalysisLog(prev => [...prev, '✨ Analysis complete!']);
-            } else if (line.startsWith('event: error')) {
-                const data = JSON.parse(line.substring(line.indexOf('{'), line.lastIndexOf('}') + 1));
-                setError(data.error);
-                setAnalysisLog(prev => [...prev, `❌ Error: ${data.error}`]);
+      // Build the full request body for analysis
+      const requestBody = {
+        model: "mistralai/mistral-small-3.2-24b-instruct",
+        stream: false,
+        structured_outputs: true,
+        require_parameters: true,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "ui_ux_site_analysis",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                url: {
+                  type: "string",
+                  description: "The full URL of the website analyzed"
+                },
+                visual_analysis: {
+                  type: "object",
+                  properties: {
+                    ui_sections: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "List of UI section names in order of appearance"
+                    }
+                  },
+                  required: ["ui_sections"],
+                  additionalProperties: false
+                },
+                sections: {
+                  type: "array",
+                  description: "List of cropped UI sections with detailed analysis",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string", description: "Section name" },
+                      elements: { type: "array", items: { type: "string" } },
+                      purpose: { type: "string" },
+                      style: {
+                        type: "object",
+                        properties: {
+                          fonts: { type: "string" },
+                          colors: { type: "string" },
+                          layout: { type: "string" },
+                          interactions: { type: "string" },
+                          css_properties: {
+                            type: "object",
+                            description: "Raw CSS properties used in this section",
+                            additionalProperties: false
+                          }
+                        },
+                        required: ["fonts", "colors", "layout", "interactions", "css_properties"],
+                        additionalProperties: false
+                      },
+                      mobile_behavior: { type: "string" },
+                      image_crop_url: { type: "string", description: "Image URL of the cropped UI section" }
+                    },
+                    required: ["name", "elements", "purpose", "style", "mobile_behavior", "image_crop_url"],
+                    additionalProperties: false
+                  }
+                },
+                global_design_summary: {
+                  type: "object",
+                  properties: {
+                    typography: { type: "string" },
+                    colors: { type: "string" },
+                    buttons: { type: "string" },
+                    layout: { type: "string" },
+                    icons: { type: "string" },
+                    css_properties: {
+                      type: "object",
+                      description: "CSS properties applied globally (e.g., body, :root, html)",
+                      additionalProperties: false
+                    }
+                  },
+                  required: ["typography", "colors", "buttons", "layout", "icons", "css_properties"],
+                  additionalProperties: false
+                },
+                ux_architecture: {
+                  type: "object",
+                  properties: {
+                    page_flow: { type: "string" },
+                    emotional_strategy: { type: "string" },
+                    conversion_points: { type: "string" },
+                    design_trends: { type: "string" }
+                  },
+                  required: ["page_flow", "emotional_strategy", "conversion_points", "design_trends"],
+                  additionalProperties: false
+                },
+                business_analysis: {
+                  type: "object",
+                  properties: {
+                    summary: { type: "string" },
+                    business_type: { type: "string" },
+                    target_audience: { type: "string" },
+                    keywords: { type: "array", items: { type: "string" } }
+                  },
+                  required: ["summary", "business_type", "target_audience", "keywords"],
+                  additionalProperties: false
+                }
+              },
+              required: [
+                "url",
+                "visual_analysis",
+                "sections",
+                "global_design_summary",
+                "ux_architecture",
+                "business_analysis"
+              ],
+              additionalProperties: false
             }
-          });
-        }
+          }
+        },
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `You are an advanced UI/UX analyst, visual design expert, and business intelligence extractor. Given the screenshot and/or webpage - ${url}, analyze the entire website UI using this flow:\n\n1. Visual Analysis & Cropping\nDetect distinct UI sections and label them clearly.\nReturn image_crop_url per section (use the provided image as source).\n\n2. Detailed Per-Section Structured Breakdown\nFor each section:\n- name\n- elements\n- purpose\n- Under style, return actual CSS property-value mappings (e.g., font-size: 36px, background-color: #ffffff, padding: 2rem). Use a css_properties object where keys are CSS property names and values are the actual values as seen in the design.\n- mobile_behavior\n- image_crop_url\n\n3. Detailed Global Design System Summary\nInclude css styles, return actual CSS property-value mappings (e.g., font-size: 36px, background-color: #ffffff, padding: 2rem). Use a css_properties object where keys are CSS property names and values are the actual values as seen in the design.\n\n4. Detailed UX Architecture & Interaction Patterns\nExplain the site journey, emotional strategy, conversion points, and design trends.\n\n5. Detailed Business & Audience Analysis\nWhat is the site about? Business type? Target audience? Extract 10–20 keywords from hero, menu, services, etc.\n\nOnly return response in json_schema given in the response format.`
+              }
+            ]
+          }
+        ],
+        url: url,
+        screenshot: false
       };
-
-      await processStream();
-
+      const analysis = await analyzeWithScreenshot(requestBody);
+      setFinalAnalysis(analysis);
+      setIsLoading(false);
+      navigate('/feature-review', { state: { analysis, url } });
     } catch (e) {
       console.error('Failed to fetch analysis:', e);
       setError('Failed to connect to the server. Is it running?');

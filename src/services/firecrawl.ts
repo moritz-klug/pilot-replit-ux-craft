@@ -71,134 +71,21 @@ const categorizeElement = (title: string, description: string): Feature['categor
   return 'visual';
 };
 
-// Extract UI elements from a URL
-export const extractUIElements = async (url: string): Promise<Feature[]> => {
+// Replace extractUIElements to call backend
+export const extractUIElements = async (url: string): Promise<any> => {
   try {
-    // Ensure URL has protocol
-    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-    
-    
-    // Create Zod schema with descriptions
-    const zodSchema = z.object({
-      ui_elements: z.array(z.object({
-        section_title: z.string().describe("Title of the UI section"),
-        section_description: z.string().describe("Description of what this section contains"),
-        elements: z.array(z.object({
-          element_title: z.string().describe("Title of the UI element"),
-          element_description: z.string().describe("Description of the UI element"),
-          confidence_score: z.number().describe("Confidence score 0-100"),
-          priority: z.string().describe("Priority level: low, medium, or high")
-        })).describe("List of UI elements in this section")
-      })).describe("All UI sections found on the website")
-    });
-    
-    // Convert to JSON Schema
-    const baseSchema = zodToJsonSchema(zodSchema);
-    
-    // Create a properly typed schema with all required properties
-    const jsonSchema = {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        ui_elements: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              section_title: { type: "string", description: "Title of the UI section" },
-              section_description: { type: "string", description: "Description of what this section contains" },
-              elements: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {
-                    element_title: { type: "string", description: "Title of the UI element" },
-                    element_description: { type: "string", description: "Description of the UI element" },
-                    confidence_score: { type: "number", description: "Confidence score 0-100" },
-                    priority: { type: "string", description: "Priority level: low, medium, or high" }
-                  },
-                  required: ["element_title", "element_description", "confidence_score", "priority"]
-                },
-                description: "List of UI elements in this section"
-              }
-            },
-            required: ["section_title", "section_description", "elements"]
-          },
-          description: "All UI sections found on the website"
-        }
+    const response = await fetch('http://localhost:8000/firecrawl-analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      required: ["ui_elements"]
-    };
-    
-    
-    const extractResult = await app.extract(
-      [`${fullUrl}`], // Try without wildcard based on troubleshooting guide
-      {
-        prompt: "Extract all UI elements in sections from the website. Provide a title and description for each UI section and element. Include a confidence score in percentage (0-100) for how accurately each section and element is parsed. Assign a priority level (low, medium, high) for each feature on the website based on UX importance.",
-        schema: jsonSchema,
-        agent: {
-          model: 'FIRE-1'
-        }
-      }
-    );
-
-    // Log the raw extract result
-    console.log('Raw Firecrawl extract result:', extractResult);
-
-    // Check for the correct response structure
-    if (!extractResult) {
-      throw new Error('Extract failed - no result');
-    }
-    
-    // Type guard to check if result has data property
-    const hasData = (result: any): result is { data: any } => {
-      return result && typeof result === 'object' && 'data' in result;
-    };
-
-    // Type guard to check if result has ui_elements property
-    const hasUIElements = (result: any): result is { ui_elements: any } => {
-      return result && typeof result === 'object' && 'ui_elements' in result;
-    };
-    
-    // Try different response structures
-    let uiElements;
-    if (hasData(extractResult) && extractResult.data && extractResult.data.ui_elements) {
-      uiElements = extractResult.data.ui_elements;
-      console.log('UI Elements from data.ui_elements:', uiElements);
-    } else if (hasUIElements(extractResult) && extractResult.ui_elements) {
-      uiElements = extractResult.ui_elements;
-      console.log('UI Elements from ui_elements:', uiElements);
-    } else {
-      console.error('Extract result structure:', extractResult);
-      throw new Error('No UI elements found in response');
-    }
-
-    // Convert extracted data to Features
-    const features: Feature[] = [];
-    let featureId = 1;
-
-    
-    uiElements.forEach((section: any) => {
-      section.elements.forEach((element: any) => {
-        features.push({
-          id: featureId.toString(),
-          title: `${section.section_title} - ${element.element_title}`,
-          description: element.element_description,
-          category: categorizeElement(element.element_title, element.element_description),
-          severity: mapPriorityToSeverity(element.priority),
-          status: 'pending',
-          aiConfidence: element.confidence_score / 100, // Convert percentage to decimal
-          isManual: false,
-          elementId: `feature-${featureId}` // Add element ID for highlighting
-        });
-        featureId++;
-      });
+      body: JSON.stringify({ url }),
     });
-
-    
-    return features;
+    if (!response.ok) {
+      throw new Error('Failed to fetch Firecrawl analysis');
+    }
+    const data = await response.json();
+    return data;
   } catch (error: any) {
     console.error('Error extracting UI elements:', error.message);
     throw error;

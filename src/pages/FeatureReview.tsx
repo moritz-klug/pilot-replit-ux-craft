@@ -4,7 +4,8 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Loader2, Sparkles, LayoutDashboard, Camera, Target, ArrowUp } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
+import { analyzeWithScreenshot } from '../services/featureExtractionService';
+import { getRecommendations } from '../services/futureHouseService';
 import { UITestModeContext } from '../App';
 import { motion } from 'framer-motion';
 import { Dialog, DialogContent } from '../components/ui/dialog';
@@ -20,6 +21,10 @@ import { SocialCard } from '../components/ui/social-card';
 import { cn } from '../lib/utils';
 import AnimatedLoadingSkeleton from '../components/ui/animated-loading-skeleton';
 import FeatureChatbot from '../components/FeatureChatbot';
+import { SectionList } from '../components/SectionList';
+import { GlobalDesignSummary } from '../components/GlobalDesignSummary';
+import { UxArchitecture } from '../components/UxArchitecture';
+import { BusinessAnalysis } from '../components/BusinessAnalysis';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -446,33 +451,13 @@ Execute these improvements while preserving all current features and maintaining
 
   useEffect(() => {
     setLoading(true);
-    setProgressLog([]);
     setError(null);
+    setProgressLog([]);
     setAnalysis(null);
-    setScreenshotUrl(null);
-    setComponentStatuses({});
-    setSelectedSection(null);
-    setRecommendation(null);
-    setRecommending(false);
 
-    if (uiTest) {
-      // In UI Test Mode, only mimic analysis, do not call backend
-      analyzeWithScreenshot(url, uiTest).then((mockAnalysis) => {
-        setAnalysis(mockAnalysis);
-        setLoading(false);
-        setScreenshotUrl(null); // Optionally set a mock screenshot URL if desired
-        if (mockAnalysis.sections) {
-          const initialStatuses: Record<string, Status> = {};
-          mockAnalysis.sections.forEach((section: any, idx: number) => {
-            initialStatuses[section.name || idx] = 'rejected';
-          });
-          setComponentStatuses(initialStatuses);
-        }
-      });
-      return;
-    }
-
-    const es = new EventSource(`${MAIN_API_BASE}/analyze-ui?url=${encodeURIComponent(url)}`, {
+    // Set up streaming analysis via EventSource
+    const urlParam = url.startsWith('http') ? url : `https://${url}`;
+    const es = new EventSource(`${MAIN_API_BASE}/extract-features?url=${encodeURIComponent(urlParam)}&stream=true`, {
       withCredentials: false
     });
     eventSourceRef.current = es;
@@ -485,27 +470,44 @@ Execute these improvements while preserving all current features and maintaining
       setProgressLog(prev => [...prev, data.message]);
     });
     es.addEventListener('error', (event: MessageEvent) => {
-      const data = event.data ? JSON.parse(event.data) : { error: 'Unknown error' };
-      setError(data.error);
-      setProgressLog(prev => [...prev, `❌ Error: ${data.error}`]);
+      let errorMsg = 'Connection lost or server error.';
+      if (event.data) {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.error) errorMsg = data.error;
+        } catch {}
+      }
+      setError(errorMsg);
       setLoading(false);
       es.close();
     });
     es.addEventListener('result', (event: MessageEvent) => {
       const data = JSON.parse(event.data);
-      setAnalysis(data);
+      let parsed = data;
+      // If this is a full OpenRouter response, parse the content string
+      if (data.choices && data.choices[0]?.message?.content) {
+        try {
+          parsed = JSON.parse(data.choices[0].message.content);
+        } catch (e) {
+          setError('Failed to parse analysis content as JSON.');
+          setLoading(false);
+          es.close();
+          return;
+        }
+      }
+      setAnalysis(parsed);
       setLoading(false);
-      if (data.screenshot_id) {
-        setScreenshotUrl(`${SCREENSHOT_API_BASE}/screenshot/${data.screenshot_id}`);
-      } else if (data.screenshot_url) {
-        setScreenshotUrl(data.screenshot_url);
+      if (parsed.screenshot_id) {
+        setScreenshotUrl(`${SCREENSHOT_API_BASE}/screenshot/${parsed.screenshot_id}`);
+      } else if (parsed.screenshot_url) {
+        setScreenshotUrl(parsed.screenshot_url);
       } else {
         setScreenshotUrl(null);
       }
       // Initialize statuses
-      if (data.sections) {
+      if (parsed.sections) {
         const initialStatuses: Record<string, Status> = {};
-        data.sections.forEach((section: any, idx: number) => {
+        parsed.sections.forEach((section: any, idx: number) => {
           initialStatuses[section.name || idx] = 'rejected';
         });
         setComponentStatuses(initialStatuses);
@@ -598,31 +600,26 @@ Execute these improvements while preserving all current features and maintaining
     }
   };
 
-  if (loading) {
-  return (
+  if (loading || !analysis) {
+    return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
-        <p className="text-lg mb-4">Analyzing UI and UX...</p>
-        <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4">
-          <h2 className="font-semibold mb-2 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" /> Live Analysis Log
-          </h2>
-          <div className="font-mono text-sm space-y-1">
-            {progressLog.map((msg, i) => (
-              <div key={i}>{msg}</div>
-            ))}
-            {error && <div className="text-red-500">{error}</div>}
-          </div>
+        <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/2 mb-4" />
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-2" />
+          <div className="h-6 bg-gray-200 rounded w-2/3 mb-2" />
+          <div className="h-6 bg-gray-200 rounded w-1/4 mb-2" />
+          <div className="h-32 bg-gray-100 rounded w-full mb-4" />
         </div>
-                    </div>
+        <p className="text-lg text-muted-foreground mt-4">Loading analysis...</p>
+      </div>
     );
   }
 
-  if (!analysis) {
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <p className="text-lg text-red-500">Failed to analyze the website. Please try again.</p>
-                  </div>
+        <p className="text-lg text-red-500">{error}</p>
+      </div>
     );
   }
 
@@ -646,584 +643,59 @@ Execute these improvements while preserving all current features and maintaining
             </div>
           </header>
           <div className="flex-1 p-6">
-            {tab === 'chatbot' ? (
-              // Full width layout for chatbot
-              <div className="h-[calc(100vh-8rem)]">
-                {/* Chatbot Content */}
-                <div className="flex gap-4 h-full">
-                  <div className="w-1/2 h-full">
-                    <FeatureChatbot featureName={currentChatFeature} />
-                  </div>
-                  <div className="w-1/2 bg-gray-100 rounded-lg h-full p-4">
-                    {/* Chatbot Tab Design */}
-                    <div className="flex justify-center mb-6">
-                      <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
-                        {CHATBOT_TABS.map((chatTab) => {
-                          const isActive = chatbotTab === chatTab;
-                          return (
-                            <button
-                              key={chatTab}
-                              onClick={() => setChatbotTab(chatTab as ChatbotTab)}
-                              className={cn(
-                                "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
-                                "text-foreground/80 hover:text-primary",
-                                isActive && "bg-muted text-primary",
-                              )}
-                            >
-                              {chatTab.charAt(0).toUpperCase() + chatTab.slice(1)}
-                              {isActive && (
-                                <motion.div
-                                  layoutId="chatbot-lamp"
-                                  className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
-                                  initial={false}
-                                  transition={{
-                                    type: "spring",
-                                    stiffness: 300,
-                                    damping: 30,
-                                  }}
-                                >
-                                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
-                                    <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
-                                    <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
-                                    <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
-                                  </div>
-                                </motion.div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    
-                    {/* Tab Content */}
-                    <div className="h-[calc(100%-5rem)]">
-                      {chatbotTab === 'mockups' && <div className="h-full p-4 bg-white/50 rounded-lg">Mockups content coming soon...</div>}
-                      {chatbotTab === 'code' && (
-                        <div className="h-full overflow-y-auto">
-                          <h3 className="text-xl font-bold mb-4 text-center">UX Improvement Results</h3>
-                          
-                          <Tabs defaultValue="code" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2 mb-4">
-                              <TabsTrigger value="code">Code</TabsTrigger>
-                              <TabsTrigger value="prompt">Prompt</TabsTrigger>
-                            </TabsList>
-                            
-                            <TabsContent value="code" className="space-y-4">
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle>Implementation Code</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                  <div className="flex items-center gap-4">
-                                    <Select value={selectedFramework} onValueChange={setSelectedFramework}>
-                                      <SelectTrigger className="w-48">
-                                        <SelectValue placeholder="Select framework" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="react">React</SelectItem>
-                                        <SelectItem value="vue">Vue</SelectItem>
-                                        <SelectItem value="angular">Angular</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <CodeBlock>
-                                    <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
-                                      <div className="flex items-center gap-2">
-                                        <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                                          {selectedFramework.charAt(0).toUpperCase() + selectedFramework.slice(1)}
-                                        </div>
-                                        <span className="text-muted-foreground text-sm">component.{selectedFramework === 'react' ? 'tsx' : selectedFramework === 'vue' ? 'vue' : 'ts'}</span>
-                                      </div>
-                                      <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
-                                        {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                      </Button>
-                                    </CodeBlockGroup>
-                                    <CodeBlockCode 
-                                      code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
-                                      language={selectedFramework === 'angular' ? 'typescript' : selectedFramework === 'react' ? 'tsx' : selectedFramework}
-                                      theme="github-light"
-                                    />
-                                  </CodeBlock>
-                                  
-                                  <div className="mt-6 p-4 bg-blue-50 rounded-md">
-                                    <h3 className="font-semibold mb-2">Integration Instructions:</h3>
-                                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                                      <li>Copy the code snippet above and integrate it into your project</li>
-                                      <li>Ensure you have the necessary dependencies installed (Tailwind CSS for styling)</li>
-                                      <li>Customize the component according to your specific requirements</li>
-                                      <li>Test the implementation across different devices and screen sizes</li>
-                                    </ul>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            </TabsContent>
-                            
-                            <TabsContent value="prompt" className="space-y-4">
-                              <Card>
-                                <CardHeader>
-                                   <CardTitle>
-                                     AI Development Prompt
-                                   </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="flex items-center gap-4 mb-4">
-                                    <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                                      <SelectTrigger className="w-48">
-                                        <SelectValue placeholder="Select platform" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="lovable">Lovable</SelectItem>
-                                        <SelectItem value="cursor">Cursor (or any AI IDE)</SelectItem>
-                                        <SelectItem value="bolt">Bolt.new (Partnership)</SelectItem>
-                                        <SelectItem value="vercel">v0 by Vercel</SelectItem>
-                                        <SelectItem value="replit">Replit</SelectItem>
-                                        <SelectItem value="magic">Magic Patterns</SelectItem>
-                                        <SelectItem value="sitebrew">sitebrew.ai</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <CodeBlock>
-                                    <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
-                                      <div className="flex items-center gap-2">
-                                        <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                                          {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}
-                                        </div>
-                                        <span className="text-muted-foreground text-sm">prompt.txt</span>
-                                      </div>
-                                      <Button onClick={handleCopyPrompt} variant="ghost" size="icon" className="h-8 w-8">
-                                        {promptCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                      </Button>
-                                    </CodeBlockGroup>
-                                    <CodeBlockCode 
-                                      code={promptText} 
-                                      language="text"
-                                      theme="github-light"
-                                    />
-                                  </CodeBlock>
-                                  
-                                  <div className="space-y-4">
-                                    <div className="p-4 bg-green-50 rounded-md">
-                                      <h3 className="font-semibold mb-2">How to use this prompt:</h3>
-                                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                                        {selectedPlatform === 'lovable' && <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>}
-                                        {selectedPlatform === 'cursor' && <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement in your AI IDE</li>}
-                                        {selectedPlatform === 'bolt' && <li><strong>Bolt.new:</strong> Copy this prompt to generate improved components with UX enhancements</li>}
-                                        {selectedPlatform === 'vercel' && <li><strong>v0 by Vercel:</strong> Use this specification to generate accessible and polished React components</li>}
-                                        {selectedPlatform === 'replit' && <li><strong>Replit:</strong> Apply this checklist-style prompt for systematic UX improvements</li>}
-                                        {selectedPlatform === 'magic' && <li><strong>Magic Patterns:</strong> Use this JSON specification to generate enhanced UI patterns</li>}
-                                        {selectedPlatform === 'sitebrew' && <li><strong>sitebrew.ai:</strong> Apply this XML-formatted brief for comprehensive UX enhancements</li>}
-                                      </ul>
-                                    </div>
-                                    
-                                    <div className="p-4 bg-yellow-50 rounded-md">
-                                      <h3 className="font-semibold mb-2">Expected Results:</h3>
-                                      <p className="text-sm text-gray-700">
-                                        This prompt will help AI tools understand the specific UX improvements needed 
-                                        and generate code that follows evidence-based design principles, improving 
-                                        user experience, accessibility, and overall usability of your application.
-                                      </p>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            </TabsContent>
-                          </Tabs>
-                        </div>
-                      )}
-{chatbotTab === 'sources' && (
-                        <div className="h-full overflow-y-auto bg-background rounded-lg">
-                          <div className="p-6">
-                            <h3 className="text-lg font-semibold mb-6 text-foreground">References</h3>
-                            <div className="space-y-4">
-                              {/* Reference 1 */}
-                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
-                                <div className="flex items-start gap-3">
-                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">1</span>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
-                                      The role of artificial intelligence algorithms in information systems research: a conceptual overview and avenues for research
-                                      <span className="ml-2 text-primary text-sm">↗</span>
-                                    </h4>
-                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
-                                      <span>📄 David Bendig, Antonio Bränunche</span>
-                                      <span>•</span>
-                                      <span>📊 Management Review Quarterly, June 2024</span>
-                                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">PEER REVIEWED</span>
-                                      <span>•</span>
-                                      <span>📈 citations 5</span>
-                                    </div>
-                                    <div className="mt-2 text-sm">
-                                      <span className="text-muted-foreground">Contexts: Used </span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">1.1</span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.2</span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.3</span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.4</span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.5</span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.6</span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.7</span>
-                                      <span className="text-muted-foreground ml-1">Unused </span>
-                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">1.8</span>
-                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700 ml-1">1.9</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+            <div className="max-w-2xl mx-auto pt-8">
+              <Accordion type="multiple" className="mb-8">
+              <AccordionItem value="global-design" className="border-b">
+                <AccordionTrigger className="flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline">Global Design System</AccordionTrigger>
+                <AccordionContent className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"><div className="pb-4 pt-0"><GlobalDesignSummary summary={analysis.global_design_summary} /></div></AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="ux-architecture">
+                <AccordionTrigger>UX Architecture</AccordionTrigger>
+                <AccordionContent>
+                  <UxArchitecture architecture={analysis.ux_architecture} />
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="business-analysis">
+                <AccordionTrigger>Business & Audience</AccordionTrigger>
+                <AccordionContent>
+                  <BusinessAnalysis analysis={analysis.business_analysis} />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
-                              {/* Reference 2 */}
-                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
-                                <div className="flex items-start gap-3">
-                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">2</span>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
-                                      Selected Essays on the Role of Emotions in Information Systems Research and Use
-                                      <span className="ml-2 text-primary text-sm">↗</span>
-                                    </h4>
-                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
-                                      <span>📄 O Hornung</span>
-                                      <span>•</span>
-                                      <span>📅 2024</span>
-                                    </div>
-                                    <div className="mt-2 text-sm">
-                                      <span className="text-muted-foreground">Contexts: Used </span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">2.1</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Reference 3 */}
-                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
-                                <div className="flex items-start gap-3">
-                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">3</span>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
-                                      Selected Essays on the Role of Emotions in Information Systems Research and Use
-                                      <span className="ml-2 text-primary text-sm">↗</span>
-                                    </h4>
-                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
-                                      <span>📄 O Hornung</span>
-                                      <span>•</span>
-                                      <span>📅 2024</span>
-                                    </div>
-                                    <div className="mt-2 text-sm">
-                                      <span className="text-muted-foreground">Contexts: Used </span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">3.1</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Reference 4 */}
-                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
-                                <div className="flex items-start gap-3">
-                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">4</span>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
-                                      UNDERSTANDING CUSTOMER JOURNEYS: A SYSTEMATIC LITERATURE REVIEW OF AI-POWERED MARKETING PERSONALIZATION
-                                      <span className="ml-2 text-primary text-sm">↗</span>
-                                    </h4>
-                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
-                                      <span>📄 H Mulyono</span>
-                                      <span>•</span>
-                                      <span>📅 2024</span>
-                                    </div>
-                                    <div className="mt-2 text-sm">
-                                      <span className="text-muted-foreground">Contexts: Used </span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">4.1</span>
-                                      <span className="text-muted-foreground ml-1">Unused </span>
-                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">4.2</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Reference 5 */}
-                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
-                                <div className="flex items-start gap-3">
-                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">5</span>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
-                                      UNDERSTANDING CUSTOMER JOURNEYS: A SYSTEMATIC LITERATURE REVIEW OF AI-POWERED MARKETING PERSONALIZATION
-                                      <span className="ml-2 text-primary text-sm">↗</span>
-                                    </h4>
-                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
-                                      <span>📄 H Mulyono</span>
-                                      <span>•</span>
-                                      <span>📅 2024</span>
-                                    </div>
-                                    <div className="mt-2 text-sm">
-                                      <span className="text-muted-foreground">Contexts: Used </span>
-                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">5.1</span>
-                                      <span className="text-muted-foreground ml-1">Unused </span>
-                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">5.2</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              // Constrained width layout for other tabs
-              <div className="max-w-6xl mx-auto">
-                <div className="flex flex-col items-center gap-4 text-center mb-8">
-                  <h1 className="max-w-2xl text-3xl font-semibold md:text-4xl">
-                    Advanced UI/UX Analysis Results
-                  </h1>
-                  <p className="text-muted-foreground">Get actionable insights and recommendations to improve your website's user experience and conversion rates.</p>
-                </div>
-
-                <div className="space-y-8">
-                  {/* UI Components Section */}
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                  {tab === 'ui' && (
-                    <div>
-                      {/* Analysis Overview Accordion */}
-                      <div className="mb-8">
-                        <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value="global-design">
-                            <AccordionTrigger className="text-xl font-semibold">
-                              Global Design System
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Typography:</b> {analysis.global?.typography}</div>
-                                <div><b>Color Palette:</b> {analysis.global?.color_palette}</div>
-                                <div><b>Button Styles:</b> {analysis.global?.button_styles}</div>
-                                <div><b>Spacing & Layout:</b> {analysis.global?.spacing_layout}</div>
-                                <div><b>Iconography:</b> {analysis.global?.iconography}</div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="ux-architecture">
-                            <AccordionTrigger className="text-xl font-semibold">
-                              UX Architecture
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Page Flow:</b> {analysis.ux?.page_flow}</div>
-                                <div><b>Emotional Strategy:</b> {analysis.ux?.emotional_strategy}</div>
-                                <div><b>Conversion Points:</b> {analysis.ux?.conversion_points}</div>
-                                <div><b>Design Trends:</b> {analysis.ux?.design_trends}</div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="business-audience">
-                            <AccordionTrigger className="text-xl font-semibold">
-                              Business & Audience
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Summary:</b> {analysis.business?.summary}</div>
-                                <div><b>Business Type:</b> {analysis.business?.business_type}</div>
-                                <div><b>Target Audience:</b> {analysis.business?.target_audience}</div>
-                                <div><b>Keywords:</b> {Array.isArray(analysis.business?.keywords) ? analysis.business.keywords.join(', ') : analysis.business?.keywords}</div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      </div>
-                      <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
-                        <div className="flex justify-center mb-6">
-                          <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
-                            {SUBTABS.map((sub) => {
-                              const isActive = uiSubTab === sub;
-                              return (
-                                <button
-                                  key={sub}
-                                  onClick={() => setUiSubTab(sub as SubTab)}
-                                  className={cn(
-                                    "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
-                                    "text-foreground/80 hover:text-primary",
-                                    isActive && "bg-muted text-primary",
-                                  )}
-                                >
-                                  {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                                  {isActive && (
-                                    <motion.div
-                                      layoutId="lamp"
-                                      className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
-                                      initial={false}
-                                      transition={{
-                                        type: "spring",
-                                        stiffness: 300,
-                                        damping: 30,
-                                      }}
-                                    >
-                                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
-                                        <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
-                                        <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
-                                        <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <TabsContent value={uiSubTab} className="mt-4">
-                        <div className="grid grid-cols-1 gap-8">
-                          {analysis.sections?.filter((section: any, idx: number) => {
-                            const status = componentStatuses[section.name || idx] || 'rejected';
-                            if (uiSubTab === 'all') return true;
-                            return status === uiSubTab;
-                          }).map((section: any, idx: number) => (
-                            <SocialCard
-                              key={section.name || idx}
-                              author={{
-                                name: section.name,
-                                username: "", 
-                                avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                                timeAgo: ""
-                              }}
-                              content={{
-                                text: `${section.purpose || 'UI Component'}`,
-                                link: {
-                                  title: `${section.elements || 'Component Elements'}`,
-                                  description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                                  icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
-                                }
-                              }}
-                              statusOptions={[...STATUS_OPTIONS]}
-                              currentStatus={componentStatuses[section.name || idx] || 'rejected'}
-                              onStatusChange={(status) => handleStatusChange(section, status as Status)}
-                              engagement={{
-                                likes: 0,
-                                comments: 0,
-                                shares: 0,
-                                isLiked: false,
-                                isBookmarked: false
-                              }}
-                              className="mb-4"
-                            >
-                              <div className="text-sm text-muted-foreground space-y-1">
-                                <div><b>Layouts:</b> {section.style?.layouts}</div>
-                                <div><b>Interactions:</b> {section.style?.interactions}</div>
-                                <div><b>Mobile:</b> {section.mobile}</div>
-                                <div className="flex gap-2 items-center mt-6">
-                                  {STATUS_OPTIONS.map((status) => (
-                                    <Button 
-                                      key={status}
-                                      size="sm"
-                                      variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
-                                      onClick={() => handleStatusChange(section, status)}
-                                    >
-                                      {status === 'rejected' ? 'Reject' : 'Improve'}
-                                    </Button>
-                                  ))}
-                                </div>
-                              </div>
-                            </SocialCard>
-                          ))}
-                          </div>
-                          </TabsContent>
-                        </Tabs>
-                      </div>
-                   )}
-                  </div>
-
-                  {/* Design Recommendations Section */}
-                  {tab === 'recommendations' && (
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                      <div className="text-center py-8">
-                        <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium mb-2">Design Recommendations</h3>
-                        <p className="text-muted-foreground mb-4">Get AI-powered recommendations for confirmed components</p>
-                        <p className="text-sm text-muted-foreground">Confirm components in the UI tab and get recommendations in the AI Analysis tab.</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* AI Recommendations Section */}
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                  {tab === 'ai' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
-                        <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
-                      )}
-                      {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
-                        <SocialCard
-                          key={section.name || idx}
-                          author={{
-                            name: section.name,
-                            username: "confirmed_component", 
-                            avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                            timeAgo: "confirmed"
-                          }}
-                          content={{
-                            text: `${section.purpose || 'Confirmed UI Component'}`,
-                            link: {
-                              title: `${section.elements || 'Component Elements'}`,
-                              description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                              icon: <LayoutDashboard className="w-5 h-5 text-green-500" />
-                            }
-                          }}
-                          engagement={{
-                            likes: 0,
-                            comments: 0,
-                            shares: 0,
-                            isLiked: false,
-                            isBookmarked: true
-                          }}
-                          className="mb-4"
-                        >
-                          <div className="mt-4 space-y-2">
-                            <Button 
-                              size="sm"
-                              className="mb-3"
-                              onClick={() => handleGetRecommendation(section)}
-                              disabled={recommending}
-                            >
-                              {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                              Get Recommendations
-                            </Button>
-                            <div className="text-sm text-muted-foreground space-y-1">
-                              <div><b>Layouts:</b> {section.style?.layouts}</div>
-                              <div><b>Interactions:</b> {section.style?.interactions}</div>
-                              <div><b>Mobile:</b> {section.mobile}</div>
-                            </div>
-                          </div>
-                        </SocialCard>
-                      ))}
-                     </div>
-                   )}
-                  </div>
-
-                  {/* Screenshot Section */}
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                  {tab === 'screenshot' && (
-                    <div>
-                      {screenshotUrl && (
-                        <div className="mb-8 text-center">
-                          <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
-                          <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px]" />
-                        </div>
-                      )}
-                     </div>
-                   )}
-                  </div>
-                </div>
-
-                {showRecLog && (
-                  <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 my-8 mx-auto">
-                    <h2 className="font-semibold mb-2 flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-primary" /> Recommendation Progress Log
-                    </h2>
-                    <div className="font-mono text-sm space-y-1">
-                      {recProgressLog.map((msg, i) => (
-                        <div key={i}>{msg}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* UI Section Cards in Tabs */}
+            <Tabs value={uiSubTab} onValueChange={v => setUiSubTab(v as SubTab)} className="mb-8">
+              <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                <TabsTrigger value="all" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">All</TabsTrigger>
+                <TabsTrigger value="rejected" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Rejected</TabsTrigger>
+                <TabsTrigger value="improved" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Improved</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all">
+                <SectionList
+                  analysis={analysis}
+                  handleStatusChange={handleStatusChange}
+                  componentStatuses={componentStatuses}
+                  filterStatus={null}
+                />
+              </TabsContent>
+              <TabsContent value="rejected">
+                <SectionList
+                  analysis={analysis}
+                  handleStatusChange={handleStatusChange}
+                  componentStatuses={componentStatuses}
+                  filterStatus="rejected"
+                />
+              </TabsContent>
+              <TabsContent value="improved">
+                <SectionList
+                  analysis={analysis}
+                  handleStatusChange={handleStatusChange}
+                  componentStatuses={componentStatuses}
+                  filterStatus="improved"
+                />
+              </TabsContent>
+            </Tabs>
+            </div>
           </div>
         </SidebarInset>
       </div>

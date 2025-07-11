@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { analyzeWithScreenshot as analyzeWithScreenshotReal } from './featureExtractionService';
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';
 
@@ -93,14 +94,7 @@ const mockAnalysis = {
   },
 };
 
-export async function analyzeWithScreenshot(url: string, uiTest: boolean) {
-  if (uiTest) {
-    await new Promise((r) => setTimeout(r, 1200));
-    return mockAnalysis;
-  }
-  // Only call the real backend if UI Test Mode is OFF
-  // ...existing real backend call...
-}
+// Removed analyzeWithScreenshot to prevent incorrect usage. Use analyzeWithScreenshot from featureExtractionService.ts directly.
 
 export async function approveComponent(sectionId: string, uiTest: boolean) {
   if (uiTest) {

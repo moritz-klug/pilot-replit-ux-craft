@@ -22,6 +22,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 print("DEBUG: FUTURE_HOUSE_API_KEY =", os.getenv('FUTURE_HOUSE_API_KEY'))
 
 FUTURE_HOUSE_API_KEY = os.getenv('FUTURE_HOUSE_API_KEY', '')
+FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY', '')
 
 app = FastAPI()
 
@@ -414,6 +415,89 @@ async def chat_with_feature(request: ChatRequest):
     except Exception as e:
         print('[ERROR] Exception during chat:', e)
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+
+class FirecrawlAnalyzeRequest(BaseModel):
+    url: str
+
+@app.post('/firecrawl-analyze')
+async def firecrawl_analyze(request: FirecrawlAnalyzeRequest):
+    """
+    Takes a URL, calls Firecrawl API, and returns the structured UI analysis.
+    """
+    if not FIRECRAWL_API_KEY:
+        raise HTTPException(status_code=500, detail="Firecrawl API key not set.")
+    firecrawl_url = 'https://api.firecrawl.dev/extract'
+    schema = {
+        "type": "object",
+        "properties": {
+            "ui_components": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "section_name": {"type": "string"},
+                        "html_content": {"type": "string"},
+                        "css_styles_description": {"type": "string"},
+                        "css_styles_code": {"type": "string"},
+                        "js_code": {"type": "string"},
+                        "js_links": {"type": "array", "items": {"type": "string"}},
+                        "interactions": {"type": "string"},
+                        "full_description": {"type": "string"}
+                    },
+                    "required": [
+                        "section_name",
+                        "html_content",
+                        "css_styles_description",
+                        "css_styles_code",
+                        "js_code",
+                        "js_links",
+                        "interactions",
+                        "full_description"
+                    ]
+                }
+            },
+            "global_styles": {"type": "string"}
+        },
+        "required": ["ui_components", "global_styles"]
+    }
+    payload = {
+        "url": request.url,
+        "schema": schema,
+        "agent": {"model": "FIRE-1"}
+    }
+    headers = {
+        "Authorization": f"Bearer {FIRECRAWL_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    try:
+        resp = requests.post(firecrawl_url, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Firecrawl API error: {str(e)}")
+
+@app.get("/test-openrouter")
+def test_openrouter():
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set.")
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "openai/gpt-3.5-turbo",
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Test connection"}
+        ]
+    }
+    try:
+        resp = requests.post(url, headers=headers, json=data, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
 # Serve cropped images statically
 app.mount('/section-crops', StaticFiles(directory=CROPS_DIR), name='section-crops')
