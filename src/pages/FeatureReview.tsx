@@ -666,7 +666,6 @@ Execute these improvements while preserving all current features and maintaining
           return encoded;
         }
       };
-      
 
       setReactCode(decodeBase64(data.react_code) || '');
       setVueCode(decodeBase64(data.vue_code) || '');
@@ -792,9 +791,9 @@ Execute these improvements while preserving all current features and maintaining
                     
                     {/* Tab Content */}
                     <div className="h-[calc(100%-5rem)]">
-                      {chatbotTab === 'mockups' && <div className="h-full p-4 bg-white/50 rounded-lg">Mockups content coming soon...</div>}
+                      {chatbotTab === 'mockups' && <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">Mockups content coming soon...</div>}
                       {chatbotTab === 'improvements' && (
-                        <div className="h-full overflow-y-auto">
+                        <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">
                           <h3 className="text-xl font-bold mb-4 text-center">UX Improvement Results</h3>
                           
                           <Tabs defaultValue="code" className="w-full">
@@ -804,41 +803,49 @@ Execute these improvements while preserving all current features and maintaining
                             </TabsList>
                             
                             <TabsContent value="code" className="space-y-4">
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle>Implementation Code</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                  <div className="flex items-center gap-4">
-                                    <Select value={selectedFramework} onValueChange={setSelectedFramework}>
-                                      <SelectTrigger className="w-48">
-                                        <SelectValue placeholder="Select framework" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="react">React</SelectItem>
-                                        <SelectItem value="vue">Vue</SelectItem>
-                                        <SelectItem value="angular">Angular</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <CodeBlock>
-                                    <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
-                                      <div className="flex items-center gap-2">
-                                        <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                                          {selectedFramework.charAt(0).toUpperCase() + selectedFramework.slice(1)}
+                              {isFetching ? (
+                                <div className="flex flex-col items-center justify-center min-h-[200px]">
+                                  <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
+                                  <p className="text-lg">Generating code and prompt, please wait...</p>
+                                </div>
+                              ) : (
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle>Implementation Code</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="space-y-4">
+                                    <div className="flex items-center gap-4">
+                                      <Select value={selectedFramework} onValueChange={setSelectedFramework}>
+                                        <SelectTrigger className="w-48">
+                                          <SelectValue placeholder="Select framework" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="react">React</SelectItem>
+                                          <SelectItem value="vue">Vue</SelectItem>
+                                          <SelectItem value="angular">Angular</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="w-full max-w-xl mx-auto">
+                                    <CodeBlock>
+                                      <CodeBlockGroup className="border-border border-b py-2 px-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
+                                            {selectedFramework.charAt(0).toUpperCase() + selectedFramework.slice(1)}
+                                          </div>
+                                          <span className="text-muted-foreground text-sm">component.{selectedFramework === 'react' ? 'tsx' : selectedFramework === 'vue' ? 'vue' : 'ts'}</span>
                                         </div>
-                                        <span className="text-muted-foreground text-sm">component.{selectedFramework === 'react' ? 'tsx' : selectedFramework === 'vue' ? 'vue' : 'ts'}</span>
-                                      </div>
-                                      <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
-                                        {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                      </Button>
-                                    </CodeBlockGroup>
-                                    <CodeBlockCode 
-                                      code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
-                                      language={selectedFramework === 'angular' ? 'typescript' : selectedFramework === 'react' ? 'tsx' : selectedFramework}
-                                      theme="github-light"
-                                    />
-                                  </CodeBlock>
+                                        <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
+                                          {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                        </Button>
+                                      </CodeBlockGroup>
+                                      <CodeBlockCode 
+                                        code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
+                                        language={selectedFramework === 'angular' ? 'typescript' : selectedFramework === 'react' ? 'tsx' : selectedFramework}
+                                        theme="github-light"
+                                      />
+                                    </CodeBlock>
+                                  </div>
                                   
                                   <div className="mt-6 p-4 bg-blue-50 rounded-md">
                                     <h3 className="font-semibold mb-2">Integration Instructions:</h3>
@@ -851,76 +858,85 @@ Execute these improvements while preserving all current features and maintaining
                                   </div>
                                 </CardContent>
                               </Card>
+                            )}
                             </TabsContent>
                             
                             <TabsContent value="prompt" className="space-y-4">
-                              <Card>
-                                <CardHeader>
-                                   <CardTitle>
-                                     AI Development Prompt
-                                   </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="flex items-center gap-4 mb-4">
-                                    <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                                      <SelectTrigger className="w-48">
-                                        <SelectValue placeholder="Select platform" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="lovable">Lovable</SelectItem>
-                                        <SelectItem value="cursor">Cursor (or any AI IDE)</SelectItem>
-                                        <SelectItem value="bolt">Bolt.new (Partnership)</SelectItem>
-                                        <SelectItem value="vercel">v0 by Vercel</SelectItem>
-                                        <SelectItem value="replit">Replit</SelectItem>
-                                        <SelectItem value="magic">Magic Patterns</SelectItem>
-                                        <SelectItem value="sitebrew">sitebrew.ai</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <CodeBlock>
-                                    <CodeBlockGroup className="border-border border-b py-2 pr-2 pl-4">
-                                      <div className="flex items-center gap-2">
-                                        <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                                          {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}
-                                        </div>
-                                        <span className="text-muted-foreground text-sm">prompt.txt</span>
+                              {isFetching ? (
+                                <div className="flex flex-col items-center justify-center min-h-[200px]">
+                                  <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
+                                  <p className="text-lg">Generating code and prompt, please wait...</p>
+                                </div>
+                              ) : (
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle>
+                                      AI Development Prompt
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <div className="flex items-center gap-4 mb-4">
+                                      <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                                        <SelectTrigger className="w-48">
+                                          <SelectValue placeholder="Select platform" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="lovable">Lovable</SelectItem>
+                                          <SelectItem value="cursor">Cursor (or any AI IDE)</SelectItem>
+                                          <SelectItem value="bolt">Bolt.new (Partnership)</SelectItem>
+                                          <SelectItem value="vercel">v0 by Vercel</SelectItem>
+                                          <SelectItem value="replit">Replit</SelectItem>
+                                          <SelectItem value="magic">Magic Patterns</SelectItem>
+                                          <SelectItem value="sitebrew">sitebrew.ai</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="w-full max-w-xl mx-auto">
+                                      <CodeBlock>
+                                        <CodeBlockGroup className="border-border border-b py-2 px-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
+                                              {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}
+                                            </div>
+                                            <span className="text-muted-foreground text-sm">prompt.txt</span>
+                                          </div>
+                                          <Button onClick={handleCopyPrompt} variant="ghost" size="icon" className="h-8 w-8">
+                                            {promptCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                          </Button>
+                                        </CodeBlockGroup>
+                                        <CodeBlockCode 
+                                          code={promptText} 
+                                          language="text"
+                                          theme="github-light"
+                                        />
+                                      </CodeBlock>
+                                    </div>
+                                    <div className="space-y-4">
+                                      <div className="p-4 bg-green-50 rounded-md">
+                                        <h3 className="font-semibold mb-2">How to use this prompt:</h3>
+                                        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                                          {selectedPlatform === 'lovable' && <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>}
+                                          {selectedPlatform === 'cursor' && <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement in your AI IDE</li>}
+                                          {selectedPlatform === 'bolt' && <li><strong>Bolt.new:</strong> Copy this prompt to generate improved components with UX enhancements</li>}
+                                          {selectedPlatform === 'vercel' && <li><strong>v0 by Vercel:</strong> Use this specification to generate accessible and polished React components</li>}
+                                          {selectedPlatform === 'replit' && <li><strong>Replit:</strong> Apply this checklist-style prompt for systematic UX improvements</li>}
+                                          {selectedPlatform === 'magic' && <li><strong>Magic Patterns:</strong> Use this JSON specification to generate enhanced UI patterns</li>}
+                                          {selectedPlatform === 'sitebrew' && <li><strong>sitebrew.ai:</strong> Apply this XML-formatted brief for comprehensive UX enhancements</li>}
+                                        </ul>
                                       </div>
-                                      <Button onClick={handleCopyPrompt} variant="ghost" size="icon" className="h-8 w-8">
-                                        {promptCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                      </Button>
-                                    </CodeBlockGroup>
-                                    <CodeBlockCode 
-                                      code={promptText} 
-                                      language="text"
-                                      theme="github-light"
-                                    />
-                                  </CodeBlock>
-                                  
-                                  <div className="space-y-4">
-                                    <div className="p-4 bg-green-50 rounded-md">
-                                      <h3 className="font-semibold mb-2">How to use this prompt:</h3>
-                                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                                        {selectedPlatform === 'lovable' && <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>}
-                                        {selectedPlatform === 'cursor' && <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement in your AI IDE</li>}
-                                        {selectedPlatform === 'bolt' && <li><strong>Bolt.new:</strong> Copy this prompt to generate improved components with UX enhancements</li>}
-                                        {selectedPlatform === 'vercel' && <li><strong>v0 by Vercel:</strong> Use this specification to generate accessible and polished React components</li>}
-                                        {selectedPlatform === 'replit' && <li><strong>Replit:</strong> Apply this checklist-style prompt for systematic UX improvements</li>}
-                                        {selectedPlatform === 'magic' && <li><strong>Magic Patterns:</strong> Use this JSON specification to generate enhanced UI patterns</li>}
-                                        {selectedPlatform === 'sitebrew' && <li><strong>sitebrew.ai:</strong> Apply this XML-formatted brief for comprehensive UX enhancements</li>}
-                                      </ul>
+                                      
+                                      <div className="p-4 bg-yellow-50 rounded-md">
+                                        <h3 className="font-semibold mb-2">Expected Results:</h3>
+                                        <p className="text-sm text-gray-700">
+                                          This prompt will help AI tools understand the specific UX improvements needed 
+                                          and generate code that follows evidence-based design principles, improving 
+                                          user experience, accessibility, and overall usability of your application.
+                                        </p>
+                                      </div>
                                     </div>
-                                    
-                                    <div className="p-4 bg-yellow-50 rounded-md">
-                                      <h3 className="font-semibold mb-2">Expected Results:</h3>
-                                      <p className="text-sm text-gray-700">
-                                        This prompt will help AI tools understand the specific UX improvements needed 
-                                        and generate code that follows evidence-based design principles, improving 
-                                        user experience, accessibility, and overall usability of your application.
-                                      </p>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
+                                  </CardContent>
+                                </Card>
+                              )}
                             </TabsContent>
                           </Tabs>
                         </div>

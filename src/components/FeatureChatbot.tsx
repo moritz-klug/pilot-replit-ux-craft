@@ -115,21 +115,23 @@ For specific technical recommendations, please ensure the backend server is runn
             key={message.id || index}
             className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                message.isUser
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background border'
-              }`}
-            >
-              {message.isUser ? (
-                message.text
-              ) : (
-                // Animate bot responses only for the most recent message
-                index === messages.length - 1 && !message.isUser ? 
-                  animatedBotResponse : 
+            <div className="flex flex-col items-start max-w-[80%]">
+              <div
+                className={`rounded-lg px-4 py-2 break-words whitespace-pre-wrap ${
+                  message.isUser
+                    ? 'bg-blue-500 text-white self-end'
+                    : 'bg-gray-100 text-gray-900 border border-gray-200 self-start'
+                }`}
+              >
+                {message.isUser ? (
                   message.text
-              )}
+                ) : (
+                  // Animate bot responses only for the most recent message
+                  index === messages.length - 1 && !message.isUser ? 
+                    animatedBotResponse : 
+                    message.text
+                )}
+              </div>
             </div>
           </div>
         ))}

@@ -618,8 +618,8 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
             print('[ERROR] OpenRouter error:', resp.text)
             raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
             
-        result = resp.json()
-        response_text = result['choices'][0]['message']['content']
+        results = resp.json()
+        response_text = results['choices'][0]['message']['content']
         
         try:
             sections = ['LOVABLE', 'CURSOR', 'BOLT', 'VERCEL', 'REPLIT', 'MAGIC', 'SITEBREW', 'REACT', 'VUE', 'ANGULAR']
@@ -647,13 +647,13 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
                 for value in result.values()
             )
             if has_error:
-                print('[DEBUG] LLM response received with errors:', result)
+                print('[DEBUG] LLM response received with errors:', results)
 
             return RecommendationPromptCodeResponse(**result)
                 
         except Exception as e:
             print(f"[ERROR] Failed to parse response sections: {e}")
-            print(f"[ERROR] Response text: {response_text}")
+            print(f"[ERROR] Response text: {results}")
             error_result = {}
             for platform in ['lovable', 'cursor', 'bolt', 'vercel', 'replit', 'magic', 'sitebrew']:
                 error_result[f"{platform}_prompt"] = "Could not generate prompt"
