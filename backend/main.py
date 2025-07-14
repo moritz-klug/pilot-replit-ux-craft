@@ -2,7 +2,7 @@ import os
 import asyncio
 import requests
 import json
-from fastapi import FastAPI, HTTPException, UploadFile, Request
+from fastapi import FastAPI, HTTPException, UploadFile, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -206,9 +206,11 @@ class AnalyzeUIRequest(BaseModel):
     url: str
 
 class ChatRequest(BaseModel):
-    message: str
     feature_name: str
     context: str = ""
+    message: str
+    model: str = "openrouter/auto"
+    history: list[dict] = [] # previous chat messages
 
 class ChatResponse(BaseModel):
     response: str
@@ -475,6 +477,133 @@ async def firecrawl_analyze(request: FirecrawlAnalyzeRequest):
         return resp.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Firecrawl API error: {str(e)}")
+
+@app.post("/futurehouse-research-prompt")
+def generate_futurehouse_prompt(
+    data: dict = Body(...)
+):
+    """
+    Accepts feature extraction and global context, returns a research prompt for FutureHouse API.
+    Expects data = {
+        'section': {
+            'name': str,
+            'elements': list,
+            'purpose': str,
+            'style': str or dict,
+            'mobile_behavior': str
+        },
+        'global': {
+            'business_type': str,
+            'target_audience': str,
+            'design_system': str or dict,
+            'ux_architecture': str or dict
+        }
+    }
+    """
+    section = data.get('section', {})
+    global_ctx = data.get('global', {})
+
+    section_name = section.get('name', '[section_name]')
+    elements = ', '.join(section.get('elements', [])) or '[list of elements]'
+    purpose = section.get('purpose', '[section_purpose]')
+    style_details = section.get('style', '[style_details]')
+    if isinstance(style_details, dict):
+        style_details = ', '.join(f"{k}: {v}" for k, v in style_details.items())
+    mobile_specifics = section.get('mobile_behavior', '[mobile_specifics]')
+
+    business_type = global_ctx.get('business_type', '[business_type]')
+    target_audience = global_ctx.get('target_audience', '[target_audience]')
+    design_system = global_ctx.get('design_system', '[typography, colors, layout principles]')
+    if isinstance(design_system, dict):
+        design_system = ', '.join(f"{k}: {v}" for k, v in design_system.items())
+    ux_architecture = global_ctx.get('ux_architecture', '[page_flow, emotional_strategy]')
+    if isinstance(ux_architecture, dict):
+        ux_architecture = ', '.join(f"{k}: {v}" for k, v in ux_architecture.items())
+
+    prompt = f"""
+Given a website section's information and global design context, generate a comprehensive research analysis prompt for FutureHouse API using this structure:
+Context to consider:
+1. Section-specific details:
+   - Name: {section_name}
+   - Elements: {elements}
+   - Purpose: {purpose}
+   - Current styling: {style_details}
+   - Mobile behavior: {mobile_specifics}
+2. Global website context:
+   - Business type: {business_type}
+   - Target audience: {target_audience}
+   - Design system: {design_system}
+   - UX architecture: {ux_architecture}
+Generate a research request using this format:
+Research request: Provide a comprehensive analysis of {section_name} design in {business_type} websites with supporting research studies and data.
+Key areas to address:
+1. User Experience Research
+   - User behavior patterns specific to this section type
+   - Interaction design effectiveness studies
+   - Section-specific conversion metrics
+   - Accessibility considerations
+2. Design Implementation
+   - Layout optimization techniques
+   - Visual hierarchy best practices
+   - Component interaction patterns
+   - Responsive design approaches
+3. Performance Impact
+   - Loading and rendering metrics
+   - Mobile-first considerations
+   - Technical implementation guidelines
+   - Optimization strategies
+4. Content Strategy
+   - Content hierarchy research
+   - Element placement studies
+   - Information architecture findings
+   - User engagement patterns
+5. Business Impact
+   - Conversion rate influences
+   - User journey effectiveness
+   - Brand alignment metrics
+   - ROI measurements
+Format requirements:
+- Include quantitative data where available
+- Cite specific research studies
+- Provide actionable guidelines
+- Include success metrics
+- Address cross-device considerations
+Target audience context:
+{business_type} / {target_audience}
+Keep the structure consistent but modify the specific research points based on the section's unique purpose and elements.
+"""
+
+    # Call FutureHouse API with the generated prompt
+    FUTURE_HOUSE_API_KEY = os.getenv('FUTURE_HOUSE_API_KEY', '')
+    if not FUTURE_HOUSE_API_KEY:
+        raise HTTPException(status_code=500, detail="Future House API key not set.")
+    client = FutureHouseClient(api_key=FUTURE_HOUSE_API_KEY)
+    task_data = {
+        "name": JobNames.CROW,
+        "query": prompt.strip(),
+    }
+    try:
+        task_response = client.run_tasks_until_done(task_data)
+        answer = getattr(task_response, 'answer', '')
+        formatted_answer = getattr(task_response, 'formatted_answer', '')
+        papers = []
+        if hasattr(task_response, 'references') and task_response.references:
+            for ref in task_response.references:
+                papers.append({
+                    "title": ref.get('title', ''),
+                    "authors": ref.get('authors', []),
+                    "year": ref.get('year', 0),
+                    "url": ref.get('url', ''),
+                    "relevance": ref.get('snippet', '')
+                })
+        recommendations = [rec.strip() for rec in answer.split('\n') if rec.strip()]
+        return {
+            "prompt": prompt.strip(),
+            "recommendations": recommendations,
+            "papers": papers
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"FutureHouse API error: {str(e)}")
 
 @app.get("/test-openrouter")
 def test_openrouter():
