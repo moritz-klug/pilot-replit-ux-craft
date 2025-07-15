@@ -616,18 +616,74 @@ Execute these improvements while preserving all current features and maintaining
   useEffect(() => {
     if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
       (window as any).handleWebhookInput = handleWebhookInput;
+      (window as any).processWebhookResponse = handleWebhookInput;
+      
+      // Also listen for custom webhook events
+      const handleCustomWebhook = (event: CustomEvent) => {
+        console.log("Received custom webhook event:", event.detail);
+        handleWebhookInput(event.detail);
+      };
+      
+      window.addEventListener('webhookResponse', handleCustomWebhook as EventListener);
+      
+      return () => {
+        window.removeEventListener('webhookResponse', handleCustomWebhook as EventListener);
+      };
     } else {
       delete (window as any).handleWebhookInput;
+      delete (window as any).processWebhookResponse;
     }
     
     return () => {
       delete (window as any).handleWebhookInput;
+      delete (window as any).processWebhookResponse;
     };
   }, [selectedModel]);
 
+  // Listen for webhook response messages and polling
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout | null = null;
+    
+    const handleMessage = (event: MessageEvent) => {
+      console.log("Received message event:", event);
+      if (event.data && event.data.type === 'webhook-response') {
+        console.log("Processing webhook response from message event");
+        handleWebhookInput(event.data.data);
+      }
+    };
+
+    const checkForWebhookResponse = () => {
+      // Check if there's a webhook response in sessionStorage
+      const storedResponse = sessionStorage.getItem('webhookResponse');
+      if (storedResponse) {
+        try {
+          const parsedResponse = JSON.parse(storedResponse);
+          console.log("Found stored webhook response:", parsedResponse);
+          handleWebhookInput(parsedResponse);
+          sessionStorage.removeItem('webhookResponse');
+        } catch (error) {
+          console.error("Error parsing stored webhook response:", error);
+        }
+      }
+    };
+
+    // Start polling for webhook responses if waiting
+    if (waitingForWebhook) {
+      console.log("Starting webhook polling...");
+      pollInterval = setInterval(checkForWebhookResponse, 1000);
+    }
+
+    window.addEventListener('message', handleMessage);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [waitingForWebhook]);
+
   // Mock webhook endpoint for testing (only in development)
   useEffect(() => {
-    if (selectedModel === "Reasoning-Pro (wait times 8-15min)" && process.env.NODE_ENV === 'development') {
+    if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
       const mockWebhookData = [
         {
           "featureName": "Header",
@@ -643,17 +699,17 @@ Execute these improvements while preserving all current features and maintaining
         }
       ];
       
-      // Auto-process mock data after 2 seconds if no real webhook data received
+      // Auto-process mock data after 5 seconds if no real webhook data received
       const mockTimeout = setTimeout(() => {
-        if (!analysis && !webhookData) {
+        if (!analysis && !webhookData && waitingForWebhook) {
           console.log("Processing mock webhook data for Reasoning-Pro");
           handleWebhookInput(mockWebhookData);
         }
-      }, 2000);
+      }, 5000);
       
       return () => clearTimeout(mockTimeout);
     }
-  }, [selectedModel, analysis, webhookData]);
+  }, [selectedModel, analysis, webhookData, waitingForWebhook]);
 
   useEffect(() => {
     setLoading(true);
