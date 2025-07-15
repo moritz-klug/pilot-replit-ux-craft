@@ -142,12 +142,6 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
                 await triggerN8nWebhook(value);
             }
             
-            // Notify other components about model selection
-            window.postMessage({
-                type: 'MODEL_SELECTED',
-                model: selectedModel
-            }, '*');
-            
             onSubmit();
             adjustHeight(true);
         }

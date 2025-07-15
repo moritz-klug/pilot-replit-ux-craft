@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Loader2, Sparkles, LayoutDashboard, Camera, Target, ArrowUp, Webhook } from 'lucide-react';
+import { Loader2, Sparkles, LayoutDashboard, Camera, Target, ArrowUp } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
 import { UITestModeContext } from '../App';
@@ -78,11 +78,6 @@ const FeatureReview: React.FC = () => {
   const [currentFeatureDescription, setCurrentFeatureDescription] = useState<string | null>(null);
   const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
   const [chatHistory, setChatHistory] = useState([]);
-  
-  // Webhook functionality - only active when Reasoning-Pro is selected
-  const [webhookData, setWebhookData] = useState<any[]>([]);
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [isReasoningProSelected, setIsReasoningProSelected] = useState(false);
   
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -490,43 +485,6 @@ Execute these improvements while preserving all current features and maintaining
     setSelectedSection(null);
     setRecommendation(null);
     setRecommending(false);
-    
-    // Generate webhook URL
-    const generatedWebhookUrl = `${window.location.origin}/api/webhook/features/${Date.now()}`;
-    setWebhookUrl(generatedWebhookUrl);
-    
-    // Expose webhook endpoint for testing
-    (window as any).webhookEndpoint = (data: any[]) => {
-      setWebhookData(data);
-      toast({
-        title: "Webhook Data Received",
-        description: `Received ${data.length} feature(s) from webhook`,
-      });
-    };
-    
-    // Listen for model selection changes from AI input
-    const handleModelSelection = (event: MessageEvent) => {
-      if (event.data.type === 'MODEL_SELECTED') {
-        setIsReasoningProSelected(event.data.model === 'Reasoning-Pro (wait times 8-15min)');
-      }
-    };
-    
-    // Setup webhook listener for postMessage
-    const handleWebhookMessage = (event: MessageEvent) => {
-      if (event.data.type === 'WEBHOOK_DATA') {
-        const data = event.data.payload;
-        if (Array.isArray(data)) {
-          setWebhookData(data);
-          toast({
-            title: "Webhook Data Received",
-            description: `Received ${data.length} feature(s) from webhook`,
-          });
-        }
-      }
-    };
-    
-    window.addEventListener('message', handleWebhookMessage);
-    window.addEventListener('message', handleModelSelection);
 
     if (uiTest) {
       // In UI Test Mode, only mimic analysis, do not call backend
@@ -542,10 +500,7 @@ Execute these improvements while preserving all current features and maintaining
           setComponentStatuses(initialStatuses);
         }
       });
-      return () => {
-        window.removeEventListener('message', handleWebhookMessage);
-        window.removeEventListener('message', handleModelSelection);
-      };
+      return;
     }
 
     // --- New: Call /extract-features (POST) instead of EventSource ---
@@ -576,11 +531,6 @@ Execute these improvements while preserving all current features and maintaining
       }
     }
     fetchAnalysis();
-    
-    return () => {
-      window.removeEventListener('message', handleWebhookMessage);
-      window.removeEventListener('message', handleModelSelection);
-    };
     // eslint-disable-next-line
   }, [url]);
 
@@ -794,7 +744,6 @@ Execute these improvements while preserving all current features and maintaining
             setCurrentChatFeature(featureName);
             setTab('chatbot');
           }}
-          isReasoningProSelected={isReasoningProSelected}
         />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
@@ -1390,132 +1339,6 @@ Execute these improvements while preserving all current features and maintaining
                       )}
                      </div>
                    )}
-                  </div>
-
-                  {/* Webhook Section - Only active when Reasoning-Pro is selected */}
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                  {tab === 'webhook' && (
-                    <div>
-                      {isReasoningProSelected ? (
-                        <div>
-                          <div className="mb-6 text-center">
-                            <h3 className="text-lg font-medium mb-4">Webhook Integration</h3>
-                            <p className="text-muted-foreground mb-4">
-                              Send JSON data to this webhook endpoint to populate the cards with your feature data.
-                            </p>
-                        
-                        {/* Webhook URL Display */}
-                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                          <label className="block text-sm font-medium mb-2">Webhook URL:</label>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 bg-white border rounded px-3 py-2 text-sm font-mono">
-                              {webhookUrl}
-                            </code>
-                            <Button
-                              onClick={() => {
-                                navigator.clipboard.writeText(webhookUrl);
-                                toast({
-                                  title: "Copied!",
-                                  description: "Webhook URL copied to clipboard",
-                                });
-                              }}
-                              variant="outline"
-                              size="sm"
-                            >
-                              Copy
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Test Button */}
-                        <Button
-                          onClick={() => {
-                            const testData = [
-                              {
-                                featureName: "Header",
-                                detailedDescription: "Logo, navigation menu, search icon. Fonts: SF Pro Display, 18px, Bold • Colors: White background, black text, blue accent. Layouts: Interactions: Sticky on scroll, hover underline on nav links. Mobile: CSS properties: N/A"
-                              },
-                              {
-                                featureName: "Hero Section",
-                                detailedDescription: "Large full-width banner at the top with dark blue gradient background (#1a237e to #3949ab). Features centered white headline in bold sans-serif font (48px), smaller gray subtitle (16px). Contains prominent orange CTA button (#ff9800) with rounded corners and drop shadow. Background includes subtle geometric pattern overlay. Section height spans 80vh with content vertically centered."
-                              },
-                              {
-                                featureName: "Navigation Bar",
-                                detailedDescription: "Horizontal navigation bar with white background and subtle shadow. Logo positioned left, main navigation links center-aligned using SF Pro Display 16px medium weight. Search icon and user account dropdown on right. Sticky positioning on scroll with smooth transition. Hover effects include blue underline animation. Mobile version collapses to hamburger menu."
-                              }
-                            ];
-                            (window as any).webhookEndpoint(testData);
-                          }}
-                          variant="outline"
-                          className="ml-2"
-                        >
-                          Test with Sample Data
-                        </Button>
-                        
-                        {webhookData.length > 0 && (
-                          <Button
-                            onClick={() => {
-                              setWebhookData([]);
-                              toast({
-                                title: "Cleared",
-                                description: "Webhook data cleared",
-                              });
-                            }}
-                            variant="outline"
-                            className="ml-2"
-                          >
-                            Clear Data
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Webhook Data Display */}
-                      <div className="grid grid-cols-1 gap-8">
-                        {webhookData.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <p>No webhook data received yet. Use the test button above or send a POST request to the webhook URL.</p>
-                          </div>
-                        ) : (
-                          webhookData.map((item: any, idx: number) => (
-                            <SocialCard
-                              key={idx}
-                              author={{
-                                name: item.featureName,
-                                username: "webhook_input",
-                                avatar: "https://via.placeholder.com/40",
-                                timeAgo: "via webhook"
-                              }}
-                              content={{
-                                text: item.detailedDescription,
-                                link: {
-                                  title: "Webhook Feature",
-                                  description: "Populated from JSON webhook data",
-                                  icon: <Webhook className="w-5 h-5 text-blue-500" />
-                                }
-                              }}
-                              engagement={{
-                                likes: 0,
-                                comments: 0,
-                                shares: 0,
-                                isLiked: false,
-                                isBookmarked: false
-                              }}
-                              className="mb-4"
-                            />
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <h3 className="text-lg font-medium mb-4">Reasoning-Pro Required</h3>
-                      <p className="text-muted-foreground">
-                        Webhook integration is only available when "Reasoning-Pro (wait times 8-15min)" is selected in the AI input.
-                      </p>
-                    </div>
-                  )}
-                    </div>
-                  )}
                   </div>
                 </div>
 

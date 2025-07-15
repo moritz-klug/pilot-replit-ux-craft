@@ -1,4 +1,4 @@
-import { LayoutDashboard, MessageSquare, Webhook } from "lucide-react"
+import { LayoutDashboard, MessageSquare } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -17,7 +17,6 @@ interface AppSidebarProps {
   onTabChange: (tab: string) => void
   activeChatbots?: Record<string, boolean>
   onChatSelect?: (featureName: string) => void
-  isReasoningProSelected?: boolean
 }
 
 const items = [
@@ -27,15 +26,9 @@ const items = [
     icon: LayoutDashboard,
     route: "/feature-review"
   },
-  { 
-    title: "Webhook Input", 
-    value: "webhook", 
-    icon: Webhook,
-    route: "/feature-review"
-  },
 ]
 
-export function AppSidebar({ activeTab, onTabChange, activeChatbots = {}, onChatSelect, isReasoningProSelected = false }: AppSidebarProps) {
+export function AppSidebar({ activeTab, onTabChange, activeChatbots = {}, onChatSelect }: AppSidebarProps) {
   const { state } = useSidebar()
   const navigate = useNavigate()
   const location = useLocation()
@@ -59,7 +52,7 @@ export function AppSidebar({ activeTab, onTabChange, activeChatbots = {}, onChat
           <SidebarGroupLabel>Analysis Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.filter(item => item.value !== 'webhook' || isReasoningProSelected).map((item) => (
+              {items.map((item) => (
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton 
                     onClick={() => handleItemClick(item)}
