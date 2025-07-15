@@ -527,11 +527,6 @@ Execute these improvements while preserving all current features and maintaining
     
     window.addEventListener('message', handleWebhookMessage);
     window.addEventListener('message', handleModelSelection);
-    
-    return () => {
-      window.removeEventListener('message', handleWebhookMessage);
-      window.removeEventListener('message', handleModelSelection);
-    };
 
     if (uiTest) {
       // In UI Test Mode, only mimic analysis, do not call backend
@@ -547,7 +542,10 @@ Execute these improvements while preserving all current features and maintaining
           setComponentStatuses(initialStatuses);
         }
       });
-      return;
+      return () => {
+        window.removeEventListener('message', handleWebhookMessage);
+        window.removeEventListener('message', handleModelSelection);
+      };
     }
 
     // --- New: Call /extract-features (POST) instead of EventSource ---
@@ -578,6 +576,11 @@ Execute these improvements while preserving all current features and maintaining
       }
     }
     fetchAnalysis();
+    
+    return () => {
+      window.removeEventListener('message', handleWebhookMessage);
+      window.removeEventListener('message', handleModelSelection);
+    };
     // eslint-disable-next-line
   }, [url]);
 
