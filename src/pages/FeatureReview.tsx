@@ -79,9 +79,10 @@ const FeatureReview: React.FC = () => {
   const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
   const [chatHistory, setChatHistory] = useState([]);
   
-  // Webhook functionality
+  // Webhook functionality - only active when Reasoning-Pro is selected
   const [webhookData, setWebhookData] = useState<any[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
+  const [selectedModel, setSelectedModel] = useState('Standard (1-2min)');
   
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -1378,15 +1379,17 @@ Execute these improvements while preserving all current features and maintaining
                    )}
                   </div>
 
-                  {/* Webhook Section */}
+                  {/* Webhook Section - Only active when Reasoning-Pro is selected */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
                   {tab === 'webhook' && (
                     <div>
-                      <div className="mb-6 text-center">
-                        <h3 className="text-lg font-medium mb-4">Webhook Integration</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Send JSON data to this webhook endpoint to populate the cards with your feature data.
-                        </p>
+                      {selectedModel === 'Reasoning-Pro (wait times 8-15min)' ? (
+                        <div>
+                          <div className="mb-6 text-center">
+                            <h3 className="text-lg font-medium mb-4">Webhook Integration</h3>
+                            <p className="text-muted-foreground mb-4">
+                              Send JSON data to this webhook endpoint to populate the cards with your feature data.
+                            </p>
                         
                         {/* Webhook URL Display */}
                         <div className="bg-gray-50 rounded-lg p-4 mb-4">
@@ -1489,6 +1492,15 @@ Execute these improvements while preserving all current features and maintaining
                           ))
                         )}
                       </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <h3 className="text-lg font-medium mb-4">Reasoning-Pro Required</h3>
+                      <p className="text-muted-foreground">
+                        Webhook integration is only available when "Reasoning-Pro (wait times 8-15min)" is selected in the AI input.
+                      </p>
+                    </div>
+                  )}
                     </div>
                   )}
                   </div>
