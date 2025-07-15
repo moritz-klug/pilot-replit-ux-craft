@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { UITestModeContext, ModelSelectionContext } from "@/App";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface UseAutoResizeTextareaProps {
     minHeight: number;
@@ -82,6 +83,7 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
     const { selectedModel, setSelectedModel } = useContext(ModelSelectionContext);
     const { uiTest, setUITest } = useContext(UITestModeContext);
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     const N8N_WEBHOOK_URL = "https://lokalhelden.app.n8n.cloud/webhook-test/cea6e7da-58b7-4dd7-bb13-c5d260041df2";
 
@@ -104,16 +106,19 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
                 const responseData = await response.json();
                 console.log("Webhook response:", responseData);
                 
-                // Navigate to feature-review and let the webhook handler process the data
+                // Store the response data and navigate using React Router
                 const currentUrl = (window as any).currentAnalysisUrl || chatContent;
-                window.location.href = `/feature-review?url=${encodeURIComponent(currentUrl)}`;
+                sessionStorage.setItem('analysisUrl', currentUrl);
+                sessionStorage.setItem('webhookResponse', JSON.stringify(responseData));
                 
-                // Small delay to ensure page loads before calling webhook handler
-                setTimeout(() => {
-                    if ((window as any).handleWebhookInput) {
-                        (window as any).handleWebhookInput(responseData);
-                    }
-                }, 500);
+                // Navigate using React Router instead of window.location.href
+                navigate('/feature-review', { 
+                    state: { 
+                        url: currentUrl, 
+                        webhookData: responseData,
+                        isReasoningPro: true 
+                    } 
+                });
                 
                 toast({
                     title: "Reasoning-Pro Activated",

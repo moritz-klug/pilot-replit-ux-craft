@@ -57,6 +57,7 @@ const FeatureReview: React.FC = () => {
   const navigate = useNavigate();
   const urlParams = new URLSearchParams(location.search);
   const url = location.state?.url || urlParams.get('url') || sessionStorage.getItem('analysisUrl') || 'https://www.apple.com';
+  const webhookDataFromState = location.state?.webhookData;
 
   const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -645,6 +646,13 @@ Execute these improvements while preserving all current features and maintaining
     setRecommendation(null);
     setRecommending(false);
 
+    // If we have webhook data from navigation state, process it immediately
+    if (webhookDataFromState) {
+      console.log("Processing webhook data from navigation state");
+      handleWebhookInput(webhookDataFromState);
+      return;
+    }
+
     if (uiTest) {
       // In UI Test Mode, only mimic analysis, do not call backend
       analyzeWithScreenshot(url, uiTest).then((mockAnalysis) => {
@@ -701,7 +709,7 @@ Execute these improvements while preserving all current features and maintaining
     }
     fetchAnalysis();
     // eslint-disable-next-line
-  }, [url, uiTest, selectedModel]);
+  }, [url, uiTest, selectedModel, webhookDataFromState]);
 
   const handleStatusChange = (section: any, status: Status) => {
     if (status === 'improved') {
