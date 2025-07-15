@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowRight, Bot, Check, ChevronDown, Paperclip } from "lucide-react";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { ArrowRight, Bot, Check, ChevronDown, Paperclip, Wrench } from "lucide-react";
+import { useState, useRef, useCallback, useEffect, useContext } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
+import { UITestModeContext } from "@/App";
 
 interface UseAutoResizeTextareaProps {
     minHeight: number;
@@ -78,6 +79,7 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
         maxHeight: 300,
     });
     const [selectedModel, setSelectedModel] = useState("Standard (1-2min)");
+    const { uiTest, setUITest } = useContext(UITestModeContext);
 
     const AI_MODELS = [
         "Reasoning-Pro (wait times 8-15min)",
@@ -114,7 +116,7 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
                     >
                         <Textarea
                             value={value}
-                            placeholder="What can I do for you?"
+                            placeholder={uiTest ? "UI Test Mode ON" : "What can I do for you?"}
                             className={cn(
                                 "w-full rounded-2xl rounded-b-none px-4 py-3 bg-card/50 border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0",
                                 "min-h-[72px]"
@@ -132,6 +134,65 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
                     <div className="h-14 bg-card/50 rounded-b-xl flex items-center">
                         <div className="absolute left-3 right-3 bottom-3 flex items-center justify-between w-[calc(100%-24px)]">
                             <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setUITest(!uiTest)
+                                    }}
+                                    className={cn(
+                                        "rounded-full transition-all flex items-center gap-2 px-1.5 py-1 border h-8",
+                                        uiTest
+                                            ? "bg-orange-500/15 border-orange-500 text-orange-600"
+                                            : "bg-muted border-transparent text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                                        <motion.div
+                                            animate={{
+                                                rotate: uiTest ? 180 : 0,
+                                                scale: uiTest ? 1.1 : 1,
+                                            }}
+                                            whileHover={{
+                                                rotate: uiTest ? 180 : 15,
+                                                scale: 1.1,
+                                                transition: {
+                                                    type: "spring",
+                                                    stiffness: 300,
+                                                    damping: 10,
+                                                },
+                                            }}
+                                            transition={{
+                                                type: "spring",
+                                                stiffness: 260,
+                                                damping: 25,
+                                            }}
+                                        >
+                                            <Wrench
+                                                className={cn(
+                                                    "w-4 h-4",
+                                                    uiTest ? "text-orange-600" : "text-inherit"
+                                                )}
+                                            />
+                                        </motion.div>
+                                    </div>
+                                    <AnimatePresence>
+                                        {uiTest && (
+                                            <motion.span
+                                                initial={{ width: 0, opacity: 0 }}
+                                                animate={{
+                                                    width: "auto",
+                                                    opacity: 1,
+                                                }}
+                                                exit={{ width: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="text-sm overflow-hidden whitespace-nowrap text-orange-600 flex-shrink-0"
+                                            >
+                                                UI Test
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
+                                </button>
+                                <div className="h-4 w-px bg-border mx-0.5" />
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button
