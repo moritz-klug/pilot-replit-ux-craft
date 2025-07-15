@@ -82,7 +82,7 @@ const FeatureReview: React.FC = () => {
   // Webhook functionality - only active when Reasoning-Pro is selected
   const [webhookData, setWebhookData] = useState<any[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
-  const [selectedModel, setSelectedModel] = useState('Standard (1-2min)');
+  const [isReasoningProSelected, setIsReasoningProSelected] = useState(false);
   
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -504,6 +504,13 @@ Execute these improvements while preserving all current features and maintaining
       });
     };
     
+    // Listen for model selection changes from AI input
+    const handleModelSelection = (event: MessageEvent) => {
+      if (event.data.type === 'MODEL_SELECTED') {
+        setIsReasoningProSelected(event.data.model === 'Reasoning-Pro (wait times 8-15min)');
+      }
+    };
+    
     // Setup webhook listener for postMessage
     const handleWebhookMessage = (event: MessageEvent) => {
       if (event.data.type === 'WEBHOOK_DATA') {
@@ -519,9 +526,11 @@ Execute these improvements while preserving all current features and maintaining
     };
     
     window.addEventListener('message', handleWebhookMessage);
+    window.addEventListener('message', handleModelSelection);
     
     return () => {
       window.removeEventListener('message', handleWebhookMessage);
+      window.removeEventListener('message', handleModelSelection);
     };
 
     if (uiTest) {
@@ -782,6 +791,7 @@ Execute these improvements while preserving all current features and maintaining
             setCurrentChatFeature(featureName);
             setTab('chatbot');
           }}
+          isReasoningProSelected={isReasoningProSelected}
         />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
@@ -1383,7 +1393,7 @@ Execute these improvements while preserving all current features and maintaining
                   <div className="bg-white rounded-lg shadow-sm p-6">
                   {tab === 'webhook' && (
                     <div>
-                      {selectedModel === 'Reasoning-Pro (wait times 8-15min)' ? (
+                      {isReasoningProSelected ? (
                         <div>
                           <div className="mb-6 text-center">
                             <h3 className="text-lg font-medium mb-4">Webhook Integration</h3>

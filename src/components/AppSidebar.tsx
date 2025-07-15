@@ -17,6 +17,7 @@ interface AppSidebarProps {
   onTabChange: (tab: string) => void
   activeChatbots?: Record<string, boolean>
   onChatSelect?: (featureName: string) => void
+  isReasoningProSelected?: boolean
 }
 
 const items = [
@@ -34,7 +35,7 @@ const items = [
   },
 ]
 
-export function AppSidebar({ activeTab, onTabChange, activeChatbots = {}, onChatSelect }: AppSidebarProps) {
+export function AppSidebar({ activeTab, onTabChange, activeChatbots = {}, onChatSelect, isReasoningProSelected = false }: AppSidebarProps) {
   const { state } = useSidebar()
   const navigate = useNavigate()
   const location = useLocation()
@@ -58,7 +59,7 @@ export function AppSidebar({ activeTab, onTabChange, activeChatbots = {}, onChat
           <SidebarGroupLabel>Analysis Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {items.filter(item => item.value !== 'webhook' || isReasoningProSelected).map((item) => (
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton 
                     onClick={() => handleItemClick(item)}
