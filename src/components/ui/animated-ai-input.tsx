@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { UITestModeContext } from "@/App";
+import { useToast } from "@/hooks/use-toast";
 
 interface UseAutoResizeTextareaProps {
     minHeight: number;
@@ -80,6 +81,42 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
     });
     const [selectedModel, setSelectedModel] = useState("Standard (1-2min)");
     const { uiTest, setUITest } = useContext(UITestModeContext);
+    const { toast } = useToast();
+
+    const N8N_WEBHOOK_URL = "https://lokalhelden.app.n8n.cloud/webhook-test/cea6e7da-58b7-4dd7-bb13-c5d260041df2";
+
+    const triggerN8nWebhook = async (chatContent: string) => {
+        try {
+            const response = await fetch(N8N_WEBHOOK_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    message: chatContent,
+                    model: selectedModel,
+                    timestamp: new Date().toISOString(),
+                    triggered_from: window.location.origin,
+                }),
+            });
+
+            if (response.ok) {
+                toast({
+                    title: "Reasoning-Pro Activated",
+                    description: "Your request has been sent for advanced processing.",
+                });
+            } else {
+                throw new Error("Webhook request failed");
+            }
+        } catch (error) {
+            console.error("Error triggering n8n webhook:", error);
+            toast({
+                title: "Error",
+                description: "Failed to trigger Reasoning-Pro. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
 
     const AI_MODELS = [
         "Reasoning-Pro (wait times 8-15min)",
@@ -91,16 +128,20 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
         "Standard (1-2min)": <Bot className="w-4 h-4" />,
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey && value.trim()) {
             e.preventDefault();
-            onSubmit();
-            adjustHeight(true);
+            await handleSubmit();
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!disabled && value.trim()) {
+            // If Reasoning-Pro is selected, trigger the n8n webhook
+            if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
+                await triggerN8nWebhook(value);
+            }
+            
             onSubmit();
             adjustHeight(true);
         }
