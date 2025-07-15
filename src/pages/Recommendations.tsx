@@ -10,6 +10,11 @@ import { futureHouseService } from "@/services/futureHouseService";
 import { RecommendationsDisplay } from "@/components/RecommendationsDisplay";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { mockFutureHouseResponse, mockFeature } from "@/mock/futureHouseMock";
+import { parseRecommendationString, ParsedRecommendation } from "@/utils/parseRecommendation";
+import { mistralService } from "@/services/mistral";
 
 interface Recommendation {
   id: string;
@@ -23,18 +28,47 @@ interface Recommendation {
   category: 'accessibility' | 'usability' | 'visual' | 'interaction';
 }
 
+// Add type for enriched recommendation
+interface EnrichedRecommendation {
+  id?: string;
+  title: string;
+  description: string;
+  principle: string;
+  research: string;
+  impact: string;
+  category: string;
+}
+
+interface Paper {
+  title: string;
+  authors: string[];
+  year: number;
+  url: string;
+  relevance: string;
+}
+
 const Recommendations = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const section = location.state?.section;
   const [recommendations, setRecommendations] = useState<string[]>([]);
-  const [papers, setPapers] = useState<any[]>([]);
+  const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(false);
   const [mockupStates, setMockupStates] = useState<{ [key: string]: 'before' | 'after' }>({});
   const [recProgressLog, setRecProgressLog] = useState<string[]>([]);
   const [showRecLog, setShowRecLog] = useState(!!location.state?.showRecLog);
   const [tab, setTab] = useState('recommendations');
+  const [heuristicSuggestions, setHeuristicSuggestions] = useState<{ [key: number]: string }>({});
+  const [heuristicLoading, setHeuristicLoading] = useState<{ [key: number]: boolean }>({});
+  const [relevantHeuristics, setRelevantHeuristics] = useState<number[]>([]);
+  const [heuristicsLoading, setHeuristicsLoading] = useState(false);
+  // Default to mock data (true)
+  const [useMockupCards, setUseMockupCards] = useState(true);
+  const [enrichedCards, setEnrichedCards] = useState<EnrichedRecommendation[]>([]);
+  const [enrichLoading, setEnrichLoading] = useState(false);
+  const [implementationQueue, setImplementationQueue] = useState<Recommendation[]>([]);
+
 
   useEffect(() => {
     if (showRecLog) {
@@ -50,14 +84,21 @@ const Recommendations = () => {
     }
   }, [showRecLog]);
 
+  // Only call the real API if useMockupCards is false
   useEffect(() => {
     if (!section) {
       navigate('/feature-review');
       return;
     }
+    if (useMockupCards) {
+      // Only use mock data, do NOT call any API
+      setRecommendations([]);
+      setPapers([]);
+      setLoading(false);
+      return;
+    }
     if (showRecLog) return; // Wait for log to finish
     setLoading(true);
-    // Always prompt for best UI/UX experiences for the UI element
     const context = `What are the best UI and UX experiences, patterns, and scientific recommendations for a ${section.name}?`;
     futureHouseService.getRecommendations({
       feature: section.name,
@@ -76,7 +117,49 @@ const Recommendations = () => {
         });
       })
       .finally(() => setLoading(false));
-  }, [section, navigate, toast, showRecLog]);
+  }, [section, navigate, toast, useMockupCards, showRecLog]);
+
+  useEffect(() => {
+    if (tab === 'heuristics' && section) {
+      setHeuristicsLoading(true);
+      futureHouseService.getRelevantHeuristics(section.title, section.description)
+        .then(indices => setRelevantHeuristics(indices))
+        .catch(() => setRelevantHeuristics([]))
+        .finally(() => setHeuristicsLoading(false));
+    }
+  }, [tab, section]);
+    // Always prompt for best UI/UX experiences for the UI element
+  
+  // Enrich recommendations with LLM when toggled to API recommendations
+  useEffect(() => {
+    if (!useMockupCards) {
+      setEnrichLoading(true);
+      Promise.all(
+        mockFutureHouseResponse.recommendations.map((rec) =>
+          fetch("http://localhost:8000/enrich-recommendation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recommendation: rec,
+              feature: mockFeature.title,
+              currentDesign: mockFeature.description,
+            }),
+          })
+            .then((res) => res.json())
+            .catch(() => null)
+        )
+      )
+        .then((results) => {
+          // Add an id for React key
+          setEnrichedCards(
+            results
+              .filter(Boolean)
+              .map((card, idx) => ({ ...card, id: (idx + 1).toString() }))
+          );
+        })
+        .finally(() => setEnrichLoading(false));
+    }
+  }, [useMockupCards]);
 
   if (!section) return null;
 
@@ -139,6 +222,11 @@ const Recommendations = () => {
     }
   ];
 
+  // Remove the hardcoded allRecommendations and use parsed mock data instead
+  const parsedRecommendations: ParsedRecommendation[] = mockFutureHouseResponse.recommendations.map((rec, idx) =>
+    parseRecommendationString(rec, idx + 1)
+  );
+
   const getImpactColor = (impact: Recommendation['impact']) => {
     switch (impact) {
       case 'high': return 'bg-green-500/20 text-green-400 border-green-500/30';
@@ -157,11 +245,15 @@ const Recommendations = () => {
   };
 
   const handleChooseRecommendation = (recommendation: Recommendation) => {
+    setImplementationQueue(prev => [...prev, recommendation]);
     toast({
       title: "Recommendation Selected",
       description: `"${recommendation.title}" has been added to your implementation queue.`,
     });
   };
+
+  // Helper to check if a recommendation is already in the queue
+  const isInQueue = (rec: Recommendation) => implementationQueue.some(r => r.id === rec.id);
 
   const toggleMockupView = (recommendationId: string) => {
     setMockupStates(prev => ({
@@ -178,6 +270,108 @@ const Recommendations = () => {
   const getMockupLabel = (recommendationId: string) => {
     const state = mockupStates[recommendationId] || 'before';
     return state === 'before' ? 'Before' : 'After';
+  };
+
+  const handleHeuristicSuggestion = async (index: number, heuristic: { title: string, explanation: string }) => {
+    setHeuristicLoading(prev => ({ ...prev, [index]: true }));
+    try {
+      // Use your existing LLM service, e.g. futureHouseService.getRecommendations or a new endpoint
+      const context = `Using the usability heuristic: ${heuristic.title} - ${heuristic.explanation}, how can we improve the following feature?\nTitle: ${section.title}\nDescription: ${section.description}`;
+      const res = await futureHouseService.getRecommendations({
+        feature: section.title,
+        currentDesign: section.description,
+        context,
+      });
+      setHeuristicSuggestions(prev => ({ ...prev, [index]: res.recommendations?.[0] || 'No suggestion returned.' }));
+    } catch (err) {
+      setHeuristicSuggestions(prev => ({ ...prev, [index]: 'Failed to get suggestion.' }));
+    } finally {
+      setHeuristicLoading(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
+  const usabilityHeuristics = [
+    {
+      title: "Visibility of system status",
+      explanation: "The system should always keep users informed about what is going on, through appropriate feedback within reasonable time."
+    },
+    {
+      title: "Match between system and the real world",
+      explanation: "The system should speak the users' language, with words, phrases and concepts familiar to the user, rather than system-oriented terms."
+    },
+    {
+      title: "User control and freedom",
+      explanation: "Users often choose system functions by mistake and will need a clearly marked 'emergency exit' to leave the unwanted state."
+    },
+    {
+      title: "Consistency and standards",
+      explanation: "Users should not have to wonder whether different words, situations, or actions mean the same thing. Follow platform conventions."
+    },
+    {
+      title: "Error prevention",
+      explanation: "Even better than good error messages is a careful design which prevents a problem from occurring in the first place."
+    },
+    {
+      title: "Recognition rather than recall",
+      explanation: "Minimize the user's memory load by making objects, actions, and options visible."
+    },
+    {
+      title: "Flexibility and efficiency of use",
+      explanation: "Accelerators—unseen by the novice user—may often speed up the interaction for the expert user such that the system can cater to both inexperienced and experienced users."
+    },
+    {
+      title: "Aesthetic and minimalist design",
+      explanation: "Dialogues should not contain information which is irrelevant or rarely needed. Every extra unit of information competes with the relevant units of information and diminishes their relative visibility."
+    },
+    {
+      title: "Help users recognize, diagnose, and recover from errors",
+      explanation: "Error messages should be expressed in plain language (no codes), precisely indicate the problem, and constructively suggest a solution."
+    },
+    {
+      title: "Help and documentation",
+      explanation: "Even though it is better if the system can be used without documentation, it may be necessary to provide help and documentation."
+    }
+  ];
+
+  const recommendationsToShow = useMockupCards ? allRecommendations : enrichedCards;
+
+  const handleRemoveFromQueue = (recommendation: Recommendation) => {
+    setImplementationQueue(prev => prev.filter(rec => rec.id !== recommendation.id));
+  };
+
+  const handleGetPromptAndCode = async () => {
+    try {
+      // Combine titles/descriptions for the LLM
+      const combinedTitle = implementationQueue.map((rec) => rec.title).join("; ");
+      const combinedDescription = implementationQueue.map((rec) => rec.description).join("\n\n");
+
+      // Use the same fallback logic for feature/currentDesign as before
+      let featureName: string;
+      let currentDesign: string;
+      if (!useMockupCards && section?.name && section?.description) {
+        featureName = section.name;
+        currentDesign = section.description;
+      } else {
+        featureName = mockFeature.title;
+        currentDesign = mockFeature.description;
+      }
+
+      // Call the LLM service
+      const response = await mistralService.recommendationToLLM({
+        featureName: featureName,
+        currentDesign: currentDesign,
+        recommendationTitle: combinedTitle,
+        recommendationDescription: combinedDescription,
+      });
+      // Navigate to the result page, passing the LLM result
+      navigate("/results", { state: { response } });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to generate code and prompt.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -240,56 +434,45 @@ const Recommendations = () => {
           </CardContent>
         </Card>
 
-        {showRecLog && (
-          <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 my-8 mx-auto">
-            <h2 className="font-semibold mb-2 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" /> Recommendation Progress Log
-            </h2>
-            <div className="font-mono text-sm space-y-1">
-              {recProgressLog.map((msg, i) => (
-                <div key={i}>{msg}</div>
-              ))}
-              <Loader2 className="h-6 w-6 animate-spin mt-4 text-primary" />
-            </div>
-          </div>
-        )}
 
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
+        {/* Tab Switcher */}
+        <div className="mb-8 flex gap-4">
+          <Button variant={tab === 'scientific' ? 'default' : 'outline'} onClick={() => setTab('scientific')}>Scientific Recommendations</Button>
+          <Button variant={tab === 'heuristics' ? 'default' : 'outline'} onClick={() => setTab('heuristics')}>Usability Heuristics</Button>
+          </div>
+
+        {tab === 'scientific' ? (
           <>
-          {/* Summary */}
-          <Card className="mt-8">
-              <CardHeader>
-                <CardTitle>Implementation Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  These recommendations are based on current UI/UX best practices and research.
-                  Choose the recommendations that best align with your design goals and user needs.
-                  You can implement multiple recommendations or start with the highest impact ones.
-                </p>
-              </CardContent>
-            </Card>
+            {/* Toggle Button for Data Source */}
+            <div className="mb-4">
+              <Button variant="secondary" onClick={() => setUseMockupCards((v) => !v)}>
+                {useMockupCards ? "Show API Recommendations" : "Show Mockup Cards"}
+              </Button>
+            </div>
             {/* Horizontal Scrollable Recommendations */}
             <div className="mb-8">
               <h2 className="text-2xl font-bold mb-6">Design Recommendations</h2>
+              {enrichLoading && !useMockupCards ? (
+                <div className="p-8 text-center text-muted-foreground">Enriching recommendations with AI...</div>
+              ) : (
               <ScrollArea className="w-full whitespace-nowrap rounded-md">
                 <div className="flex w-max space-x-6 p-4">
-                  {allRecommendations.map((recommendation, index) => (
-                    <Card key={recommendation.id} className="w-[450px] flex-none overflow-hidden">
+                    {recommendationsToShow.map((recommendation, index) => (
+                      <Card key={recommendation.id || index} className="w-[450px] flex-none overflow-hidden">
                       <CardHeader className="pb-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3 min-w-0 flex-1">
                             <div className="bg-orange-500/20 p-2 rounded-lg flex-shrink-0">
-                              {getCategoryIcon(recommendation.category)}
+                                {/* Show icon or index */}
+                                {useMockupCards && getCategoryIcon((recommendation as Recommendation).category as Recommendation['category'])}
+                                {!useMockupCards && <span className="h-4 w-4">{index + 1}</span>}
                             </div>
                             <div className="min-w-0 flex-1">
                               <CardTitle className="text-lg mb-2 break-words whitespace-normal hyphens-auto">
                                 {index + 1}. {recommendation.title}
                               </CardTitle>
                               <div className="flex gap-2 flex-wrap">
-                                <Badge variant="outline" className={`${getImpactColor(recommendation.impact)} whitespace-nowrap`}>
+                                  <Badge variant="outline" className={`${useMockupCards ? getImpactColor((recommendation as Recommendation).impact as Recommendation['impact']) : ''} whitespace-nowrap`}>
                                   {recommendation.impact} impact
                                 </Badge>
                                 <Badge variant="outline" className="capitalize whitespace-nowrap">
@@ -299,11 +482,12 @@ const Recommendations = () => {
                             </div>
                           </div>
                           <Button
-                            onClick={() => handleChooseRecommendation(recommendation)}
+                            onClick={useMockupCards && !isInQueue(recommendation as Recommendation) ? () => handleChooseRecommendation(recommendation as Recommendation) : undefined}
                             className="bg-orange-600 hover:bg-orange-700 flex-shrink-0 ml-2"
                             size="sm"
+                            disabled={!useMockupCards || isInQueue(recommendation as Recommendation)}
                           >
-                            Choose This
+                            {isInQueue(recommendation as Recommendation) ? "Added" : "Choose This"}
                           </Button>
                         </div>
                       </CardHeader>
@@ -311,7 +495,6 @@ const Recommendations = () => {
                         <div>
                           <p className="text-sm text-muted-foreground break-words whitespace-normal hyphens-auto overflow-wrap-anywhere">{recommendation.description}</p>
                         </div>
-
                         {/* Vertical Layout: Principle, Research, then Visual Mockup */}
                         <div className="space-y-4">
                           {/* UI/UX Principle */}
@@ -322,53 +505,34 @@ const Recommendations = () => {
                             </h4>
                             <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal hyphens-auto overflow-wrap-anywhere">{recommendation.principle}</p>
                           </div>
-
                           {/* Research Citation */}
                           <div className="overflow-hidden">
                             <h4 className="font-semibold mb-2 text-sm break-words">Research Citation</h4>
                             <p className="text-xs text-muted-foreground italic leading-relaxed break-words whitespace-normal hyphens-auto overflow-wrap-anywhere">{recommendation.research}</p>
                           </div>
-
                           {/* Visual Mockup */}
                           <div className="overflow-hidden">
                             <h4 className="font-semibold mb-2 text-sm">Visual Mockup</h4>
                             <div className="bg-muted rounded-lg p-3 relative overflow-hidden">
                               <div className="relative">
+                                  {useMockupCards && (recommendation as Recommendation).beforeMockupUrl ? (
                                 <img
-                                  src={getMockupUrl(recommendation)}
-                                  alt={`${getMockupLabel(recommendation.id)} mockup for ${recommendation.title}`}
+                                      src={(recommendation as Recommendation).beforeMockupUrl}
+                                      alt={`Before mockup for ${recommendation.title}`}
                                   className="w-full h-32 object-cover rounded-lg transition-all duration-300"
                                 />
-
-                                {/* Swipe Controls */}
-                                <div className="absolute inset-0 flex items-center justify-between p-2">
-                                  <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
-                                    onClick={() => toggleMockupView(recommendation.id)}
-                                  >
-                                    <ChevronLeft className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-0"
-                                    onClick={() => toggleMockupView(recommendation.id)}
-                                  >
-                                    <ChevronRight className="h-4 w-4" />
-                                  </Button>
+                                  ) : (
+                                    <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded-lg text-gray-400">No mockup</div>
+                                  )}
                                 </div>
-                              </div>
-
                               {/* Before/After Label */}
                               <div className="flex justify-between items-center mt-2">
                                 <p className="text-xs text-muted-foreground break-words">
-                                  {getMockupLabel(recommendation.id)}
+                                    Before
                                 </p>
                                 <div className="flex gap-1 flex-shrink-0">
-                                  <div className={`w-2 h-2 rounded-full ${mockupStates[recommendation.id] !== 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
-                                  <div className={`w-2 h-2 rounded-full ${mockupStates[recommendation.id] === 'after' ? 'bg-orange-500' : 'bg-muted-foreground/30'}`} />
+                                    <div className={`w-2 h-2 rounded-full bg-orange-500`} />
+                                    <div className={`w-2 h-2 rounded-full bg-muted-foreground/30`} />
                                 </div>
                               </div>
                             </div>
@@ -380,11 +544,129 @@ const Recommendations = () => {
                 </div>
                 <ScrollBar orientation="horizontal" />
               </ScrollArea>
+              )}
             </div>
-
+            {/* Summary */}
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>Implementation Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  These recommendations are based on current UI/UX best practices and research.
+                  Choose the recommendations that best align with your design goals and user needs.
+                  You can implement multiple recommendations or start with the highest impact ones.
+                </p>
+                {implementationQueue.length === 0 ? (
+                  <p className="text-muted-foreground">
+                    No recommendations queued yet. Click "Choose This" to add.
+                  </p>
+                ) : (
+                  <>
+                    <ul className="mb-4">
+                      {implementationQueue.map((rec) => (
+                        <li key={rec.id} className="mb-2 flex items-center justify-between">
+                          <span>
+                            <strong>{rec.title}</strong>: {rec.description}
+                          </span>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="ml-2"
+                            onClick={() => handleRemoveFromQueue(rec)}
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      onClick={handleGetPromptAndCode}
+                      disabled={implementationQueue.length === 0}
+                    >
+                      Generate Code & Prompt for Selected
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            {loading ? (
+              <p>Loading...</p>
+            ) : (
+              useMockupCards ? (
             <RecommendationsDisplay recommendations={recommendations} papers={papers} />
+              ) : (
+                <RecommendationsDisplay recommendations={mockFutureHouseResponse.recommendations} papers={mockFutureHouseResponse.papers} />
+              )
+            )}
           </>
-
+        ) : (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-6">10 Usability Heuristics</h2>
+            <p className="mb-6 text-muted-foreground max-w-2xl">
+              These are Jakob Nielsen's 10 Usability Heuristics—timeless principles that form the foundation of great user interfaces. They are widely recognized as the main pillars of UI/UX design. Applying these heuristics helps ensure your product is intuitive, efficient, and delightful for users. Every major tech company and design team references these principles when evaluating and improving digital experiences.
+            </p>
+            {heuristicsLoading ? (
+              <p>Loading relevant heuristics...</p>
+            ) : (
+              <ScrollArea className="w-full whitespace-nowrap rounded-md">
+                <div className="flex w-max space-x-6 p-4">
+                  {[
+                    ...usabilityHeuristics.map((h, i) => ({ ...h, index: i, relevant: relevantHeuristics.includes(i + 1) })),
+                  ]
+                    .sort((a, b) => (b.relevant ? 1 : 0) - (a.relevant ? 1 : 0)) // relevant first
+                    .map((heuristic, idx) => {
+                      const isRelevant = heuristic.relevant;
+                      return (
+                        <Card
+                          key={heuristic.index}
+                          className={`w-[450px] flex-none overflow-hidden ${!isRelevant ? 'opacity-50 pointer-events-none' : ''}`}
+                        >
+                          <CardHeader className="pb-4">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <div className="bg-muted p-2 rounded-lg flex-shrink-0 h-10 w-10 flex items-center justify-center font-bold text-lg text-muted-foreground">
+                                {heuristic.index + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <CardTitle className="text-lg mb-2 break-words whitespace-normal hyphens-auto font-bold">
+                                  {heuristic.title}
+                                </CardTitle>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="overflow-hidden mb-4">
+                              <h4 className="font-semibold mb-2 text-sm text-muted-foreground">
+                                UI/UX Principle
+                              </h4>
+                              <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal hyphens-auto overflow-wrap-anywhere">
+                                {heuristic.explanation}
+                              </p>
+                            </div>
+                            <Separator className="my-4" />
+                            <div>
+                              <Button
+                                onClick={() => handleHeuristicSuggestion(heuristic.index, heuristic)}
+                                disabled={!isRelevant || heuristicLoading[heuristic.index]}
+                                className="mb-2"
+                              >
+                                {heuristicLoading[heuristic.index] ? 'Loading...' : 'Get Improvement Suggestion'}
+                              </Button>
+                              {heuristicSuggestions[heuristic.index] && (
+                                <div className="mt-2 p-3 bg-muted rounded">
+                                  <strong>Suggestion:</strong> {heuristicSuggestions[heuristic.index]}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            )}
+          </div>
         )}
             </div>
           </div>

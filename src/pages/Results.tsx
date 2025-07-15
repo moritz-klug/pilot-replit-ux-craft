@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,6 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CodeBlock, CodeBlockCode, CodeBlockGroup } from '@/components/ui/code-block';
+import { useLocation} from "react-router-dom";
+
+function responseToCode(code: string): string {
+  if (!code) return '';
+  // Replace escaped newlines and double quotes
+  return code.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+}
 
 const Results = () => {
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -14,9 +20,11 @@ const Results = () => {
   const [codeCopied, setCodeCopied] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
   const { toast } = useToast();
+  const location = useLocation();
+  const { response } = location.state;
 
   const codeSnippets = {
-    react: `import React from 'react';
+    react: response?.react || `import React from 'react';
 
 const ImprovedComponent = () => {
   return (
@@ -33,7 +41,7 @@ const ImprovedComponent = () => {
 };
 
 export default ImprovedComponent;`,
-    vue: `<template>
+    vue: response?.vue ||`<template>
   <div class="container mx-auto p-6">
     <h1 class="text-2xl font-bold mb-4">
       Improved UX Component
@@ -50,7 +58,7 @@ export default {
   name: 'ImprovedComponent'
 }
 </script>`,
-    angular: `import { Component } from '@angular/core';
+    angular: response?.angular || `import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-improved-component',
@@ -66,11 +74,11 @@ export default {
     </div>
   \`
 })
-export class ImprovedComponent { }`
+export class ImprovedComponent { }`,
   };
 
   const platformPrompts = {
-    lovable: `Please implement the following science-based UX improvements for my application:
+    lovable: response?.prompt || `Please implement the following science-based UX improvements for my application:
 
 1. **Visual Hierarchy**: Improve the visual hierarchy by adjusting font sizes, spacing, and color contrast to guide user attention effectively.
 
@@ -358,7 +366,7 @@ Execute these improvements while preserving all current features and maintaining
 
   const handleCopyCode = async () => {
     try {
-      await navigator.clipboard.writeText(codeSnippets[selectedFramework as keyof typeof codeSnippets]);
+      await navigator.clipboard.writeText(responseToCode(codeSnippets[selectedFramework as keyof typeof codeSnippets]));
       setCodeCopied(true);
       toast({
         title: "Code copied!",
@@ -435,7 +443,7 @@ Execute these improvements while preserving all current features and maintaining
                       </Button>
                     </CodeBlockGroup>
                     <CodeBlockCode 
-                      code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
+                      code={responseToCode(codeSnippets[selectedFramework as keyof typeof codeSnippets])} 
                       language={selectedFramework === 'angular' ? 'typescript' : selectedFramework === 'react' ? 'tsx' : selectedFramework}
                       theme="github-light"
                     />

@@ -1,5 +1,6 @@
 import os
 import asyncio
+from openai.types.batch import Errors
 import requests
 import json
 from fastapi import FastAPI, HTTPException, UploadFile, Request
@@ -12,15 +13,15 @@ import base64
 import uuid
 from fastapi.staticfiles import StaticFiles
 import glob
-
+from typing import List
+import openai
+import re
 # Correct import for the official client
 from futurehouse_client import FutureHouseClient, JobNames
 from feature_extraction import extract_features_logic
 
 # Load environment variables from .env file
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
-
-print("DEBUG: FUTURE_HOUSE_API_KEY =", os.getenv('FUTURE_HOUSE_API_KEY'))
 
 FUTURE_HOUSE_API_KEY = os.getenv('FUTURE_HOUSE_API_KEY', '')
 FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY', '')
@@ -116,6 +117,42 @@ class RecommendationResponse(BaseModel):
     recommendations: list[str]
     papers: list[Paper]
 
+class RelevantHeuristicsRequest(BaseModel):
+    feature: str
+    currentDesign: str
+
+class RelevantHeuristicsResponse(BaseModel):
+    relevant: List[int]
+
+class EnrichRecommendationRequest(BaseModel):
+    recommendation: str
+    feature: str
+    currentDesign: str
+
+class EnrichedRecommendation(BaseModel):
+    title: str
+    description: str
+    principle: str
+    research: str
+    impact: str = ''
+    category: str = ''
+
+def call_mistral_via_openrouter(prompt: str) -> str:
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set. Please add OPENROUTER_API_KEY to your .env file.")
+    print("[Mistral] Connecting to OpenRouter with prompt:")
+    print(prompt)
+    print("[Mistral] Waiting for response...")
+    client = openai.OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
+    response = client.chat.completions.create(
+        model="mistralai/mistral-7b-instruct",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    content = response.choices[0].message.content
+    print("[Mistral] Got response:")
+    print(content)
+    return content if content is not None else ""
+
 @app.post("/recommendations", response_model=RecommendationResponse)
 def get_recommendations(request: RecommendationRequest):
     if not FUTURE_HOUSE_API_KEY:
@@ -135,10 +172,16 @@ def get_recommendations(request: RecommendationRequest):
         # The response may contain answer, formatted_answer, and references
         answer = getattr(task_response, 'answer', '')
         formatted_answer = getattr(task_response, 'formatted_answer', '')
-        # Extract references/papers if available
         papers = []
-        if hasattr(task_response, 'references') and task_response.references:
-            for ref in task_response.references:
+        # Fix: handle if task_response is a list
+        if isinstance(task_response, list):
+            response_obj = task_response[0] if task_response else None
+        else:
+            response_obj = task_response
+        # Use getattr to safely access 'references' and avoid linter errors
+        references = getattr(response_obj, 'references', None)
+        if references:
+            for ref in references:
                 papers.append(Paper(
                     title=ref.get('title', ''),
                     authors=ref.get('authors', []),
@@ -509,6 +552,239 @@ def test_openrouter():
 
 # Serve cropped images statically
 app.mount('/section-crops', StaticFiles(directory=CROPS_DIR), name='section-crops')
+
+
+@app.post("/relevant-heuristics", response_model=RelevantHeuristicsResponse)
+def get_relevant_heuristics(request: RelevantHeuristicsRequest):
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set. Please add OPENROUTER_API_KEY to your .env file.")
+
+    heuristics_list = [
+        "1. Visibility of system status",
+        "2. Match between system and the real world",
+        "3. User control and freedom",
+        "4. Consistency and standards",
+        "5. Error prevention",
+        "6. Recognition rather than recall",
+        "7. Flexibility and efficiency of use",
+        "8. Aesthetic and minimalist design",
+        "9. Help users recognize, diagnose, and recover from errors",
+        "10. Help and documentation"
+    ]
+    heuristics_str = '\n'.join(heuristics_list)
+    prompt = (
+        f"Given the following UI feature and its current design, select which of Nielsen's 10 Usability Heuristics are most relevant for improving this feature. "
+        f"Return only a comma-separated list of the numbers of the relevant heuristics (e.g., 1,3,5).\n\n"
+        f"Feature: {request.feature}\nCurrent Design: {request.currentDesign}\n\nHeuristics:\n{heuristics_str}"
+    )
+    try:
+        answer = call_mistral_via_openrouter(prompt)
+        numbers = re.findall(r'\b\d+\b', answer)
+        relevant = [int(n) for n in numbers if 1 <= int(n) <= 10]
+        return RelevantHeuristicsResponse(relevant=relevant)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
+
+@app.post("/enrich-recommendation", response_model=EnrichedRecommendation)
+def enrich_recommendation(request: EnrichRecommendationRequest):
+    print("[API] /enrich-recommendation called with:")
+    print(f"Feature: {request.feature}")
+    print(f"Current Design: {request.currentDesign}")
+    print(f"Recommendation: {request.recommendation}")
+    prompt = (
+        f"Given the following UI feature, its current design, and a scientific recommendation, extract the following fields as JSON: "
+        f"title, description, principle, research, impact (high/medium/low), and category (accessibility/usability/visual/interaction). "
+        f"If a field is not present, return an empty string for it.\n\n"
+        f"If the original recommendation is vague, clarify and expand it. Make the description actionable and user-friendly.\n\n"
+        f"Feature: {request.feature}\n"
+        f"Current Design: {request.currentDesign}\n"
+        f"Recommendation: {request.recommendation}\n\n"
+        f"Respond ONLY with a valid JSON object."
+    )
+    try:
+        answer = call_mistral_via_openrouter(prompt)
+        # Try to extract JSON from the answer
+        import json
+        try:
+            data = json.loads(answer)
+        except Exception:
+            # Try to extract JSON substring if LLM wraps it in text
+            import re
+            match = re.search(r'\{.*\}', answer, re.DOTALL)
+            if match:
+                data = json.loads(match.group(0))
+            else:
+                raise HTTPException(status_code=500, detail="Could not parse JSON from LLM response.")
+        return EnrichedRecommendation(**data)
+    except Exception as e:
+        print(f"[Mistral] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}") 
+
+class RecommendationPromptCodeRequest(BaseModel):
+    featureName: str
+    currentDesign: str
+    latestRecommendation: str
+
+class RecommendationPromptCodeResponse(BaseModel):
+    lovable_prompt: str
+    cursor_prompt: str
+    bolt_prompt: str
+    vercel_prompt: str
+    replit_prompt: str
+    magic_prompt: str
+    sitebrew_prompt: str
+    react_code: str  
+    vue_code: str    
+    angular_code: str 
+
+def encode_code_block(code: str) -> str:
+    if not code:
+        return ""
+    return base64.b64encode(code.encode('utf-8')).decode('utf-8')
+
+import time
+
+def retry_get_prompt_code(requests_llm, retry_error, max_retries=3, delay=1.0):
+    for i in range(max_retries):
+        result = requests_llm()
+        if not retry_error(result):
+            return result
+        time.sleep(delay * ( i ** 2))
+    return result
+
+def has_error(result):
+    errors = {"Could not generate prompt", "Could not generate code"}
+    return any(value in errors for value in result.values())
+
+def get_prompt_code(request):
+    prompt = (
+        f"Feature: {request.featureName}\n"
+        f"Latest recommendation:\n{request.latestRecommendation}\n\n"
+        f"Generate platform-specific prompts and code:\n\n"
+        f"1. React component (TypeScript + styles)\n"
+        f"2. Vue 3 component (Composition API + styles)\n"
+        f"3. Angular component (TypeScript + styles)\n"
+        f"4. Lovable prompt: Optimized for Lovable AI with UX focus\n"
+        f"5. Cursor prompt: For Cursor IDE with technical details\n"
+        f"6. Bolt prompt: For Bolt.new with design trends\n"
+        f"7. Vercel prompt: For v0 with production focus\n"
+        f"8. Replit prompt: For Replit with documentation\n"
+        f"9. Magic prompt: For Magic Patterns with advanced UI\n"
+        f"10. Sitebrew prompt: For sitebrew.ai with enterprise focus\n\n"
+        f"Return ONLY code without markdown or file names.\n\n"
+        f"Format:\n"
+        f"---REACT---\n"
+        f"[React code]\n"
+        f"---VUE---\n"
+        f"[Vue code]\n"
+        f"---ANGULAR---\n"
+        f"[Angular code]\n"
+        f"---LOVABLE---\n"
+        f"[Lovable prompt]\n"
+        f"---CURSOR---\n"
+        f"[Cursor prompt]\n"
+        f"---BOLT---\n"
+        f"[Bolt prompt]\n"
+        f"---VERCEL---\n"
+        f"[Vercel prompt]\n"
+        f"---REPLIT---\n"
+        f"[Replit prompt]\n"
+        f"---MAGIC---\n"
+        f"[Magic prompt]\n"
+        f"---SITEBREW---\n"
+        f"[Sitebrew prompt]\n"
+        f"---END---\n"
+    )
+    
+    try:
+        data = {
+            'model': OPENROUTER_MODEL,
+            'messages': [
+                {
+                    "role": "user",
+                    "content": prompt
+                },
+            ],
+            'temperature': 0.7,
+            'max_tokens': 8000
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+            'Content-Type': 'application/json',
+        }
+        
+        print(f'[DEBUG] Requesting code and prompt for {request.featureName}')
+        resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
+        
+        if resp.status_code != 200:
+            print('[ERROR] OpenRouter error:', resp.text)
+            raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
+            
+        results = resp.json()
+        response_text = results['choices'][0]['message']['content']
+        
+        try:
+            sections = ['LOVABLE', 'CURSOR', 'BOLT', 'VERCEL', 'REPLIT', 'MAGIC', 'SITEBREW', 'REACT', 'VUE', 'ANGULAR']
+            result = {}
+            
+            for i, section in enumerate(sections):
+                pattern = rf'---{section}---\n(.*?)\n---(?!{section})'
+                match = re.search(pattern, response_text, re.DOTALL)
+                content = match.group(1).strip() if match else ("Could not generate prompt" if i < 7 else "Could not generate code")
+                result[section.lower() + ('_prompt' if i < 7 else '_code')] = content
+            
+            def clean_code(code: str) -> str:
+                code = re.sub(r'```[a-zA-Z]*\s*\n?|```[a-zA-Z]*$|```', '', code)
+                code = re.sub(r'^(Angular|React|Vue)\s+(with\s+TypeScript|component):\s*$', '', code, flags=re.MULTILINE | re.IGNORECASE)
+                code = re.sub(r'^[A-Za-z0-9_-]+\.(vue|tsx|ts|jsx|js|css|html)\s*$', '', code, flags=re.MULTILINE)
+                code = re.sub(r'^(vue|tsx|ts|jsx|js|css|html)\s*$', '', code, flags=re.MULTILINE)
+                return '\n'.join(line for line in code.split('\n') if line.strip()).strip()
+            
+            for framework_code in ['react_code', 'vue_code', 'angular_code']:
+                result[framework_code] = encode_code_block(clean_code(result[framework_code]))
+            
+            # Just to check if a code or prompt could not be extracted
+            has_error = any(
+                value in ['Could not generate prompt', 'Could not generate code']
+                for value in result.values()
+            )
+            if has_error:
+                print('[DEBUG] LLM response received with errors' )
+
+            return result
+                
+        except Exception as e:
+            print(f"[ERROR] Failed to parse response sections: {e}")
+            print(f"[ERROR] Response text: {results}")
+            error_result = {}
+            for platform in ['lovable', 'cursor', 'bolt', 'vercel', 'replit', 'magic', 'sitebrew']:
+                error_result[f"{platform}_prompt"] = "Could not generate prompt"
+            for framework in ['react', 'vue', 'angular']:
+                error_result[f"{framework}_code"] = encode_code_block("Could not generate code")
+            return error_result
+    
+    except Exception as e:
+        print(f"[ERROR] Exception during recommendation generation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
+
+
+@app.post("/recommendation-prompt-code", response_model=RecommendationPromptCodeResponse)
+def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set")
+    
+    def request_llm():
+        return get_prompt_code(request)
+    
+    result = retry_get_prompt_code(request_llm, has_error, max_retries=3, delay=1.0)
+
+    if has_error(result):
+        print(f"[ERROR] Failed to generate prompt and code: {result}")
+
+    return RecommendationPromptCodeResponse(**result)
+
+    
 
 if __name__ == "__main__":
     import uvicorn
