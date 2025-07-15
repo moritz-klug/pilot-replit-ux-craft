@@ -80,6 +80,8 @@ const FeatureReview: React.FC = () => {
   const [currentFeatureDescription, setCurrentFeatureDescription] = useState<string | null>(null);
   const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
   const [chatHistory, setChatHistory] = useState([]);
+  const [loadingText, setLoadingText] = useState('');
+  const [waitingForWebhook, setWaitingForWebhook] = useState(false);
   
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -441,6 +443,35 @@ Execute these improvements while preserving all current features and maintaining
 
   const promptText = platformPrompts[selectedPlatform as keyof typeof platformPrompts];
 
+  // Loading text animation for Reasoning-Pro
+  const loadingTexts = [
+    'Analyzing website structure...',
+    'Examining user interface elements...',
+    'Identifying design patterns...',
+    'Evaluating accessibility features...',
+    'Checking responsive behavior...',
+    'Assessing user experience flow...',
+    'Reviewing color schemes and typography...',
+    'Analyzing navigation patterns...',
+    'Evaluating content hierarchy...',
+    'Checking loading states...',
+    'Reviewing error handling...',
+    'Assessing mobile optimization...',
+    'Finalizing comprehensive analysis...'
+  ];
+
+  useEffect(() => {
+    if (waitingForWebhook) {
+      let index = 0;
+      const interval = setInterval(() => {
+        setLoadingText(loadingTexts[index % loadingTexts.length]);
+        index++;
+      }, 2000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [waitingForWebhook]);
+
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(codeSnippets[selectedFramework as keyof typeof codeSnippets]);
@@ -515,6 +546,7 @@ Execute these improvements while preserving all current features and maintaining
       setAnalysis(transformedAnalysis);
       setWebhookData(webhookJsonData);
       setLoading(false);
+      setWaitingForWebhook(false);
       
       // Initialize component statuses
       const initialStatuses: Record<string, Status> = {};
@@ -529,6 +561,7 @@ Execute these improvements while preserving all current features and maintaining
       });
     } catch (error) {
       console.error("Error processing webhook data:", error);
+      setWaitingForWebhook(false);
       toast({
         title: "Error",
         description: "Failed to process webhook data",
@@ -611,6 +644,8 @@ Execute these improvements while preserving all current features and maintaining
     // If Reasoning-Pro is selected, wait for webhook data instead of calling backend
     if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
       setProgressLog(["Waiting for Reasoning-Pro webhook data..."]);
+      setWaitingForWebhook(true);
+      setLoadingText(loadingTexts[0]);
       // The webhook handler will process the data when received
       // Analysis will be set by handleWebhookInput function
       return;
@@ -1476,6 +1511,19 @@ Execute these improvements while preserving all current features and maintaining
       {/* Loading Screen Overlay */}
       {showLoadingScreen && (
         <AnimatedLoadingSkeleton onClose={handleCloseLoadingScreen} />
+      )}
+      
+      {/* Reasoning-Pro Loading Screen */}
+      {waitingForWebhook && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold mb-2">Reasoning-Pro Analysis</h2>
+              <p className="text-gray-600 animate-pulse">{loadingText}</p>
+            </div>
+            <AnimatedLoadingSkeleton />
+          </div>
+        </div>
       )}
     </SidebarProvider>
   )
