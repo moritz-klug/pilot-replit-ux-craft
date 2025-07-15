@@ -513,18 +513,23 @@ Execute these improvements while preserving all current features and maintaining
   // Webhook handler for JSON input functionality (only for Reasoning-Pro)
   const handleWebhookInput = (webhookJsonData: any) => {
     console.log("Received webhook data:", webhookJsonData);
+    console.log("Current selected model:", selectedModel);
     
     // Only process webhook data if Reasoning-Pro is selected
     if (selectedModel !== "Reasoning-Pro (wait times 8-15min)") {
-      console.log("Webhook functionality is only available for Reasoning-Pro model");
+      console.log("Webhook functionality is only available for Reasoning-Pro model, current model:", selectedModel);
       return;
     }
 
     try {
       let sections = [];
       
+      console.log("Processing webhook data format...");
+      console.log("webhookJsonData structure:", JSON.stringify(webhookJsonData, null, 2));
+      
       // Handle different webhook response formats
       if (webhookJsonData.output && webhookJsonData.output.featureName) {
+        console.log("Detected single feature response format");
         // Handle single feature response format
         sections = [{
           name: webhookJsonData.output.featureName,
@@ -535,6 +540,7 @@ Execute these improvements while preserving all current features and maintaining
           status: 'rejected'
         }];
       } else if (Array.isArray(webhookJsonData)) {
+        console.log("Detected array format");
         // Handle array format
         sections = webhookJsonData.map((item, index) => ({
           name: item.featureName,
@@ -544,9 +550,23 @@ Execute these improvements while preserving all current features and maintaining
           recommendations: [],
           status: 'rejected'
         }));
+      } else if (webhookJsonData.output && Array.isArray(webhookJsonData.output)) {
+        console.log("Detected output array format");
+        // Handle output array format
+        sections = webhookJsonData.output.map((item, index) => ({
+          name: item.featureName,
+          description: item.detailedDescription,
+          id: index + 1,
+          purpose: item.detailedDescription,
+          recommendations: [],
+          status: 'rejected'
+        }));
       } else {
+        console.error("Unexpected webhook data format:", webhookJsonData);
         throw new Error("Unexpected webhook data format");
       }
+      
+      console.log("Created sections:", sections);
 
       // Transform webhook JSON data into analysis structure
       const transformedAnalysis = {
