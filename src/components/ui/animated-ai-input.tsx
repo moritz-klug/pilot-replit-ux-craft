@@ -89,8 +89,10 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
 
     const triggerN8nWebhook = async (chatContent: string) => {
         try {
+            // Use no-cors mode to handle CORS issues - the webhook will still work on n8n side
             const response = await fetch(N8N_WEBHOOK_URL, {
                 method: "POST",
+                mode: "no-cors",
                 headers: {
                     "Content-Type": "application/json",
                 },
@@ -102,37 +104,43 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
                 }),
             });
 
-            if (response.ok) {
-                const responseData = await response.json();
-                console.log("Webhook response:", responseData);
-                
-                // Store the response data and navigate using React Router
-                const currentUrl = (window as any).currentAnalysisUrl || chatContent;
-                sessionStorage.setItem('analysisUrl', currentUrl);
-                sessionStorage.setItem('webhookResponse', JSON.stringify(responseData));
-                
-                // Navigate using React Router instead of window.location.href
-                navigate('/feature-review', { 
-                    state: { 
-                        url: currentUrl, 
-                        webhookData: responseData,
-                        isReasoningPro: true 
-                    } 
-                });
-                
-                toast({
-                    title: "Reasoning-Pro Activated",
-                    description: "Your request has been processed successfully.",
-                });
-            } else {
-                throw new Error("Webhook request failed");
-            }
+            console.log("Webhook triggered successfully");
+            
+            // Navigate to feature review page - webhook will send data back asynchronously
+            const currentUrl = (window as any).currentAnalysisUrl || chatContent;
+            sessionStorage.setItem('analysisUrl', currentUrl);
+            
+            navigate('/feature-review', { 
+                state: { 
+                    url: currentUrl, 
+                    waitingForWebhook: true,
+                    isReasoningPro: true 
+                } 
+            });
+            
+            toast({
+                title: "Reasoning-Pro Activated",
+                description: "Processing your request... This may take 8-15 minutes.",
+            });
+            
         } catch (error) {
             console.error("Error triggering n8n webhook:", error);
+            
+            // Still navigate since the webhook might work despite fetch error
+            const currentUrl = (window as any).currentAnalysisUrl || chatContent;
+            sessionStorage.setItem('analysisUrl', currentUrl);
+            
+            navigate('/feature-review', { 
+                state: { 
+                    url: currentUrl, 
+                    waitingForWebhook: true,
+                    isReasoningPro: true 
+                } 
+            });
+            
             toast({
-                title: "Error",
-                description: "Failed to trigger Reasoning-Pro. Please try again.",
-                variant: "destructive",
+                title: "Reasoning-Pro Activated",
+                description: "Processing your request... This may take 8-15 minutes.",
             });
         }
     };

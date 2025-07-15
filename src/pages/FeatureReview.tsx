@@ -673,6 +673,13 @@ Execute these improvements while preserving all current features and maintaining
       return;
     }
 
+    // If we're waiting for webhook data, show loading state
+    if (location.state?.waitingForWebhook) {
+      console.log("Waiting for webhook data...");
+      setWaitingForWebhook(true);
+      return;
+    }
+
     if (uiTest) {
       // In UI Test Mode, only mimic analysis, do not call backend
       analyzeWithScreenshot(url, uiTest).then((mockAnalysis) => {
