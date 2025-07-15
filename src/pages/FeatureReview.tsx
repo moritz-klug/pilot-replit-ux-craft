@@ -1120,11 +1120,11 @@ Execute these improvements while preserving all current features and maintaining
                             </AccordionTrigger>
                             <AccordionContent>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Typography:</b> {mappedAnalysis.global_design_summary?.typography || 'N/A'}</div>
                                 <div><b>Color Palette:</b> {mappedAnalysis.global_design_summary?.color_palette || 'N/A'}</div>
                                 <div><b>Button Styles:</b> {mappedAnalysis.global_design_summary?.button_styles || 'N/A'}</div>
                                 <div><b>Spacing & Layout:</b> {mappedAnalysis.global_design_summary?.spacing_layout || 'N/A'}</div>
                                 <div><b>Iconography:</b> {mappedAnalysis.global_design_summary?.iconography || 'N/A'}</div>
+                                <div><b>CSS code:</b> {mappedAnalysis.global_design_summary?.css_properties || 'N/A'}</div>
                               </div>
                             </AccordionContent>
                           </AccordionItem>
@@ -1231,9 +1231,11 @@ Execute these improvements while preserving all current features and maintaining
                               className="mb-4"
                             >
                               <div className="text-sm text-muted-foreground space-y-1">
-                                <div><b>Layouts:</b> {section.style?.layouts}</div>
+                                <div><b>Layouts:</b> {section.style?.layout}</div>
                                 <div><b>Interactions:</b> {section.style?.interactions}</div>
-                                <div><b>Mobile:</b> {section.mobile}</div>
+                                <div><b>Mobile:</b> {section.mobile_behavior}</div>
+                                <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
+
                                 <div className="flex gap-2 items-center mt-6">
                                   {STATUS_OPTIONS.map((status) => (
                                     <Button 
@@ -1312,9 +1314,11 @@ Execute these improvements while preserving all current features and maintaining
                               Get Recommendations
                             </Button>
                             <div className="text-sm text-muted-foreground space-y-1">
-                              <div><b>Layouts:</b> {section.style?.layouts}</div>
-                              <div><b>Interactions:</b> {section.style?.interactions}</div>
-                              <div><b>Mobile:</b> {section.mobile}</div>
+                              
+                                <div><b>Layouts:</b> {section.style?.layout}</div>
+                                <div><b>Interactions:</b> {section.style?.interactions}</div>
+                                <div><b>Mobile:</b> {section.mobile_behavior}</div>
+                                <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
                             </div>
                           </div>
                         </SocialCard>
