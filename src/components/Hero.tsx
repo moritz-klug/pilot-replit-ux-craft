@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import { analyzeWithScreenshot } from '../services/futureHouseService';
 import { useContext } from 'react';
 import { UITestModeContext } from '../App';
-import { AiInput } from "@/components/ui/ai-input";
+import { AnimatedAiInput } from "@/components/ui/animated-ai-input";
 import { Particles } from "@/components/ui/particles";
 import { ShiningText } from "@/components/ui/shining-text";
 import { Loader } from "@/components/ui/loader";
@@ -91,7 +91,7 @@ export const Hero = () => {
         </p>
         
         <div className="max-w-4xl mx-auto mb-12">
-          <AiInput
+          <AnimatedAiInput
             value={url}
             onChange={setUrl}
             onSubmit={handleAnalyze}
