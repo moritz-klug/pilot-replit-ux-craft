@@ -21,15 +21,20 @@ const queryClient = new QueryClient();
 // UI Test Mode Context
 export const UITestModeContext = createContext({ uiTest: false, setUITest: (v: boolean) => {} });
 
+// Model Selection Context
+export const ModelSelectionContext = createContext({ selectedModel: 'Standard (1-2min)', setSelectedModel: (v: string) => {} });
+
 const App = () => {
   const [uiTest, setUITest] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('Standard (1-2min)');
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <UITestModeContext.Provider value={{ uiTest, setUITest }}>
-          <BrowserRouter>
+          <ModelSelectionContext.Provider value={{ selectedModel, setSelectedModel }}>
+            <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/about" element={<About />} />
@@ -44,6 +49,7 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </ModelSelectionContext.Provider>
         </UITestModeContext.Provider>
       </TooltipProvider>
     </QueryClientProvider>

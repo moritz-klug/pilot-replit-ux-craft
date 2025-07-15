@@ -12,7 +12,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
-import { UITestModeContext } from "@/App";
+import { UITestModeContext, ModelSelectionContext } from "@/App";
 import { useToast } from "@/hooks/use-toast";
 
 interface UseAutoResizeTextareaProps {
@@ -79,7 +79,7 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
         minHeight: 72,
         maxHeight: 300,
     });
-    const [selectedModel, setSelectedModel] = useState("Standard (1-2min)");
+    const { selectedModel, setSelectedModel } = useContext(ModelSelectionContext);
     const { uiTest, setUITest } = useContext(UITestModeContext);
     const { toast } = useToast();
 

@@ -5,7 +5,7 @@ import { Badge } from '../components/ui/badge';
 import { Loader2, Sparkles, LayoutDashboard, Camera, Target, ArrowUp } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
-import { UITestModeContext } from '../App';
+import { UITestModeContext, ModelSelectionContext } from '../App';
 import { motion } from 'framer-motion';
 import { Dialog, DialogContent } from '../components/ui/dialog';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '../components/ui/sidebar';
@@ -69,6 +69,8 @@ const FeatureReview: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const uiTest = useContext(UITestModeContext).uiTest;
+  const { selectedModel } = useContext(ModelSelectionContext);
+  const [webhookData, setWebhookData] = useState<any>(null);
   const [uiSubTab, setUiSubTab] = useState<SubTab>('all');
   const [recProgressLog, setRecProgressLog] = useState<string[]>([]);
   const [showRecLog, setShowRecLog] = useState(false);
@@ -475,6 +477,109 @@ Execute these improvements while preserving all current features and maintaining
     }
   };
 
+  // Webhook handler for JSON input functionality (only for Reasoning-Pro)
+  const handleWebhookInput = (webhookJsonData: any[]) => {
+    // Only process webhook data if Reasoning-Pro is selected
+    if (selectedModel !== "Reasoning-Pro (wait times 8-15min)") {
+      console.log("Webhook functionality is only available for Reasoning-Pro model");
+      return;
+    }
+
+    try {
+      // Transform webhook JSON data into analysis structure
+      const sections = webhookJsonData.map((item, index) => ({
+        name: item.featureName,
+        description: item.detailedDescription,
+        id: index + 1,
+        purpose: item.detailedDescription,
+        recommendations: [],
+        status: 'rejected'
+      }));
+
+      const transformedAnalysis = {
+        sections: sections,
+        global: {
+          title: "Webhook Analysis",
+          description: "Analysis from webhook JSON input"
+        },
+        ux: {
+          title: "UX Analysis",
+          description: "User experience analysis from webhook data"
+        },
+        business: {
+          title: "Business Analysis", 
+          description: "Business impact analysis from webhook data"
+        }
+      };
+
+      setAnalysis(transformedAnalysis);
+      setWebhookData(webhookJsonData);
+      setLoading(false);
+      
+      // Initialize component statuses
+      const initialStatuses: Record<string, Status> = {};
+      sections.forEach((section) => {
+        initialStatuses[section.name] = 'rejected';
+      });
+      setComponentStatuses(initialStatuses);
+
+      toast({
+        title: "Webhook Data Processed",
+        description: "Successfully processed webhook JSON data with Reasoning-Pro",
+      });
+    } catch (error) {
+      console.error("Error processing webhook data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process webhook data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Expose webhook handler globally for external webhook calls
+  useEffect(() => {
+    if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
+      (window as any).handleWebhookInput = handleWebhookInput;
+    } else {
+      delete (window as any).handleWebhookInput;
+    }
+    
+    return () => {
+      delete (window as any).handleWebhookInput;
+    };
+  }, [selectedModel]);
+
+  // Mock webhook endpoint for testing (only in development)
+  useEffect(() => {
+    if (selectedModel === "Reasoning-Pro (wait times 8-15min)" && process.env.NODE_ENV === 'development') {
+      const mockWebhookData = [
+        {
+          "featureName": "Header",
+          "detailedDescription": "Logo, navigation menu, search icon. Fonts: SF Pro Display, 18px, Bold • Colors: White background, black text, blue accent. Layouts: Interactions: Sticky on scroll, hover underline on nav links. Mobile: CSS properties: N/A"
+        },
+        {
+          "featureName": "Hero Section", 
+          "detailedDescription": "Large full-width banner at the top with dark blue gradient background (#1a237e to #3949ab). Features centered white headline in bold sans-serif font (48px), smaller gray subtitle (16px). Contains prominent orange CTA button (#ff9800) with rounded corners and drop shadow. Background includes subtle geometric pattern overlay. Section height spans 80vh with content vertically centered."
+        },
+        {
+          "featureName": "Navigation Bar",
+          "detailedDescription": "Horizontal navigation bar with white background and subtle shadow. Logo positioned left, main navigation links center-aligned using SF Pro Display 16px medium weight. Search icon and user account dropdown on right. Sticky positioning on scroll with smooth transition. Hover effects include blue underline animation. Mobile version collapses to hamburger menu."
+        }
+      ];
+      
+      // Auto-process mock data after 2 seconds if no real webhook data received
+      const mockTimeout = setTimeout(() => {
+        if (!analysis && !webhookData) {
+          console.log("Processing mock webhook data for Reasoning-Pro");
+          handleWebhookInput(mockWebhookData);
+        }
+      }, 2000);
+      
+      return () => clearTimeout(mockTimeout);
+    }
+  }, [selectedModel, analysis, webhookData]);
+
   useEffect(() => {
     setLoading(true);
     setProgressLog([]);
@@ -500,6 +605,14 @@ Execute these improvements while preserving all current features and maintaining
           setComponentStatuses(initialStatuses);
         }
       });
+      return;
+    }
+
+    // If Reasoning-Pro is selected, wait for webhook data instead of calling backend
+    if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
+      setProgressLog(["Waiting for Reasoning-Pro webhook data..."]);
+      // The webhook handler will process the data when received
+      // Analysis will be set by handleWebhookInput function
       return;
     }
 
@@ -532,7 +645,7 @@ Execute these improvements while preserving all current features and maintaining
     }
     fetchAnalysis();
     // eslint-disable-next-line
-  }, [url, uiTest]);
+  }, [url, uiTest, selectedModel]);
 
   const handleStatusChange = (section: any, status: Status) => {
     if (status === 'improved') {
