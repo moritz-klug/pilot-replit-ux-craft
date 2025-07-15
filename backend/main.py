@@ -1,5 +1,6 @@
 import os
 import asyncio
+from openai.types.batch import Errors
 import requests
 import json
 from fastapi import FastAPI, HTTPException, UploadFile, Request
@@ -549,11 +550,21 @@ def encode_code_block(code: str) -> str:
         return ""
     return base64.b64encode(code.encode('utf-8')).decode('utf-8')
 
-@app.post("/recommendation-prompt-code", response_model=RecommendationPromptCodeResponse)
-def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
-    if not OPENROUTER_API_KEY:
-        raise HTTPException(status_code=500, detail="OpenRouter API key not set")
-    
+import time
+
+def retry_get_prompt_code(requests_llm, retry_error, max_retries=3, delay=1.0):
+    for i in range(max_retries):
+        result = requests_llm()
+        if not retry_error(result):
+            return result
+        time.sleep(delay * ( i ** 2))
+    return result
+
+def has_error(result):
+    errors = {"Could not generate prompt", "Could not generate code"}
+    return any(value in errors for value in result.values())
+
+def get_prompt_code(request):
     prompt = (
         f"Feature: {request.featureName}\n"
         f"Latest recommendation:\n{request.latestRecommendation}\n\n"
@@ -592,7 +603,7 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
         f"[Sitebrew prompt]\n"
         f"---END---\n"
     )
-
+    
     try:
         data = {
             'model': OPENROUTER_MODEL,
@@ -647,9 +658,9 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
                 for value in result.values()
             )
             if has_error:
-                print('[DEBUG] LLM response received with errors:', results)
+                print('[DEBUG] LLM response received with errors' )
 
-            return RecommendationPromptCodeResponse(**result)
+            return result
                 
         except Exception as e:
             print(f"[ERROR] Failed to parse response sections: {e}")
@@ -659,12 +670,29 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
                 error_result[f"{platform}_prompt"] = "Could not generate prompt"
             for framework in ['react', 'vue', 'angular']:
                 error_result[f"{framework}_code"] = encode_code_block("Could not generate code")
-            return RecommendationPromptCodeResponse(**error_result)
+            return error_result
     
     except Exception as e:
         print(f"[ERROR] Exception during recommendation generation: {str(e)}")
         raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
+
+@app.post("/recommendation-prompt-code", response_model=RecommendationPromptCodeResponse)
+def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set")
+    
+    def request_llm():
+        return get_prompt_code(request)
+    
+    result = retry_get_prompt_code(request_llm, has_error, max_retries=3, delay=1.0)
+
+    if has_error(result):
+        print(f"[ERROR] Failed to generate prompt and code: {result}")
+
+    return RecommendationPromptCodeResponse(**result)
+
+    
 
 if __name__ == "__main__":
     import uvicorn

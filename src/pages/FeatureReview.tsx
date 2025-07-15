@@ -622,14 +622,14 @@ Execute these improvements while preserving all current features and maintaining
 
   // Effect to fetch code/prompt when needed
   React.useEffect(() => {
-    if (chatbotTab === 'improvements' && chatHistory.length > 0 && currentChatFeature && currentFeatureDescription && !isFetching) {
-      const hasUserMessages = chatHistory.some(msg => msg.isUser);
+    if (chatHistory.length > 0 && currentChatFeature && currentFeatureDescription && !isFetching) {
+      const hasChatResponse = chatHistory.some(msg => !msg.isUser);
       const hasNewChat = chatHistory.length > lastChatLength;
-      if (hasUserMessages && hasNewChat && !isTyping) {
+      if (hasChatResponse && hasNewChat && !isTyping) {
         fetchCodeAndPrompt(chatHistory);
       }
     }
-  }, [chatbotTab, chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription]);
+  }, [ chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription]);
 
   const fetchCodeAndPrompt = async (chatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
     if (isFetching) return;
@@ -638,7 +638,7 @@ Execute these improvements while preserving all current features and maintaining
     try {
       const latestRecommendation = chatHistory
         .filter(msg => !msg.isUser)
-        .pop()?.text || "No LLM response available";
+        .pop()?.text || "No latest recommendation available";
       
       const requestBody = {
         featureName: currentChatFeature,
