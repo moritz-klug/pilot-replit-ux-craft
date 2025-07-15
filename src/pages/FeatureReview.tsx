@@ -34,6 +34,24 @@ type SubTab = typeof SUBTABS[number];
 const CHATBOT_TABS = ['mockups', 'code', 'sources'] as const;
 type ChatbotTab = typeof CHATBOT_TABS[number];
 
+// Helper skeletons for each section
+const SectionSkeleton = ({ title }: { title: string }) => (
+  <div className="bg-white rounded-lg shadow-sm p-6 mb-8 animate-pulse">
+    <div className="h-6 w-1/3 bg-gray-200 rounded mb-4" />
+    <div className="h-4 w-2/3 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-1/2 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-1/4 bg-gray-100 rounded" />
+  </div>
+);
+const UICardSkeleton = () => (
+  <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse mb-4">
+    <div className="h-5 w-1/4 bg-gray-200 rounded mb-2" />
+    <div className="h-4 w-2/3 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-1/2 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-1/3 bg-gray-100 rounded" />
+  </div>
+);
+
 const FeatureReview: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -472,54 +490,34 @@ Execute these improvements while preserving all current features and maintaining
       return;
     }
 
-    const es = new EventSource(`${MAIN_API_BASE}/analyze-ui?url=${encodeURIComponent(url)}`, {
-      withCredentials: false
-    });
-    eventSourceRef.current = es;
-
-    es.onopen = () => {
-      setProgressLog([]);
-    };
-    es.addEventListener('progress', (event: MessageEvent) => {
-      const data = JSON.parse(event.data);
-      setProgressLog(prev => [...prev, data.message]);
-    });
-    es.addEventListener('error', (event: MessageEvent) => {
-      const data = event.data ? JSON.parse(event.data) : { error: 'Unknown error' };
-      setError(data.error);
-      setProgressLog(prev => [...prev, `❌ Error: ${data.error}`]);
-      setLoading(false);
-      es.close();
-    });
-    es.addEventListener('result', (event: MessageEvent) => {
-      const data = JSON.parse(event.data);
-      setAnalysis(data);
-      setLoading(false);
-      if (data.screenshot_id) {
-        setScreenshotUrl(`${SCREENSHOT_API_BASE}/screenshot/${data.screenshot_id}`);
-      } else if (data.screenshot_url) {
-        setScreenshotUrl(data.screenshot_url);
-      } else {
-        setScreenshotUrl(null);
-      }
-      // Initialize statuses
-      if (data.sections) {
-        const initialStatuses: Record<string, Status> = {};
-        data.sections.forEach((section: any, idx: number) => {
-          initialStatuses[section.name || idx] = 'rejected';
+    // --- New: Call /extract-features (POST) instead of EventSource ---
+    async function fetchAnalysis() {
+      try {
+        setProgressLog(["Sending request to analysis server..."]);
+        const response = await fetch(`${MAIN_API_BASE}/extract-features`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
         });
-        setComponentStatuses(initialStatuses);
+        if (!response.ok) throw new Error('Failed to analyze the website.');
+        setProgressLog(["Analysis complete!"]);
+        const data = await response.json();
+        setAnalysis(data);
+        setLoading(false);
+        // Initialize statuses
+        if (data.sections) {
+          const initialStatuses: Record<string, Status> = {};
+          data.sections.forEach((section: any, idx: number) => {
+            initialStatuses[section.name || idx] = 'rejected';
+          });
+          setComponentStatuses(initialStatuses);
+        }
+      } catch (err: any) {
+        setError(err.message || 'Connection lost or server error.');
+        setLoading(false);
       }
-      es.close();
-    });
-    es.onerror = () => {
-      setError('Connection lost or server error.');
-      setLoading(false);
-      es.close();
-    };
-    return () => {
-      es.close();
-    };
+    }
+    fetchAnalysis();
     // eslint-disable-next-line
   }, [url]);
 
@@ -600,10 +598,10 @@ Execute these improvements while preserving all current features and maintaining
 
   if (loading) {
   return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
         <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
         <p className="text-lg mb-4">Analyzing UI and UX...</p>
-        <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4">
+        <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 mb-8">
           <h2 className="font-semibold mb-2 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" /> Live Analysis Log
           </h2>
@@ -614,15 +612,34 @@ Execute these improvements while preserving all current features and maintaining
             {error && <div className="text-red-500">{error}</div>}
           </div>
         </div>
-                    </div>
+        <div className="max-w-6xl w-full">
+          <SectionSkeleton title="Global Design System" />
+          <SectionSkeleton title="UX Architecture" />
+          <SectionSkeleton title="Business & Audience" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {[...Array(3)].map((_, i) => <UICardSkeleton key={i} />)}
+          </div>
+        </div>
+      </div>
     );
   }
 
-  if (!analysis) {
+  // If analysis.choices[0]?.message?.content exists, parse it
+  let mappedAnalysis = analysis;
+  if (analysis && analysis.choices && analysis.choices[0]?.message?.content) {
+    try {
+      mappedAnalysis = JSON.parse(analysis.choices[0].message.content);
+    } catch (e) {
+      mappedAnalysis = null;
+    }
+  }
+
+  // If analysis.choices[0]?.message?.content exists, parse it
+  if (!mappedAnalysis) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <p className="text-lg text-red-500">Failed to analyze the website. Please try again.</p>
-                  </div>
+      </div>
     );
   }
 
@@ -992,11 +1009,11 @@ Execute these improvements while preserving all current features and maintaining
                             </AccordionTrigger>
                             <AccordionContent>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Typography:</b> {analysis.global?.typography}</div>
-                                <div><b>Color Palette:</b> {analysis.global?.color_palette}</div>
-                                <div><b>Button Styles:</b> {analysis.global?.button_styles}</div>
-                                <div><b>Spacing & Layout:</b> {analysis.global?.spacing_layout}</div>
-                                <div><b>Iconography:</b> {analysis.global?.iconography}</div>
+                                <div><b>Typography:</b> {mappedAnalysis.global_design_summary?.typography || 'N/A'}</div>
+                                <div><b>Color Palette:</b> {mappedAnalysis.global_design_summary?.color_palette || 'N/A'}</div>
+                                <div><b>Button Styles:</b> {mappedAnalysis.global_design_summary?.button_styles || 'N/A'}</div>
+                                <div><b>Spacing & Layout:</b> {mappedAnalysis.global_design_summary?.spacing_layout || 'N/A'}</div>
+                                <div><b>Iconography:</b> {mappedAnalysis.global_design_summary?.iconography || 'N/A'}</div>
                               </div>
                             </AccordionContent>
                           </AccordionItem>
@@ -1006,10 +1023,10 @@ Execute these improvements while preserving all current features and maintaining
                             </AccordionTrigger>
                             <AccordionContent>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Page Flow:</b> {analysis.ux?.page_flow}</div>
-                                <div><b>Emotional Strategy:</b> {analysis.ux?.emotional_strategy}</div>
-                                <div><b>Conversion Points:</b> {analysis.ux?.conversion_points}</div>
-                                <div><b>Design Trends:</b> {analysis.ux?.design_trends}</div>
+                                <div><b>Page Flow:</b> {mappedAnalysis.ux_architecture?.page_flow || 'N/A'}</div>
+                                <div><b>Emotional Strategy:</b> {mappedAnalysis.ux_architecture?.emotional_strategy || 'N/A'}</div>
+                                <div><b>Conversion Points:</b> {mappedAnalysis.ux_architecture?.conversion_points || 'N/A'}</div>
+                                <div><b>Design Trends:</b> {mappedAnalysis.ux_architecture?.design_trends || 'N/A'}</div>
                               </div>
                             </AccordionContent>
                           </AccordionItem>
@@ -1019,10 +1036,10 @@ Execute these improvements while preserving all current features and maintaining
                             </AccordionTrigger>
                             <AccordionContent>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Summary:</b> {analysis.business?.summary}</div>
-                                <div><b>Business Type:</b> {analysis.business?.business_type}</div>
-                                <div><b>Target Audience:</b> {analysis.business?.target_audience}</div>
-                                <div><b>Keywords:</b> {Array.isArray(analysis.business?.keywords) ? analysis.business.keywords.join(', ') : analysis.business?.keywords}</div>
+                                <div><b>Summary:</b> {mappedAnalysis.business_analysis?.summary || 'N/A'}</div>
+                                <div><b>Business Type:</b> {mappedAnalysis.business_analysis?.business_type || 'N/A'}</div>
+                                <div><b>Target Audience:</b> {mappedAnalysis.business_analysis?.target_audience || 'N/A'}</div>
+                                <div><b>Keywords:</b> {Array.isArray(mappedAnalysis.business_analysis?.keywords) ? mappedAnalysis.business_analysis.keywords.join(', ') : mappedAnalysis.business_analysis?.keywords || 'N/A'}</div>
                               </div>
                             </AccordionContent>
                           </AccordionItem>
@@ -1069,7 +1086,7 @@ Execute these improvements while preserving all current features and maintaining
                         </div>
                         <TabsContent value={uiSubTab} className="mt-4">
                         <div className="grid grid-cols-1 gap-8">
-                          {analysis.sections?.filter((section: any, idx: number) => {
+                          {mappedAnalysis.sections?.filter((section: any, idx: number) => {
                             const status = componentStatuses[section.name || idx] || 'rejected';
                             if (uiSubTab === 'all') return true;
                             return status === uiSubTab;
@@ -1144,10 +1161,10 @@ Execute these improvements while preserving all current features and maintaining
                   <div className="bg-white rounded-lg shadow-sm p-6">
                   {tab === 'ai' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
+                      {mappedAnalysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
                         <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
                       )}
-                      {analysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
+                      {mappedAnalysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
                         <SocialCard
                           key={section.name || idx}
                           author={{
