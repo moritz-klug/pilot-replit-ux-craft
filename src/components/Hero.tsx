@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
 import { analyzeWithScreenshot } from '../services/futureHouseService';
 import { useContext } from 'react';
-import { UITestModeContext } from '../App';
+import { UITestModeContext, ModelSelectionContext } from '../App';
 import { AnimatedAiInput } from "@/components/ui/animated-ai-input";
 import { Particles } from "@/components/ui/particles";
 import { ShiningText } from "@/components/ui/shining-text";
@@ -30,6 +30,7 @@ export const Hero = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const uiTest = useContext(UITestModeContext).uiTest;
+  const { selectedModel } = useContext(ModelSelectionContext);
 
   const handleAnalyze = async () => {
     if (!url) {
@@ -63,7 +64,19 @@ export const Hero = () => {
       return;
     }
 
-    // In normal mode, just navigate with the URL
+    // Check if Reasoning-Pro is selected
+    if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
+      // For Reasoning-Pro, show loading and wait for webhook - DON'T navigate yet
+      setIsLoading(true);
+      setAnalysisLog(['🧠 Reasoning-Pro activated - processing your request...']);
+      // Store the URL globally for the webhook navigation
+      (window as any).currentAnalysisUrl = url;
+      // The webhook will be triggered from AnimatedAiInput, and when it gets a response,
+      // it will navigate to feature-review automatically
+      return;
+    }
+
+    // For standard mode, navigate immediately
     navigate('/feature-review', { state: { url } });
   };
   
@@ -91,12 +104,20 @@ export const Hero = () => {
         </p>
         
         <div className="max-w-4xl mx-auto mb-12">
-          <AnimatedAiInput
-            value={url}
-            onChange={setUrl}
-            onSubmit={handleAnalyze}
-            disabled={isLoading}
-          />
+          {isLoading && selectedModel === "Reasoning-Pro (wait times 8-15min)" ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-lg font-medium mb-2">Reasoning-Pro Processing...</p>
+              <p className="text-sm text-muted-foreground">Advanced AI analysis in progress</p>
+            </div>
+          ) : (
+            <AnimatedAiInput
+              value={url}
+              onChange={setUrl}
+              onSubmit={handleAnalyze}
+              disabled={isLoading}
+            />
+          )}
         </div>
         
         <p className="text-xs text-muted-foreground">

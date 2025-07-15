@@ -101,9 +101,23 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
             });
 
             if (response.ok) {
+                const responseData = await response.json();
+                console.log("Webhook response:", responseData);
+                
+                // Navigate to feature-review and let the webhook handler process the data
+                const currentUrl = (window as any).currentAnalysisUrl || chatContent;
+                window.location.href = `/feature-review?url=${encodeURIComponent(currentUrl)}`;
+                
+                // Small delay to ensure page loads before calling webhook handler
+                setTimeout(() => {
+                    if ((window as any).handleWebhookInput) {
+                        (window as any).handleWebhookInput(responseData);
+                    }
+                }, 500);
+                
                 toast({
                     title: "Reasoning-Pro Activated",
-                    description: "Your request has been sent for advanced processing.",
+                    description: "Your request has been processed successfully.",
                 });
             } else {
                 throw new Error("Webhook request failed");
