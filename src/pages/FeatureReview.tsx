@@ -532,7 +532,7 @@ Execute these improvements while preserving all current features and maintaining
     }
     fetchAnalysis();
     // eslint-disable-next-line
-  }, [url]);
+  }, [url, uiTest]);
 
   const handleStatusChange = (section: any, status: Status) => {
     if (status === 'improved') {
