@@ -1,4 +1,4 @@
-import { LayoutDashboard, MessageSquare } from "lucide-react"
+import { LayoutDashboard, MessageSquare, Webhook } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -24,6 +24,12 @@ const items = [
     title: "UI Components", 
     value: "ui", 
     icon: LayoutDashboard,
+    route: "/feature-review"
+  },
+  { 
+    title: "Webhook Input", 
+    value: "webhook", 
+    icon: Webhook,
     route: "/feature-review"
   },
 ]
