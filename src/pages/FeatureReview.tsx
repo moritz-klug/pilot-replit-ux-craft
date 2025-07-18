@@ -1,92 +1,54 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import {
-  Loader2,
-  Sparkles,
-  LayoutDashboard,
-  Camera,
-  Target,
-  ArrowUp,
-} from 'lucide-react';
+import { Loader2, Sparkles, LayoutDashboard, Camera, Target, ArrowUp } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  analyzeWithScreenshot,
-  getRecommendations,
-} from '../services/futureHouseService';
+import { analyzeWithScreenshot, getRecommendations } from '../services/futureHouseService';
 import { UITestModeContext, ModelSelectionContext } from '../App';
 import { motion } from 'framer-motion';
 import { Dialog, DialogContent } from '../components/ui/dialog';
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from '../components/ui/sidebar';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '../components/ui/sidebar';
 import { AppSidebar } from '../components/AppSidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Copy, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
-import {
-  CodeBlock,
-  CodeBlockCode,
-  CodeBlockGroup,
-} from '../components/ui/code-block';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '../components/ui/accordion';
+import { CodeBlock, CodeBlockCode, CodeBlockGroup } from '../components/ui/code-block';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
 import { SocialCard } from '../components/ui/social-card';
 import { cn } from '../lib/utils';
 import AnimatedLoadingSkeleton from '../components/ui/animated-loading-skeleton';
 import FeatureChatbot from '../components/FeatureChatbot';
-import { SectionList } from '../components/SectionList';
-import { GlobalDesignSummary } from '../components/GlobalDesignSummary';
-import { UxArchitecture } from '../components/UxArchitecture';
-import { BusinessAnalysis } from '../components/BusinessAnalysis';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
 const MAIN_API_BASE = 'http://localhost:8000';
 
 const STATUS_OPTIONS = ['rejected', 'improved'] as const;
-type Status = (typeof STATUS_OPTIONS)[number];
+type Status = typeof STATUS_OPTIONS[number];
 
 const SUBTABS = ['all', 'rejected', 'improved'] as const;
-type SubTab = (typeof SUBTABS)[number];
+type SubTab = typeof SUBTABS[number];
 
 const CHATBOT_TABS = ['mockups', 'improvements', 'sources'] as const;
-type ChatbotTab = (typeof CHATBOT_TABS)[number];
+type ChatbotTab = typeof CHATBOT_TABS[number];
 
 // Helper skeletons for each section
 const SectionSkeleton = ({ title }: { title: string }) => (
-  <div className='bg-white rounded-lg shadow-sm p-6 mb-8 animate-pulse'>
-    <div className='h-6 w-1/3 bg-gray-200 rounded mb-4' />
-    <div className='h-4 w-2/3 bg-gray-100 rounded mb-2' />
-    <div className='h-4 w-1/2 bg-gray-100 rounded mb-2' />
-    <div className='h-4 w-1/4 bg-gray-100 rounded' />
+  <div className="bg-white rounded-lg shadow-sm p-6 mb-8 animate-pulse">
+    <div className="h-6 w-1/3 bg-gray-200 rounded mb-4" />
+    <div className="h-4 w-2/3 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-1/2 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-1/4 bg-gray-100 rounded" />
   </div>
 );
 const UICardSkeleton = () => (
-  <div className='bg-white rounded-lg shadow-sm p-6 animate-pulse mb-4'>
-    <div className='h-5 w-1/4 bg-gray-200 rounded mb-2' />
-    <div className='h-4 w-2/3 bg-gray-100 rounded mb-2' />
-    <div className='h-4 w-1/2 bg-gray-100 rounded mb-2' />
-    <div className='h-4 w-1/3 bg-gray-100 rounded' />
+  <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse mb-4">
+    <div className="h-5 w-1/4 bg-gray-200 rounded mb-2" />
+    <div className="h-4 w-2/3 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-1/2 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-1/3 bg-gray-100 rounded" />
   </div>
 );
 
@@ -94,11 +56,7 @@ const FeatureReview: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const urlParams = new URLSearchParams(location.search);
-  const url =
-    location.state?.url ||
-    urlParams.get('url') ||
-    sessionStorage.getItem('analysisUrl') ||
-    'https://www.apple.com';
+  const url = location.state?.url || urlParams.get('url') || sessionStorage.getItem('analysisUrl') || 'https://www.apple.com';
   const webhookDataFromState = location.state?.webhookData;
 
   const [analysis, setAnalysis] = useState<any>(null);
@@ -108,9 +66,7 @@ const FeatureReview: React.FC = () => {
   const [recommending, setRecommending] = useState(false);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [tab, setTab] = useState('ui');
-  const [componentStatuses, setComponentStatuses] = useState<
-    Record<string, Status>
-  >({});
+  const [componentStatuses, setComponentStatuses] = useState<Record<string, Status>>({});
   const [progressLog, setProgressLog] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -121,20 +77,14 @@ const FeatureReview: React.FC = () => {
   const [recProgressLog, setRecProgressLog] = useState<string[]>([]);
   const [showRecLog, setShowRecLog] = useState(false);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
-  const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>(
-    {}
-  );
-  const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(
-    null
-  );
-  const [currentFeatureDescription, setCurrentFeatureDescription] = useState<
-    string | null
-  >(null);
+  const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
+  const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
+  const [currentFeatureDescription, setCurrentFeatureDescription] = useState<string | null>(null);
   const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
   const [chatHistory, setChatHistory] = useState([]);
   const [loadingText, setLoadingText] = useState('');
   const [waitingForWebhook, setWaitingForWebhook] = useState(false);
-
+  
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
   const [selectedPlatform, setSelectedPlatform] = useState('lovable');
@@ -155,9 +105,7 @@ const FeatureReview: React.FC = () => {
 
   // Code snippets from Results page
   const codeSnippets = {
-    react:
-      reactCode ||
-      `import React from 'react';
+    react: reactCode ||`import React from 'react';
 
 const ImprovedComponent = () => {
   return (
@@ -174,9 +122,7 @@ const ImprovedComponent = () => {
 };
 
 export default ImprovedComponent;`,
-    vue:
-      vueCode ||
-      `<template>
+    vue: vueCode || `<template>
   <div class="container mx-auto p-6">
     <h1 class="text-2xl font-bold mb-4">
       Improved UX Component
@@ -193,9 +139,7 @@ export default {
   name: 'ImprovedComponent'
 }
 </script>`,
-    angular:
-      angularCode ||
-      `import { Component } from '@angular/core';
+    angular: angularCode || `import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-improved-component',
@@ -211,13 +155,11 @@ export default {
     </div>
   \`
 })
-export class ImprovedComponent { }`,
+export class ImprovedComponent { }`
   };
 
   const platformPrompts = {
-    lovable:
-      lovablePrompt ||
-      `Please implement the following science-based UX improvements for my application:
+    lovable: lovablePrompt || `Please implement the following science-based UX improvements for my application:
 
 1. **Visual Hierarchy**: Improve the visual hierarchy by adjusting font sizes, spacing, and color contrast to guide user attention effectively.
 
@@ -232,9 +174,7 @@ export class ImprovedComponent { }`,
 6. **Micro-interactions**: Add subtle animations and hover effects to provide visual feedback for user actions.
 
 Please apply these improvements while maintaining the existing functionality and ensuring the code follows best practices for React and TypeScript.`,
-    cursor:
-      cursorPrompt ||
-      `// UX Improvement Instructions for Cursor AI IDE
+    cursor: cursorPrompt || `// UX Improvement Instructions for Cursor AI IDE
 
 Implement the following science-based UX improvements:
 
@@ -269,9 +209,7 @@ Implement the following science-based UX improvements:
    - Use CSS transitions for smooth interactions
 
 Focus on maintainable code with proper TypeScript types and component composition.`,
-    bolt:
-      boltPrompt ||
-      `## UX Enhancement Request for Bolt.new
+    bolt: boltPrompt || `## UX Enhancement Request for Bolt.new
 
 Create an improved version of the current component with these evidence-based UX enhancements:
 
@@ -312,9 +250,7 @@ Create an improved version of the current component with these evidence-based UX
 - Create delightful interaction feedback
 
 Please maintain existing functionality while applying these improvements using modern React patterns and TypeScript.`,
-    vercel:
-      vercelPrompt ||
-      `# UX Improvement Specification for v0
+    vercel: vercelPrompt || `# UX Improvement Specification for v0
 
 Transform the current interface with science-backed UX enhancements:
 
@@ -349,9 +285,7 @@ Transform the current interface with science-backed UX enhancements:
 - **State Changes**: Animated transitions between states
 
 Generate clean, performant React components with TypeScript support and modern CSS practices.`,
-    replit:
-      replitPrompt ||
-      `"""
+    replit: replitPrompt || `"""
 UX Enhancement Script for Replit
 
 Improve the current component with research-backed UX principles
@@ -398,9 +332,7 @@ Improve the current component with research-backed UX principles
 - Ensure backward compatibility
 
 Execute these improvements while preserving all current features and maintaining code quality standards.`,
-    magic:
-      magicPrompt ||
-      `{
+    magic: magicPrompt || `{
   "ux_improvement_request": {
     "target": "Enhanced User Experience Implementation",
     "frameworks": ["React", "TypeScript", "Tailwind CSS"],
@@ -451,9 +383,7 @@ Execute these improvements while preserving all current features and maintaining
     }
   }
 }`,
-    sitebrew:
-      sitebrewPrompt ||
-      `<!-- UX Enhancement Brief for sitebrew.ai -->
+    sitebrew: sitebrewPrompt || `<!-- UX Enhancement Brief for sitebrew.ai -->
 
 <ux-improvement-specification>
   <project-context>
@@ -510,11 +440,10 @@ Execute these improvements while preserving all current features and maintaining
   <deliverables>
     Enhanced component with improved usability, accessibility, and visual polish while preserving current features and maintaining code quality.
   </deliverables>
-</ux-improvement-specification>`,
+</ux-improvement-specification>`
   };
 
-  const promptText =
-    platformPrompts[selectedPlatform as keyof typeof platformPrompts];
+  const promptText = platformPrompts[selectedPlatform as keyof typeof platformPrompts];
 
   // Loading text animation for Reasoning-Pro
   const loadingTexts = [
@@ -530,7 +459,7 @@ Execute these improvements while preserving all current features and maintaining
     'Checking loading states...',
     'Reviewing error handling...',
     'Assessing mobile optimization...',
-    'Finalizing comprehensive analysis...',
+    'Finalizing comprehensive analysis...'
   ];
 
   useEffect(() => {
@@ -540,27 +469,25 @@ Execute these improvements while preserving all current features and maintaining
         setLoadingText(loadingTexts[index % loadingTexts.length]);
         index++;
       }, 2000);
-
+      
       return () => clearInterval(interval);
     }
   }, [waitingForWebhook]);
 
   const handleCopyCode = async () => {
     try {
-      await navigator.clipboard.writeText(
-        codeSnippets[selectedFramework as keyof typeof codeSnippets]
-      );
+      await navigator.clipboard.writeText(codeSnippets[selectedFramework as keyof typeof codeSnippets]);
       setCodeCopied(true);
       toast({
-        title: 'Code copied!',
-        description: 'The code snippet has been copied to your clipboard.',
+        title: "Code copied!",
+        description: "The code snippet has been copied to your clipboard.",
       });
       setTimeout(() => setCodeCopied(false), 2000);
     } catch (err) {
       toast({
-        title: 'Failed to copy',
-        description: 'Please try copying the code manually.',
-        variant: 'destructive',
+        title: "Failed to copy",
+        description: "Please try copying the code manually.",
+        variant: "destructive",
       });
     }
   };
@@ -570,58 +497,50 @@ Execute these improvements while preserving all current features and maintaining
       await navigator.clipboard.writeText(promptText);
       setPromptCopied(true);
       toast({
-        title: 'Prompt copied!',
-        description: 'The prompt has been copied to your clipboard.',
+        title: "Prompt copied!",
+        description: "The prompt has been copied to your clipboard.",
       });
       setTimeout(() => setPromptCopied(false), 2000);
     } catch (err) {
       toast({
-        title: 'Failed to copy',
-        description: 'Please try copying the prompt manually.',
-        variant: 'destructive',
+        title: "Failed to copy",
+        description: "Please try copying the prompt manually.",
+        variant: "destructive",
       });
     }
   };
 
   // Webhook handler for JSON input functionality (only for Reasoning-Pro)
   const handleWebhookInput = (webhookJsonData: any) => {
-    console.log('Received webhook data:', webhookJsonData);
-    console.log('Current selected model:', selectedModel);
-
+    console.log("Received webhook data:", webhookJsonData);
+    console.log("Current selected model:", selectedModel);
+    
     // Only process webhook data if Reasoning-Pro is selected
-    if (selectedModel !== 'Reasoning-Pro (wait times 8-15min)') {
-      console.log(
-        'Webhook functionality is only available for Reasoning-Pro model, current model:',
-        selectedModel
-      );
+    if (selectedModel !== "Reasoning-Pro (wait times 8-15min)") {
+      console.log("Webhook functionality is only available for Reasoning-Pro model, current model:", selectedModel);
       return;
     }
 
     try {
       let sections = [];
-
-      console.log('Processing webhook data format...');
-      console.log(
-        'webhookJsonData structure:',
-        JSON.stringify(webhookJsonData, null, 2)
-      );
-
+      
+      console.log("Processing webhook data format...");
+      console.log("webhookJsonData structure:", JSON.stringify(webhookJsonData, null, 2));
+      
       // Handle different webhook response formats
       if (webhookJsonData.output && webhookJsonData.output.featureName) {
-        console.log('Detected single feature response format');
+        console.log("Detected single feature response format");
         // Handle single feature response format
-        sections = [
-          {
-            name: webhookJsonData.output.featureName,
-            description: webhookJsonData.output.detailedDescription,
-            id: 1,
-            purpose: webhookJsonData.output.detailedDescription,
-            recommendations: [],
-            status: 'rejected',
-          },
-        ];
+        sections = [{
+          name: webhookJsonData.output.featureName,
+          description: webhookJsonData.output.detailedDescription,
+          id: 1,
+          purpose: webhookJsonData.output.detailedDescription,
+          recommendations: [],
+          status: 'rejected'
+        }];
       } else if (Array.isArray(webhookJsonData)) {
-        console.log('Detected array format');
+        console.log("Detected array format");
         // Handle array format
         sections = webhookJsonData.map((item, index) => ({
           name: item.featureName,
@@ -629,13 +548,10 @@ Execute these improvements while preserving all current features and maintaining
           id: index + 1,
           purpose: item.detailedDescription,
           recommendations: [],
-          status: 'rejected',
+          status: 'rejected'
         }));
-      } else if (
-        webhookJsonData.output &&
-        Array.isArray(webhookJsonData.output)
-      ) {
-        console.log('Detected output array format');
+      } else if (webhookJsonData.output && Array.isArray(webhookJsonData.output)) {
+        console.log("Detected output array format");
         // Handle output array format
         sections = webhookJsonData.output.map((item, index) => ({
           name: item.featureName,
@@ -643,37 +559,37 @@ Execute these improvements while preserving all current features and maintaining
           id: index + 1,
           purpose: item.detailedDescription,
           recommendations: [],
-          status: 'rejected',
+          status: 'rejected'
         }));
       } else {
-        console.error('Unexpected webhook data format:', webhookJsonData);
-        throw new Error('Unexpected webhook data format');
+        console.error("Unexpected webhook data format:", webhookJsonData);
+        throw new Error("Unexpected webhook data format");
       }
-
-      console.log('Created sections:', sections);
+      
+      console.log("Created sections:", sections);
 
       // Transform webhook JSON data into analysis structure
       const transformedAnalysis = {
         sections: sections,
         global: {
-          title: 'Webhook Analysis',
-          description: 'Analysis from webhook JSON input',
+          title: "Webhook Analysis",
+          description: "Analysis from webhook JSON input"
         },
         ux: {
-          title: 'UX Analysis',
-          description: 'User experience analysis from webhook data',
+          title: "UX Analysis",
+          description: "User experience analysis from webhook data"
         },
         business: {
-          title: 'Business Analysis',
-          description: 'Business impact analysis from webhook data',
-        },
+          title: "Business Analysis", 
+          description: "Business impact analysis from webhook data"
+        }
       };
 
       setAnalysis(transformedAnalysis);
       setWebhookData(webhookJsonData);
       setLoading(false);
       setWaitingForWebhook(false);
-
+      
       // Initialize component statuses
       const initialStatuses: Record<string, Status> = {};
       sections.forEach((section) => {
@@ -682,49 +598,42 @@ Execute these improvements while preserving all current features and maintaining
       setComponentStatuses(initialStatuses);
 
       toast({
-        title: 'Webhook Data Processed',
-        description:
-          'Successfully processed webhook JSON data with Reasoning-Pro',
+        title: "Webhook Data Processed",
+        description: "Successfully processed webhook JSON data with Reasoning-Pro",
       });
     } catch (error) {
-      console.error('Error processing webhook data:', error);
+      console.error("Error processing webhook data:", error);
       setWaitingForWebhook(false);
       toast({
-        title: 'Error',
-        description: 'Failed to process webhook data',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to process webhook data",
+        variant: "destructive",
       });
     }
   };
 
   // Expose webhook handler globally for external webhook calls
   useEffect(() => {
-    if (selectedModel === 'Reasoning-Pro (wait times 8-15min)') {
+    if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
       (window as any).handleWebhookInput = handleWebhookInput;
       (window as any).processWebhookResponse = handleWebhookInput;
-
+      
       // Also listen for custom webhook events
       const handleCustomWebhook = (event: CustomEvent) => {
-        console.log('Received custom webhook event:', event.detail);
+        console.log("Received custom webhook event:", event.detail);
         handleWebhookInput(event.detail);
       };
-
-      window.addEventListener(
-        'webhookResponse',
-        handleCustomWebhook as EventListener
-      );
-
+      
+      window.addEventListener('webhookResponse', handleCustomWebhook as EventListener);
+      
       return () => {
-        window.removeEventListener(
-          'webhookResponse',
-          handleCustomWebhook as EventListener
-        );
+        window.removeEventListener('webhookResponse', handleCustomWebhook as EventListener);
       };
     } else {
       delete (window as any).handleWebhookInput;
       delete (window as any).processWebhookResponse;
     }
-
+    
     return () => {
       delete (window as any).handleWebhookInput;
       delete (window as any).processWebhookResponse;
@@ -734,11 +643,11 @@ Execute these improvements while preserving all current features and maintaining
   // Listen for webhook response messages and polling
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null;
-
+    
     const handleMessage = (event: MessageEvent) => {
-      console.log('Received message event:', event);
+      console.log("Received message event:", event);
       if (event.data && event.data.type === 'webhook-response') {
-        console.log('Processing webhook response from message event');
+        console.log("Processing webhook response from message event");
         handleWebhookInput(event.data.data);
       }
     };
@@ -749,23 +658,23 @@ Execute these improvements while preserving all current features and maintaining
       if (storedResponse) {
         try {
           const parsedResponse = JSON.parse(storedResponse);
-          console.log('Found stored webhook response:', parsedResponse);
+          console.log("Found stored webhook response:", parsedResponse);
           handleWebhookInput(parsedResponse);
           sessionStorage.removeItem('webhookResponse');
         } catch (error) {
-          console.error('Error parsing stored webhook response:', error);
+          console.error("Error parsing stored webhook response:", error);
         }
       }
     };
 
     // Start polling for webhook responses if waiting
     if (waitingForWebhook) {
-      console.log('Starting webhook polling...');
+      console.log("Starting webhook polling...");
       pollInterval = setInterval(checkForWebhookResponse, 1000);
     }
 
     window.addEventListener('message', handleMessage);
-
+    
     return () => {
       window.removeEventListener('message', handleMessage);
       if (pollInterval) clearInterval(pollInterval);
@@ -774,41 +683,38 @@ Execute these improvements while preserving all current features and maintaining
 
   // Mock webhook endpoint for testing (only in development)
   useEffect(() => {
-    if (selectedModel === 'Reasoning-Pro (wait times 8-15min)') {
+    if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
       const mockWebhookData = [
         {
-          featureName: 'Header',
-          detailedDescription:
-            'Logo, navigation menu, search icon. Fonts: SF Pro Display, 18px, Bold • Colors: White background, black text, blue accent. Layouts: Interactions: Sticky on scroll, hover underline on nav links. Mobile: CSS properties: N/A',
+          "featureName": "Header",
+          "detailedDescription": "Logo, navigation menu, search icon. Fonts: SF Pro Display, 18px, Bold • Colors: White background, black text, blue accent. Layouts: Interactions: Sticky on scroll, hover underline on nav links. Mobile: CSS properties: N/A"
         },
         {
-          featureName: 'Hero Section',
-          detailedDescription:
-            'Large full-width banner at the top with dark blue gradient background (#1a237e to #3949ab). Features centered white headline in bold sans-serif font (48px), smaller gray subtitle (16px). Contains prominent orange CTA button (#ff9800) with rounded corners and drop shadow. Background includes subtle geometric pattern overlay. Section height spans 80vh with content vertically centered.',
+          "featureName": "Hero Section", 
+          "detailedDescription": "Large full-width banner at the top with dark blue gradient background (#1a237e to #3949ab). Features centered white headline in bold sans-serif font (48px), smaller gray subtitle (16px). Contains prominent orange CTA button (#ff9800) with rounded corners and drop shadow. Background includes subtle geometric pattern overlay. Section height spans 80vh with content vertically centered."
         },
         {
-          featureName: 'Navigation Bar',
-          detailedDescription:
-            'Horizontal navigation bar with white background and subtle shadow. Logo positioned left, main navigation links center-aligned using SF Pro Display 16px medium weight. Search icon and user account dropdown on right. Sticky positioning on scroll with smooth transition. Hover effects include blue underline animation. Mobile version collapses to hamburger menu.',
-        },
+          "featureName": "Navigation Bar",
+          "detailedDescription": "Horizontal navigation bar with white background and subtle shadow. Logo positioned left, main navigation links center-aligned using SF Pro Display 16px medium weight. Search icon and user account dropdown on right. Sticky positioning on scroll with smooth transition. Hover effects include blue underline animation. Mobile version collapses to hamburger menu."
+        }
       ];
-
+      
       // Auto-process mock data after 5 seconds if no real webhook data received
       const mockTimeout = setTimeout(() => {
         if (!analysis && !webhookData && waitingForWebhook) {
-          console.log('Processing mock webhook data for Reasoning-Pro');
+          console.log("Processing mock webhook data for Reasoning-Pro");
           handleWebhookInput(mockWebhookData);
         }
       }, 5000);
-
+      
       return () => clearTimeout(mockTimeout);
     }
   }, [selectedModel, analysis, webhookData, waitingForWebhook]);
 
   useEffect(() => {
     setLoading(true);
-    setError(null);
     setProgressLog([]);
+    setError(null);
     setAnalysis(null);
     setScreenshotUrl(null);
     setComponentStatuses({});
@@ -818,14 +724,14 @@ Execute these improvements while preserving all current features and maintaining
 
     // If we have webhook data from navigation state, process it immediately
     if (webhookDataFromState) {
-      console.log('Processing webhook data from navigation state');
+      console.log("Processing webhook data from navigation state");
       handleWebhookInput(webhookDataFromState);
       return;
     }
 
     // If we're waiting for webhook data, show loading state
     if (location.state?.waitingForWebhook) {
-      console.log('Waiting for webhook data...');
+      console.log("Waiting for webhook data...");
       setWaitingForWebhook(true);
       return;
     }
@@ -848,8 +754,8 @@ Execute these improvements while preserving all current features and maintaining
     }
 
     // If Reasoning-Pro is selected, wait for webhook data instead of calling backend
-    if (selectedModel === 'Reasoning-Pro (wait times 8-15min)') {
-      setProgressLog(['Waiting for Reasoning-Pro webhook data...']);
+    if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
+      setProgressLog(["Waiting for Reasoning-Pro webhook data..."]);
       setWaitingForWebhook(true);
       setLoadingText(loadingTexts[0]);
       // The webhook handler will process the data when received
@@ -860,14 +766,14 @@ Execute these improvements while preserving all current features and maintaining
     // --- New: Call /extract-features (POST) instead of EventSource ---
     async function fetchAnalysis() {
       try {
-        setProgressLog(['Sending request to analysis server...']);
+        setProgressLog(["Sending request to analysis server..."]);
         const response = await fetch(`${MAIN_API_BASE}/extract-features`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
         });
         if (!response.ok) throw new Error('Failed to analyze the website.');
-        setProgressLog(['Analysis complete!']);
+        setProgressLog(["Analysis complete!"]);
         const data = await response.json();
         setAnalysis(data);
         setLoading(false);
@@ -893,33 +799,22 @@ Execute these improvements while preserving all current features and maintaining
       setShowLoadingScreen(true);
       // Simulate loading time then update status and show chatbot
       setTimeout(() => {
-        setComponentStatuses((prev) => ({
-          ...prev,
-          [section.name || section.id]: status,
-        }));
+        setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
         setShowLoadingScreen(false);
         // Directly set the tab to show the chatbot interface
         setTab('chatbot');
-        const featureName =
-          section.name || `Feature ${section.id || 'Unknown'}`;
+        const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
         setCurrentChatFeature(featureName);
-        setCurrentFeatureDescription(
-          section.description ||
-            section.purpose ||
-            'No design description available'
-        );
-        setActiveChatbots((prev) => ({ ...prev, [featureName]: true }));
+        setCurrentFeatureDescription(section.description || section.purpose || 'No design description available');
+        setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
       }, 3000);
     } else {
-      setComponentStatuses((prev) => ({
-        ...prev,
-        [section.name || section.id]: status,
-      }));
+      setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
     }
   };
 
   const handleCloseChatbot = (featureName: string) => {
-    setActiveChatbots((prev) => ({ ...prev, [featureName]: false }));
+    setActiveChatbots(prev => ({ ...prev, [featureName]: false }));
   };
 
   const handleCloseLoadingScreen = () => {
@@ -931,32 +826,19 @@ Execute these improvements while preserving all current features and maintaining
     setRecommendation(null);
     setSelectedSection(section);
     setShowRecLog(true);
-    setRecProgressLog([
-      'Preparing recommendation request...',
-      'Sending to Future House...',
-      'Waiting for response...',
-    ]);
+    setRecProgressLog(["Preparing recommendation request...", "Sending to Future House...", "Waiting for response..."]);
     try {
       let logStep = 3;
-      const addLog = (msg: string) =>
-        setRecProgressLog((prev) => [...prev, msg]);
+      const addLog = (msg: string) => setRecProgressLog(prev => [...prev, msg]);
       if (uiTest) {
-        await new Promise((r) => setTimeout(r, 1200));
-        addLog('Processing results...');
-        await new Promise((r) => setTimeout(r, 800));
-        addLog('Done!');
+        await new Promise(r => setTimeout(r, 1200));
+        addLog("Processing results...");
+        await new Promise(r => setTimeout(r, 800));
+        addLog("Done!");
         const recs = await getRecommendations([section.name], uiTest);
-        setRecommendation(recs.map((r) => r.text).join('\n'));
+        setRecommendation(recs.map(r => r.text).join('\n'));
         setShowRecLog(false);
-        navigate('/recommendations', {
-          state: {
-            section,
-            context: { section, url },
-            recommendations: recs.map((r) => r.text),
-            papers: [],
-            showRecLog: true,
-          },
-        });
+        navigate('/recommendations', { state: { section, context: { section, url }, recommendations: recs.map(r => r.text), papers: [], showRecLog: true } });
         return;
       }
       const context = {
@@ -978,29 +860,17 @@ Execute these improvements while preserving all current features and maintaining
       if (!resp.ok) throw new Error('Failed to get recommendations');
       const data = await resp.json();
       setRecommendation((data.recommendations || []).join('\n'));
-      navigate('/recommendations', {
-        state: {
-          section,
-          context,
-          recommendations: data.recommendations,
-          papers: data.papers,
-        },
-      });
+      navigate('/recommendations', { state: { section, context, recommendations: data.recommendations, papers: data.papers } });
     } catch (e) {
       setRecommendation('Failed to get recommendations.');
-      setRecProgressLog((prev) => [
-        ...prev,
-        '❌ Error: Failed to get recommendations.',
-      ]);
+      setRecProgressLog(prev => [...prev, '❌ Error: Failed to get recommendations.']);
       setShowRecLog(false);
     } finally {
       setRecommending(false);
     }
   };
 
-  const handleChatUpdate = (
-    newChatHistory: Array<{ text: string; isUser: boolean; id: string }>
-  ) => {
+  const handleChatUpdate = (newChatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
     setChatHistory(newChatHistory);
   };
 
@@ -1010,52 +880,35 @@ Execute these improvements while preserving all current features and maintaining
 
   // Effect to fetch code/prompt when needed
   React.useEffect(() => {
-    if (
-      chatHistory.length > 0 &&
-      currentChatFeature &&
-      currentFeatureDescription &&
-      !isFetching
-    ) {
-      const hasChatResponse = chatHistory.some((msg) => !msg.isUser);
+    if (chatHistory.length > 0 && currentChatFeature && currentFeatureDescription && !isFetching) {
+      const hasChatResponse = chatHistory.some(msg => !msg.isUser);
       const hasNewChat = chatHistory.length > lastChatLength;
       if (hasChatResponse && hasNewChat && !isTyping) {
         fetchCodeAndPrompt(chatHistory);
       }
     }
-  }, [
-    chatHistory,
-    lastChatLength,
-    isTyping,
-    isFetching,
-    currentChatFeature,
-    currentFeatureDescription,
-  ]);
+  }, [ chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription]);
 
-  const fetchCodeAndPrompt = async (
-    chatHistory: Array<{ text: string; isUser: boolean; id: string }>
-  ) => {
+  const fetchCodeAndPrompt = async (chatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
     if (isFetching) return;
     setIsFetching(true);
 
     try {
-      const latestRecommendation =
-        chatHistory.filter((msg) => !msg.isUser).pop()?.text ||
-        'No latest recommendation available';
-
+      const latestRecommendation = chatHistory
+        .filter(msg => !msg.isUser)
+        .pop()?.text || "No latest recommendation available";
+      
       const requestBody = {
         featureName: currentChatFeature,
         currentDesign: currentFeatureDescription,
-        latestRecommendation: latestRecommendation,
+        latestRecommendation: latestRecommendation
       };
-
-      const response = await fetch(
-        `${MAIN_API_BASE}/recommendation-prompt-code`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        }
-      );
+      
+      const response = await fetch(`${MAIN_API_BASE}/recommendation-prompt-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch code and prompt');
@@ -1082,8 +935,9 @@ Execute these improvements while preserving all current features and maintaining
       setReplitPrompt(data.replit_prompt || '');
       setMagicPrompt(data.magic_prompt || '');
       setSitebrewPrompt(data.sitebrew_prompt || '');
-
+      
       setLastChatLength(chatHistory.length);
+      
     } catch (error) {
       console.error('Error fetching code and prompt:', error);
     } finally {
@@ -1093,29 +947,27 @@ Execute these improvements while preserving all current features and maintaining
   };
 
   if (loading) {
-    return (
-      <div className='flex flex-col items-center justify-center min-h-[60vh] w-full'>
-        <Loader2 className='h-10 w-10 animate-spin mb-4 text-primary' />
-        <p className='text-lg mb-4'>Analyzing UI and UX...</p>
-        <div className='w-full max-w-xl bg-muted/40 rounded-lg p-4 mb-8'>
-          <h2 className='font-semibold mb-2 flex items-center gap-2'>
-            <Sparkles className='h-4 w-4 text-primary' /> Live Analysis Log
+  return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
+        <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
+        <p className="text-lg mb-4">Analyzing UI and UX...</p>
+        <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 mb-8">
+          <h2 className="font-semibold mb-2 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Live Analysis Log
           </h2>
-          <div className='font-mono text-sm space-y-1'>
+          <div className="font-mono text-sm space-y-1">
             {progressLog.map((msg, i) => (
               <div key={i}>{msg}</div>
             ))}
-            {error && <div className='text-red-500'>{error}</div>}
+            {error && <div className="text-red-500">{error}</div>}
           </div>
         </div>
-        <div className='max-w-6xl w-full'>
-          <SectionSkeleton title='Global Design System' />
-          <SectionSkeleton title='UX Architecture' />
-          <SectionSkeleton title='Business & Audience' />
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
-            {[...Array(3)].map((_, i) => (
-              <UICardSkeleton key={i} />
-            ))}
+        <div className="max-w-6xl w-full">
+          <SectionSkeleton title="Global Design System" />
+          <SectionSkeleton title="UX Architecture" />
+          <SectionSkeleton title="Business & Audience" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {[...Array(3)].map((_, i) => <UICardSkeleton key={i} />)}
           </div>
         </div>
       </div>
@@ -1135,20 +987,18 @@ Execute these improvements while preserving all current features and maintaining
   // If analysis.choices[0]?.message?.content exists, parse it
   if (!mappedAnalysis) {
     return (
-      <div className='flex flex-col items-center justify-center min-h-[60vh]'>
-        <p className='text-lg text-red-500'>
-          Failed to analyze the website. Please try again.
-        </p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <p className="text-lg text-red-500">Failed to analyze the website. Please try again.</p>
       </div>
     );
   }
 
   return (
     <SidebarProvider>
-      <div className='min-h-screen flex w-full'>
-        <AppSidebar
-          activeTab={tab}
-          onTabChange={setTab}
+      <div className="min-h-screen flex w-full">
+        <AppSidebar 
+          activeTab={tab} 
+          onTabChange={setTab} 
           activeChatbots={activeChatbots}
           onChatSelect={(featureName) => {
             setCurrentChatFeature(featureName);
@@ -1156,62 +1006,57 @@ Execute these improvements while preserving all current features and maintaining
           }}
         />
         <SidebarInset>
-          <header className='flex h-16 shrink-0 items-center gap-2 px-4 border-b'>
-            <SidebarTrigger className='-ml-1' />
-            <div className='flex flex-col'>
-              <Badge variant='outline' className='w-fit'>
-                Auto UI Analysis
-              </Badge>
+          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
+            <SidebarTrigger className="-ml-1" />
+            <div className="flex flex-col">
+              <Badge variant="outline" className="w-fit">Auto UI Analysis</Badge>
             </div>
           </header>
-          <div className='flex-1 p-6'>
+          <div className="flex-1 p-6">
             {tab === 'chatbot' ? (
               // Full width layout for chatbot
-              <div className='h-[calc(100vh-8rem)]'>
+              <div className="h-[calc(100vh-8rem)]">
                 {/* Chatbot Content */}
-                <div className='flex gap-4 h-full'>
-                  <div className='w-1/2 h-full'>
-                    <FeatureChatbot
-                      featureName={currentChatFeature}
-                      onChatUpdate={handleChatUpdate}
-                      onTypingChange={setIsTyping}
+                <div className="flex gap-4 h-full">
+                  <div className="w-1/2 h-full">
+                    <FeatureChatbot 
+                    featureName={currentChatFeature}
+                    onChatUpdate={handleChatUpdate}
+                    onTypingChange={setIsTyping}
                     />
                   </div>
-                  <div className='w-1/2 bg-gray-100 rounded-lg h-full p-4'>
+                  <div className="w-1/2 bg-gray-100 rounded-lg h-full p-4">
                     {/* Chatbot Tab Design */}
-                    <div className='flex justify-center mb-6'>
-                      <div className='flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg'>
+                    <div className="flex justify-center mb-6">
+                      <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
                         {CHATBOT_TABS.map((chatTab) => {
                           const isActive = chatbotTab === chatTab;
                           return (
                             <button
                               key={chatTab}
-                              onClick={() =>
-                                setChatbotTab(chatTab as ChatbotTab)
-                              }
+                              onClick={() => setChatbotTab(chatTab as ChatbotTab)}
                               className={cn(
-                                'relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors',
-                                'text-foreground/80 hover:text-primary',
-                                isActive && 'bg-muted text-primary'
+                                "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
+                                "text-foreground/80 hover:text-primary",
+                                isActive && "bg-muted text-primary",
                               )}
                             >
-                              {chatTab.charAt(0).toUpperCase() +
-                                chatTab.slice(1)}
+                              {chatTab.charAt(0).toUpperCase() + chatTab.slice(1)}
                               {isActive && (
                                 <motion.div
-                                  layoutId='chatbot-lamp'
-                                  className='absolute inset-0 w-full bg-primary/5 rounded-full -z-10'
+                                  layoutId="chatbot-lamp"
+                                  className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
                                   initial={false}
                                   transition={{
-                                    type: 'spring',
+                                    type: "spring",
                                     stiffness: 300,
                                     damping: 30,
                                   }}
                                 >
-                                  <div className='absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full'>
-                                    <div className='absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2' />
-                                    <div className='absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1' />
-                                    <div className='absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2' />
+                                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
+                                    <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
+                                    <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
+                                    <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
                                   </div>
                                 </motion.div>
                               )}
@@ -1220,292 +1065,149 @@ Execute these improvements while preserving all current features and maintaining
                         })}
                       </div>
                     </div>
-
+                    
                     {/* Tab Content */}
-                    <div className='h-[calc(100%-5rem)]'>
-                      {chatbotTab === 'mockups' && (
-                        <div className='h-full p-6 bg-background rounded-lg overflow-y-auto'>
-                          Mockups content coming soon...
-                        </div>
-                      )}
+                    <div className="h-[calc(100%-5rem)]">
+                      {chatbotTab === 'mockups' && <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">Mockups content coming soon...</div>}
                       {chatbotTab === 'improvements' && (
-                        <div className='h-full p-6 bg-background rounded-lg overflow-y-auto'>
-                          <h3 className='text-xl font-bold mb-4 text-center'>
-                            UX Improvement Results
-                          </h3>
-
-                          <Tabs defaultValue='code' className='w-full'>
-                            <TabsList className='grid w-full grid-cols-2 mb-4'>
-                              <TabsTrigger value='code'>Code</TabsTrigger>
-                              <TabsTrigger value='prompt'>Prompt</TabsTrigger>
+                        <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">
+                          <h3 className="text-xl font-bold mb-4 text-center">UX Improvement Results</h3>
+                          
+                          <Tabs defaultValue="code" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2 mb-4">
+                              <TabsTrigger value="code">Code</TabsTrigger>
+                              <TabsTrigger value="prompt">Prompt</TabsTrigger>
                             </TabsList>
-
-                            <TabsContent value='code' className='space-y-4'>
+                            
+                            <TabsContent value="code" className="space-y-4">
                               {isFetching ? (
-                                <div className='flex flex-col items-center justify-center min-h-[200px]'>
-                                  <Loader2 className='h-8 w-8 animate-spin mb-2 text-primary' />
-                                  <p className='text-lg'>
-                                    Generating code and prompt, please wait...
-                                  </p>
+                                <div className="flex flex-col items-center justify-center min-h-[200px]">
+                                  <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
+                                  <p className="text-lg">Generating code and prompt, please wait...</p>
                                 </div>
                               ) : (
                                 <Card>
                                   <CardHeader>
                                     <CardTitle>Implementation Code</CardTitle>
                                   </CardHeader>
-                                  <CardContent className='space-y-4'>
-                                    <div className='flex items-center gap-4'>
-                                      <Select
-                                        value={selectedFramework}
-                                        onValueChange={setSelectedFramework}
-                                      >
-                                        <SelectTrigger className='w-48'>
-                                          <SelectValue placeholder='Select framework' />
+                                  <CardContent className="space-y-4">
+                                    <div className="flex items-center gap-4">
+                                      <Select value={selectedFramework} onValueChange={setSelectedFramework}>
+                                        <SelectTrigger className="w-48">
+                                          <SelectValue placeholder="Select framework" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value='react'>
-                                            React
-                                          </SelectItem>
-                                          <SelectItem value='vue'>
-                                            Vue
-                                          </SelectItem>
-                                          <SelectItem value='angular'>
-                                            Angular
-                                          </SelectItem>
+                                          <SelectItem value="react">React</SelectItem>
+                                          <SelectItem value="vue">Vue</SelectItem>
+                                          <SelectItem value="angular">Angular</SelectItem>
                                         </SelectContent>
                                       </Select>
                                     </div>
-                                    <div className='w-full max-w-xl mx-auto'>
-                                      <CodeBlock>
-                                        <CodeBlockGroup className='border-border border-b py-2 px-2'>
-                                          <div className='flex items-center gap-2'>
-                                            <div className='bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium'>
-                                              {selectedFramework
-                                                .charAt(0)
-                                                .toUpperCase() +
-                                                selectedFramework.slice(1)}
-                                            </div>
-                                            <span className='text-muted-foreground text-sm'>
-                                              component.
-                                              {selectedFramework === 'react'
-                                                ? 'tsx'
-                                                : selectedFramework === 'vue'
-                                                ? 'vue'
-                                                : 'ts'}
-                                            </span>
+                                    <div className="w-full max-w-xl mx-auto">
+                                    <CodeBlock>
+                                      <CodeBlockGroup className="border-border border-b py-2 px-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
+                                            {selectedFramework.charAt(0).toUpperCase() + selectedFramework.slice(1)}
                                           </div>
-                                          <Button
-                                            onClick={handleCopyCode}
-                                            variant='ghost'
-                                            size='icon'
-                                            className='h-8 w-8'
-                                          >
-                                            {codeCopied ? (
-                                              <Check className='h-4 w-4 text-green-500' />
-                                            ) : (
-                                              <Copy className='h-4 w-4' />
-                                            )}
-                                          </Button>
-                                        </CodeBlockGroup>
-                                        <CodeBlockCode
-                                          code={
-                                            codeSnippets[
-                                              selectedFramework as keyof typeof codeSnippets
-                                            ]
-                                          }
-                                          language={
-                                            selectedFramework === 'angular'
-                                              ? 'typescript'
-                                              : selectedFramework === 'react'
-                                              ? 'tsx'
-                                              : selectedFramework
-                                          }
-                                          theme='github-light'
-                                        />
-                                      </CodeBlock>
-                                    </div>
-
-                                    <div className='mt-6 p-4 bg-blue-50 rounded-md'>
-                                      <h3 className='font-semibold mb-2'>
-                                        Integration Instructions:
-                                      </h3>
-                                      <ul className='list-disc list-inside space-y-1 text-sm text-gray-700'>
-                                        <li>
-                                          Copy the code snippet above and
-                                          integrate it into your project
-                                        </li>
-                                        <li>
-                                          Ensure you have the necessary
-                                          dependencies installed (Tailwind CSS
-                                          for styling)
-                                        </li>
-                                        <li>
-                                          Customize the component according to
-                                          your specific requirements
-                                        </li>
-                                        <li>
-                                          Test the implementation across
-                                          different devices and screen sizes
-                                        </li>
-                                      </ul>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              )}
+                                          <span className="text-muted-foreground text-sm">component.{selectedFramework === 'react' ? 'tsx' : selectedFramework === 'vue' ? 'vue' : 'ts'}</span>
+                                        </div>
+                                        <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
+                                          {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                        </Button>
+                                      </CodeBlockGroup>
+                                      <CodeBlockCode 
+                                        code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
+                                        language={selectedFramework === 'angular' ? 'typescript' : selectedFramework === 'react' ? 'tsx' : selectedFramework}
+                                        theme="github-light"
+                                      />
+                                    </CodeBlock>
+                                  </div>
+                                  
+                                  <div className="mt-6 p-4 bg-blue-50 rounded-md">
+                                    <h3 className="font-semibold mb-2">Integration Instructions:</h3>
+                                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                                      <li>Copy the code snippet above and integrate it into your project</li>
+                                      <li>Ensure you have the necessary dependencies installed (Tailwind CSS for styling)</li>
+                                      <li>Customize the component according to your specific requirements</li>
+                                      <li>Test the implementation across different devices and screen sizes</li>
+                                    </ul>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
                             </TabsContent>
-
-                            <TabsContent value='prompt' className='space-y-4'>
+                            
+                            <TabsContent value="prompt" className="space-y-4">
                               {isFetching ? (
-                                <div className='flex flex-col items-center justify-center min-h-[200px]'>
-                                  <Loader2 className='h-8 w-8 animate-spin mb-2 text-primary' />
-                                  <p className='text-lg'>
-                                    Generating code and prompt, please wait...
-                                  </p>
+                                <div className="flex flex-col items-center justify-center min-h-[200px]">
+                                  <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
+                                  <p className="text-lg">Generating code and prompt, please wait...</p>
                                 </div>
                               ) : (
                                 <Card>
                                   <CardHeader>
-                                    <CardTitle>AI Development Prompt</CardTitle>
+                                    <CardTitle>
+                                      AI Development Prompt
+                                    </CardTitle>
                                   </CardHeader>
                                   <CardContent>
-                                    <div className='flex items-center gap-4 mb-4'>
-                                      <Select
-                                        value={selectedPlatform}
-                                        onValueChange={setSelectedPlatform}
-                                      >
-                                        <SelectTrigger className='w-48'>
-                                          <SelectValue placeholder='Select platform' />
+                                    <div className="flex items-center gap-4 mb-4">
+                                      <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                                        <SelectTrigger className="w-48">
+                                          <SelectValue placeholder="Select platform" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value='lovable'>
-                                            Lovable
-                                          </SelectItem>
-                                          <SelectItem value='cursor'>
-                                            Cursor (or any AI IDE)
-                                          </SelectItem>
-                                          <SelectItem value='bolt'>
-                                            Bolt.new (Partnership)
-                                          </SelectItem>
-                                          <SelectItem value='vercel'>
-                                            v0 by Vercel
-                                          </SelectItem>
-                                          <SelectItem value='replit'>
-                                            Replit
-                                          </SelectItem>
-                                          <SelectItem value='magic'>
-                                            Magic Patterns
-                                          </SelectItem>
-                                          <SelectItem value='sitebrew'>
-                                            sitebrew.ai
-                                          </SelectItem>
+                                          <SelectItem value="lovable">Lovable</SelectItem>
+                                          <SelectItem value="cursor">Cursor (or any AI IDE)</SelectItem>
+                                          <SelectItem value="bolt">Bolt.new (Partnership)</SelectItem>
+                                          <SelectItem value="vercel">v0 by Vercel</SelectItem>
+                                          <SelectItem value="replit">Replit</SelectItem>
+                                          <SelectItem value="magic">Magic Patterns</SelectItem>
+                                          <SelectItem value="sitebrew">sitebrew.ai</SelectItem>
                                         </SelectContent>
                                       </Select>
                                     </div>
-                                    <div className='w-full max-w-xl mx-auto'>
+                                    <div className="w-full max-w-xl mx-auto">
                                       <CodeBlock>
-                                        <CodeBlockGroup className='border-border border-b py-2 px-2'>
-                                          <div className='flex items-center gap-2'>
-                                            <div className='bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium'>
-                                              {selectedPlatform
-                                                .charAt(0)
-                                                .toUpperCase() +
-                                                selectedPlatform.slice(1)}
+                                        <CodeBlockGroup className="border-border border-b py-2 px-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
+                                              {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}
                                             </div>
-                                            <span className='text-muted-foreground text-sm'>
-                                              prompt.txt
-                                            </span>
+                                            <span className="text-muted-foreground text-sm">prompt.txt</span>
                                           </div>
-                                          <Button
-                                            onClick={handleCopyPrompt}
-                                            variant='ghost'
-                                            size='icon'
-                                            className='h-8 w-8'
-                                          >
-                                            {promptCopied ? (
-                                              <Check className='h-4 w-4 text-green-500' />
-                                            ) : (
-                                              <Copy className='h-4 w-4' />
-                                            )}
+                                          <Button onClick={handleCopyPrompt} variant="ghost" size="icon" className="h-8 w-8">
+                                            {promptCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                                           </Button>
                                         </CodeBlockGroup>
-                                        <CodeBlockCode
-                                          code={promptText}
-                                          language='text'
-                                          theme='github-light'
+                                        <CodeBlockCode 
+                                          code={promptText} 
+                                          language="text"
+                                          theme="github-light"
                                         />
                                       </CodeBlock>
                                     </div>
-                                    <div className='space-y-4'>
-                                      <div className='p-4 bg-green-50 rounded-md'>
-                                        <h3 className='font-semibold mb-2'>
-                                          How to use this prompt:
-                                        </h3>
-                                        <ul className='list-disc list-inside space-y-1 text-sm text-gray-700'>
-                                          {selectedPlatform === 'lovable' && (
-                                            <li>
-                                              <strong>Lovable:</strong> Paste
-                                              this prompt in the chat to get
-                                              AI-powered UX improvements
-                                            </li>
-                                          )}
-                                          {selectedPlatform === 'cursor' && (
-                                            <li>
-                                              <strong>Cursor:</strong> Use this
-                                              as a comprehensive instruction for
-                                              code enhancement in your AI IDE
-                                            </li>
-                                          )}
-                                          {selectedPlatform === 'bolt' && (
-                                            <li>
-                                              <strong>Bolt.new:</strong> Copy
-                                              this prompt to generate improved
-                                              components with UX enhancements
-                                            </li>
-                                          )}
-                                          {selectedPlatform === 'vercel' && (
-                                            <li>
-                                              <strong>v0 by Vercel:</strong> Use
-                                              this specification to generate
-                                              accessible and polished React
-                                              components
-                                            </li>
-                                          )}
-                                          {selectedPlatform === 'replit' && (
-                                            <li>
-                                              <strong>Replit:</strong> Apply
-                                              this checklist-style prompt for
-                                              systematic UX improvements
-                                            </li>
-                                          )}
-                                          {selectedPlatform === 'magic' && (
-                                            <li>
-                                              <strong>Magic Patterns:</strong>{' '}
-                                              Use this JSON specification to
-                                              generate enhanced UI patterns
-                                            </li>
-                                          )}
-                                          {selectedPlatform === 'sitebrew' && (
-                                            <li>
-                                              <strong>sitebrew.ai:</strong>{' '}
-                                              Apply this XML-formatted brief for
-                                              comprehensive UX enhancements
-                                            </li>
-                                          )}
+                                    <div className="space-y-4">
+                                      <div className="p-4 bg-green-50 rounded-md">
+                                        <h3 className="font-semibold mb-2">How to use this prompt:</h3>
+                                        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                                          {selectedPlatform === 'lovable' && <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>}
+                                          {selectedPlatform === 'cursor' && <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement in your AI IDE</li>}
+                                          {selectedPlatform === 'bolt' && <li><strong>Bolt.new:</strong> Copy this prompt to generate improved components with UX enhancements</li>}
+                                          {selectedPlatform === 'vercel' && <li><strong>v0 by Vercel:</strong> Use this specification to generate accessible and polished React components</li>}
+                                          {selectedPlatform === 'replit' && <li><strong>Replit:</strong> Apply this checklist-style prompt for systematic UX improvements</li>}
+                                          {selectedPlatform === 'magic' && <li><strong>Magic Patterns:</strong> Use this JSON specification to generate enhanced UI patterns</li>}
+                                          {selectedPlatform === 'sitebrew' && <li><strong>sitebrew.ai:</strong> Apply this XML-formatted brief for comprehensive UX enhancements</li>}
                                         </ul>
                                       </div>
-
-                                      <div className='p-4 bg-yellow-50 rounded-md'>
-                                        <h3 className='font-semibold mb-2'>
-                                          Expected Results:
-                                        </h3>
-                                        <p className='text-sm text-gray-700'>
-                                          This prompt will help AI tools
-                                          understand the specific UX
-                                          improvements needed and generate code
-                                          that follows evidence-based design
-                                          principles, improving user experience,
-                                          accessibility, and overall usability
-                                          of your application.
+                                      
+                                      <div className="p-4 bg-yellow-50 rounded-md">
+                                        <h3 className="font-semibold mb-2">Expected Results:</h3>
+                                        <p className="text-sm text-gray-700">
+                                          This prompt will help AI tools understand the specific UX improvements needed 
+                                          and generate code that follows evidence-based design principles, improving 
+                                          user experience, accessibility, and overall usability of your application.
                                         </p>
                                       </div>
                                     </div>
@@ -1516,216 +1218,132 @@ Execute these improvements while preserving all current features and maintaining
                           </Tabs>
                         </div>
                       )}
-                      {chatbotTab === 'sources' && (
-                        <div className='h-full overflow-y-auto bg-background rounded-lg'>
-                          <div className='p-6'>
-                            <h3 className='text-lg font-semibold mb-6 text-foreground'>
-                              References
-                            </h3>
-                            <div className='space-y-4'>
+{chatbotTab === 'sources' && (
+                        <div className="h-full overflow-y-auto bg-background rounded-lg">
+                          <div className="p-6">
+                            <h3 className="text-lg font-semibold mb-6 text-foreground">References</h3>
+                            <div className="space-y-4">
                               {/* Reference 1 */}
-                              <div className='border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg'>
-                                <div className='flex items-start gap-3'>
-                                  <span className='bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0'>
-                                    1
-                                  </span>
-                                  <div className='flex-1 min-w-0'>
-                                    <h4 className='font-medium text-foreground hover:text-primary cursor-pointer transition-colors'>
-                                      The role of artificial intelligence
-                                      algorithms in information systems
-                                      research: a conceptual overview and
-                                      avenues for research
-                                      <span className='ml-2 text-primary text-sm'>
-                                        ↗
-                                      </span>
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">1</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      The role of artificial intelligence algorithms in information systems research: a conceptual overview and avenues for research
+                                      <span className="ml-2 text-primary text-sm">↗</span>
                                     </h4>
-                                    <div className='flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap'>
-                                      <span>
-                                        📄 David Bendig, Antonio Bränunche
-                                      </span>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
+                                      <span>📄 David Bendig, Antonio Bränunche</span>
                                       <span>•</span>
-                                      <span>
-                                        📊 Management Review Quarterly, June
-                                        2024
-                                      </span>
-                                      <span className='bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs'>
-                                        PEER REVIEWED
-                                      </span>
+                                      <span>📊 Management Review Quarterly, June 2024</span>
+                                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">PEER REVIEWED</span>
                                       <span>•</span>
                                       <span>📈 citations 5</span>
                                     </div>
-                                    <div className='mt-2 text-sm'>
-                                      <span className='text-muted-foreground'>
-                                        Contexts: Used{' '}
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800'>
-                                        1.1
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1'>
-                                        1.2
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1'>
-                                        1.3
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1'>
-                                        1.4
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1'>
-                                        1.5
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1'>
-                                        1.6
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1'>
-                                        1.7
-                                      </span>
-                                      <span className='text-muted-foreground ml-1'>
-                                        Unused{' '}
-                                      </span>
-                                      <span className='text-gray-500 underline cursor-pointer hover:text-gray-700'>
-                                        1.8
-                                      </span>
-                                      <span className='text-gray-500 underline cursor-pointer hover:text-gray-700 ml-1'>
-                                        1.9
-                                      </span>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">1.1</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.2</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.3</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.4</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.5</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.6</span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 ml-1">1.7</span>
+                                      <span className="text-muted-foreground ml-1">Unused </span>
+                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">1.8</span>
+                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700 ml-1">1.9</span>
                                     </div>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Reference 2 */}
-                              <div className='border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg'>
-                                <div className='flex items-start gap-3'>
-                                  <span className='bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0'>
-                                    2
-                                  </span>
-                                  <div className='flex-1 min-w-0'>
-                                    <h4 className='font-medium text-foreground hover:text-primary cursor-pointer transition-colors'>
-                                      Selected Essays on the Role of Emotions in
-                                      Information Systems Research and Use
-                                      <span className='ml-2 text-primary text-sm'>
-                                        ↗
-                                      </span>
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">2</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      Selected Essays on the Role of Emotions in Information Systems Research and Use
+                                      <span className="ml-2 text-primary text-sm">↗</span>
                                     </h4>
-                                    <div className='flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap'>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
                                       <span>📄 O Hornung</span>
                                       <span>•</span>
                                       <span>📅 2024</span>
                                     </div>
-                                    <div className='mt-2 text-sm'>
-                                      <span className='text-muted-foreground'>
-                                        Contexts: Used{' '}
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800'>
-                                        2.1
-                                      </span>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">2.1</span>
                                     </div>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Reference 3 */}
-                              <div className='border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg'>
-                                <div className='flex items-start gap-3'>
-                                  <span className='bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0'>
-                                    3
-                                  </span>
-                                  <div className='flex-1 min-w-0'>
-                                    <h4 className='font-medium text-foreground hover:text-primary cursor-pointer transition-colors'>
-                                      Selected Essays on the Role of Emotions in
-                                      Information Systems Research and Use
-                                      <span className='ml-2 text-primary text-sm'>
-                                        ↗
-                                      </span>
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">3</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      Selected Essays on the Role of Emotions in Information Systems Research and Use
+                                      <span className="ml-2 text-primary text-sm">↗</span>
                                     </h4>
-                                    <div className='flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap'>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
                                       <span>📄 O Hornung</span>
                                       <span>•</span>
                                       <span>📅 2024</span>
                                     </div>
-                                    <div className='mt-2 text-sm'>
-                                      <span className='text-muted-foreground'>
-                                        Contexts: Used{' '}
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800'>
-                                        3.1
-                                      </span>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">3.1</span>
                                     </div>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Reference 4 */}
-                              <div className='border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg'>
-                                <div className='flex items-start gap-3'>
-                                  <span className='bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0'>
-                                    4
-                                  </span>
-                                  <div className='flex-1 min-w-0'>
-                                    <h4 className='font-medium text-foreground hover:text-primary cursor-pointer transition-colors'>
-                                      UNDERSTANDING CUSTOMER JOURNEYS: A
-                                      SYSTEMATIC LITERATURE REVIEW OF AI-POWERED
-                                      MARKETING PERSONALIZATION
-                                      <span className='ml-2 text-primary text-sm'>
-                                        ↗
-                                      </span>
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">4</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      UNDERSTANDING CUSTOMER JOURNEYS: A SYSTEMATIC LITERATURE REVIEW OF AI-POWERED MARKETING PERSONALIZATION
+                                      <span className="ml-2 text-primary text-sm">↗</span>
                                     </h4>
-                                    <div className='flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap'>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
                                       <span>📄 H Mulyono</span>
                                       <span>•</span>
                                       <span>📅 2024</span>
                                     </div>
-                                    <div className='mt-2 text-sm'>
-                                      <span className='text-muted-foreground'>
-                                        Contexts: Used{' '}
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800'>
-                                        4.1
-                                      </span>
-                                      <span className='text-muted-foreground ml-1'>
-                                        Unused{' '}
-                                      </span>
-                                      <span className='text-gray-500 underline cursor-pointer hover:text-gray-700'>
-                                        4.2
-                                      </span>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">4.1</span>
+                                      <span className="text-muted-foreground ml-1">Unused </span>
+                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">4.2</span>
                                     </div>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Reference 5 */}
-                              <div className='border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg'>
-                                <div className='flex items-start gap-3'>
-                                  <span className='bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0'>
-                                    5
-                                  </span>
-                                  <div className='flex-1 min-w-0'>
-                                    <h4 className='font-medium text-foreground hover:text-primary cursor-pointer transition-colors'>
-                                      UNDERSTANDING CUSTOMER JOURNEYS: A
-                                      SYSTEMATIC LITERATURE REVIEW OF AI-POWERED
-                                      MARKETING PERSONALIZATION
-                                      <span className='ml-2 text-primary text-sm'>
-                                        ↗
-                                      </span>
+                              <div className="border-l-4 border-primary pl-4 py-3 bg-muted/30 rounded-r-lg">
+                                <div className="flex items-start gap-3">
+                                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mt-1 shrink-0">5</span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors">
+                                      UNDERSTANDING CUSTOMER JOURNEYS: A SYSTEMATIC LITERATURE REVIEW OF AI-POWERED MARKETING PERSONALIZATION
+                                      <span className="ml-2 text-primary text-sm">↗</span>
                                     </h4>
-                                    <div className='flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap'>
+                                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
                                       <span>📄 H Mulyono</span>
                                       <span>•</span>
                                       <span>📅 2024</span>
                                     </div>
-                                    <div className='mt-2 text-sm'>
-                                      <span className='text-muted-foreground'>
-                                        Contexts: Used{' '}
-                                      </span>
-                                      <span className='text-blue-600 underline cursor-pointer hover:text-blue-800'>
-                                        5.1
-                                      </span>
-                                      <span className='text-muted-foreground ml-1'>
-                                        Unused{' '}
-                                      </span>
-                                      <span className='text-gray-500 underline cursor-pointer hover:text-gray-700'>
-                                        5.2
-                                      </span>
+                                    <div className="mt-2 text-sm">
+                                      <span className="text-muted-foreground">Contexts: Used </span>
+                                      <span className="text-blue-600 underline cursor-pointer hover:text-blue-800">5.1</span>
+                                      <span className="text-muted-foreground ml-1">Unused </span>
+                                      <span className="text-gray-500 underline cursor-pointer hover:text-gray-700">5.2</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1740,431 +1358,256 @@ Execute these improvements while preserving all current features and maintaining
               </div>
             ) : (
               // Constrained width layout for other tabs
-              <div className='max-w-6xl mx-auto'>
-                <div className='flex flex-col items-center gap-4 text-center mb-8'>
-                  <h1 className='max-w-2xl text-3xl font-semibold md:text-4xl'>
+              <div className="max-w-6xl mx-auto">
+                <div className="flex flex-col items-center gap-4 text-center mb-8">
+                  <h1 className="max-w-2xl text-3xl font-semibold md:text-4xl">
                     Advanced UI/UX Analysis Results
                   </h1>
-                  <p className='text-muted-foreground'>
-                    Get actionable insights and recommendations to improve your
-                    website's user experience and conversion rates.
-                  </p>
+                  <p className="text-muted-foreground">Get actionable insights and recommendations to improve your website's user experience and conversion rates.</p>
                 </div>
 
-                <div className='space-y-8'>
+                <div className="space-y-8">
                   {/* UI Components Section */}
-                  <div className='bg-white rounded-lg shadow-sm p-6'>
-                    {tab === 'ui' && (
-                      <div>
-                        {/* Analysis Overview Accordion */}
-                        <div className='mb-8'>
-                          <Accordion
-                            type='single'
-                            collapsible
-                            className='w-full'
-                          >
-                            <AccordionItem value='global-design'>
-                              <AccordionTrigger className='text-xl font-semibold'>
-                                Global Design System
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                  <div>
-                                    <b>Color Palette:</b>{' '}
-                                    {mappedAnalysis.global_design_summary
-                                      ?.color_palette || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Button Styles:</b>{' '}
-                                    {mappedAnalysis.global_design_summary
-                                      ?.button_styles || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Spacing & Layout:</b>{' '}
-                                    {mappedAnalysis.global_design_summary
-                                      ?.spacing_layout || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Iconography:</b>{' '}
-                                    {mappedAnalysis.global_design_summary
-                                      ?.iconography || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>CSS code:</b>{' '}
-                                    {mappedAnalysis.global_design_summary
-                                      ?.css_properties || 'N/A'}
-                                  </div>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                            <AccordionItem value='ux-architecture'>
-                              <AccordionTrigger className='text-xl font-semibold'>
-                                UX Architecture
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                  <div>
-                                    <b>Page Flow:</b>{' '}
-                                    {mappedAnalysis.ux_architecture
-                                      ?.page_flow || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Emotional Strategy:</b>{' '}
-                                    {mappedAnalysis.ux_architecture
-                                      ?.emotional_strategy || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Conversion Points:</b>{' '}
-                                    {mappedAnalysis.ux_architecture
-                                      ?.conversion_points || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Design Trends:</b>{' '}
-                                    {mappedAnalysis.ux_architecture
-                                      ?.design_trends || 'N/A'}
-                                  </div>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                            <AccordionItem value='business-audience'>
-                              <AccordionTrigger className='text-xl font-semibold'>
-                                Business & Audience
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                  <div>
-                                    <b>Summary:</b>{' '}
-                                    {mappedAnalysis.business_analysis
-                                      ?.summary || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Business Type:</b>{' '}
-                                    {mappedAnalysis.business_analysis
-                                      ?.business_type || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Target Audience:</b>{' '}
-                                    {mappedAnalysis.business_analysis
-                                      ?.target_audience || 'N/A'}
-                                  </div>
-                                  <div>
-                                    <b>Keywords:</b>{' '}
-                                    {Array.isArray(
-                                      mappedAnalysis.business_analysis?.keywords
-                                    )
-                                      ? mappedAnalysis.business_analysis.keywords.join(
-                                          ', '
-                                        )
-                                      : mappedAnalysis.business_analysis
-                                          ?.keywords || 'N/A'}
-                                  </div>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  {tab === 'ui' && (
+                    <div>
+                      {/* Analysis Overview Accordion */}
+                      <div className="mb-8">
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value="global-design">
+                            <AccordionTrigger className="text-xl font-semibold">
+                              Global Design System
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><b>Color Palette:</b> {mappedAnalysis.global_design_summary?.color_palette || 'N/A'}</div>
+                                <div><b>Button Styles:</b> {mappedAnalysis.global_design_summary?.button_styles || 'N/A'}</div>
+                                <div><b>Spacing & Layout:</b> {mappedAnalysis.global_design_summary?.spacing_layout || 'N/A'}</div>
+                                <div><b>Iconography:</b> {mappedAnalysis.global_design_summary?.iconography || 'N/A'}</div>
+                                <div><b>CSS code:</b> {mappedAnalysis.global_design_summary?.css_properties || 'N/A'}</div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                          <AccordionItem value="ux-architecture">
+                            <AccordionTrigger className="text-xl font-semibold">
+                              UX Architecture
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><b>Page Flow:</b> {mappedAnalysis.ux_architecture?.page_flow || 'N/A'}</div>
+                                <div><b>Emotional Strategy:</b> {mappedAnalysis.ux_architecture?.emotional_strategy || 'N/A'}</div>
+                                <div><b>Conversion Points:</b> {mappedAnalysis.ux_architecture?.conversion_points || 'N/A'}</div>
+                                <div><b>Design Trends:</b> {mappedAnalysis.ux_architecture?.design_trends || 'N/A'}</div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                          <AccordionItem value="business-audience">
+                            <AccordionTrigger className="text-xl font-semibold">
+                              Business & Audience
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><b>Summary:</b> {mappedAnalysis.business_analysis?.summary || 'N/A'}</div>
+                                <div><b>Business Type:</b> {mappedAnalysis.business_analysis?.business_type || 'N/A'}</div>
+                                <div><b>Target Audience:</b> {mappedAnalysis.business_analysis?.target_audience || 'N/A'}</div>
+                                <div><b>Keywords:</b> {Array.isArray(mappedAnalysis.business_analysis?.keywords) ? mappedAnalysis.business_analysis.keywords.join(', ') : mappedAnalysis.business_analysis?.keywords || 'N/A'}</div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </div>
+                      <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
+                        <div className="flex justify-center mb-6">
+                          <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+                            {SUBTABS.map((sub) => {
+                              const isActive = uiSubTab === sub;
+                              return (
+                                <button
+                                  key={sub}
+                                  onClick={() => setUiSubTab(sub as SubTab)}
+                                  className={cn(
+                                    "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
+                                    "text-foreground/80 hover:text-primary",
+                                    isActive && "bg-muted text-primary",
+                                  )}
+                                >
+                                  {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                                  {isActive && (
+                                    <motion.div
+                                      layoutId="lamp"
+                                      className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
+                                      initial={false}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 300,
+                                        damping: 30,
+                                      }}
+                                    >
+                                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
+                                        <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
+                                        <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
+                                        <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <Tabs
-                          value={uiSubTab}
-                          onValueChange={(value) =>
-                            setUiSubTab(value as SubTab)
-                          }
-                          className='w-full'
-                        >
-                          <div className='flex justify-center mb-6'>
-                            <div className='flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg'>
-                              {SUBTABS.map((sub) => {
-                                const isActive = uiSubTab === sub;
-                                return (
-                                  <button
-                                    key={sub}
-                                    onClick={() => setUiSubTab(sub as SubTab)}
-                                    className={cn(
-                                      'relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors',
-                                      'text-foreground/80 hover:text-primary',
-                                      isActive && 'bg-muted text-primary'
-                                    )}
-                                  >
-                                    {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                                    {isActive && (
-                                      <motion.div
-                                        layoutId='lamp'
-                                        className='absolute inset-0 w-full bg-primary/5 rounded-full -z-10'
-                                        initial={false}
-                                        transition={{
-                                          type: 'spring',
-                                          stiffness: 300,
-                                          damping: 30,
-                                        }}
-                                      >
-                                        <div className='absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full'>
-                                          <div className='absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2' />
-                                          <div className='absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1' />
-                                          <div className='absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2' />
-                                        </div>
-                                      </motion.div>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          <TabsContent value={uiSubTab} className='mt-4'>
-                            <div className='grid grid-cols-1 gap-8'>
-                              {mappedAnalysis.sections
-                                ?.filter((section: any, idx: number) => {
-                                  const status =
-                                    componentStatuses[section.name || idx] ||
-                                    'rejected';
-                                  if (uiSubTab === 'all') return true;
-                                  return status === uiSubTab;
-                                })
-                                .map((section: any, idx: number) => (
-                                  <SocialCard
-                                    key={section.name || idx}
-                                    author={{
-                                      name: section.name,
-                                      username: '',
-                                      avatar:
-                                        section.cropped_image_url ||
-                                        'https://via.placeholder.com/40',
-                                      timeAgo: '',
-                                    }}
-                                    content={{
-                                      text: `${
-                                        section.purpose || 'UI Component'
-                                      }`,
-                                      link: {
-                                        title: `${
-                                          section.elements ||
-                                          'Component Elements'
-                                        }`,
-                                        description: `Fonts: ${
-                                          section.style?.fonts || 'N/A'
-                                        } • Colors: ${
-                                          section.style?.colors || 'N/A'
-                                        }`,
-                                        icon: (
-                                          <LayoutDashboard className='w-5 h-5 text-blue-500' />
-                                        ),
-                                      },
-                                    }}
-                                    statusOptions={[...STATUS_OPTIONS]}
-                                    currentStatus={
-                                      componentStatuses[section.name || idx] ||
-                                      'rejected'
-                                    }
-                                    onStatusChange={(status) =>
-                                      handleStatusChange(
-                                        section,
-                                        status as Status
-                                      )
-                                    }
-                                    engagement={{
-                                      likes: 0,
-                                      comments: 0,
-                                      shares: 0,
-                                      isLiked: false,
-                                      isBookmarked: false,
-                                    }}
-                                    className='mb-4'
-                                  >
-                                    <div className='text-sm text-muted-foreground space-y-1'>
-                                      <div>
-                                        <b>Layouts:</b> {section.style?.layout}
-                                      </div>
-                                      <div>
-                                        <b>Interactions:</b>{' '}
-                                        {section.style?.interactions}
-                                      </div>
-                                      <div>
-                                        <b>Mobile:</b> {section.mobile_behavior}
-                                      </div>
-                                      <div>
-                                        <b>CSS properties:</b>{' '}
-                                        {section?.css_properties || 'N/A'}
-                                      </div>
-
-                                      <div className='flex gap-2 items-center mt-6'>
-                                        {STATUS_OPTIONS.map((status) => (
-                                          <Button
-                                            key={status}
-                                            size='sm'
-                                            variant={
-                                              componentStatuses[
-                                                section.name || idx
-                                              ] === status
-                                                ? 'default'
-                                                : 'outline'
-                                            }
-                                            onClick={() =>
-                                              handleStatusChange(
-                                                section,
-                                                status
-                                              )
-                                            }
-                                          >
-                                            {status === 'rejected'
-                                              ? 'Reject'
-                                              : 'Improve'}
-                                          </Button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </SocialCard>
-                                ))}
-                            </div>
-                          </TabsContent>
-                        </Tabs>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Design Recommendations Section */}
-                  {tab === 'recommendations' && (
-                    <div className='bg-white rounded-lg shadow-sm p-6'>
-                      <div className='text-center py-8'>
-                        <Target className='mx-auto h-12 w-12 text-muted-foreground mb-4' />
-                        <h3 className='text-lg font-medium mb-2'>
-                          Design Recommendations
-                        </h3>
-                        <p className='text-muted-foreground mb-4'>
-                          Get AI-powered recommendations for confirmed
-                          components
-                        </p>
-                        <p className='text-sm text-muted-foreground'>
-                          Confirm components in the UI tab and get
-                          recommendations in the AI Analysis tab.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* AI Recommendations Section */}
-                  <div className='bg-white rounded-lg shadow-sm p-6'>
-                    {tab === 'ai' && (
-                      <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
-                        {mappedAnalysis.sections?.filter(
-                          (section: any, idx: number) =>
-                            componentStatuses[section.name || idx] ===
-                            'improved'
-                        ).length === 0 && (
-                          <div className='text-muted-foreground'>
-                            No improved components. Improve a component in the
-                            UI Components tab.
-                          </div>
-                        )}
-                        {mappedAnalysis.sections
-                          ?.filter(
-                            (section: any, idx: number) =>
-                              componentStatuses[section.name || idx] ===
-                              'improved'
-                          )
-                          .map((section: any, idx: number) => (
+                        <TabsContent value={uiSubTab} className="mt-4">
+                        <div className="grid grid-cols-1 gap-8">
+                          {mappedAnalysis.sections?.filter((section: any, idx: number) => {
+                            const status = componentStatuses[section.name || idx] || 'rejected';
+                            if (uiSubTab === 'all') return true;
+                            return status === uiSubTab;
+                          }).map((section: any, idx: number) => (
                             <SocialCard
                               key={section.name || idx}
                               author={{
                                 name: section.name,
-                                username: 'confirmed_component',
-                                avatar:
-                                  section.cropped_image_url ||
-                                  'https://via.placeholder.com/40',
-                                timeAgo: 'confirmed',
+                                username: "", 
+                                avatar: section.cropped_image_url || "https://via.placeholder.com/40",
+                                timeAgo: ""
                               }}
                               content={{
-                                text: `${
-                                  section.purpose || 'Confirmed UI Component'
-                                }`,
+                                text: `${section.purpose || 'UI Component'}`,
                                 link: {
-                                  title: `${
-                                    section.elements || 'Component Elements'
-                                  }`,
-                                  description: `Fonts: ${
-                                    section.style?.fonts || 'N/A'
-                                  } • Colors: ${
-                                    section.style?.colors || 'N/A'
-                                  }`,
-                                  icon: (
-                                    <LayoutDashboard className='w-5 h-5 text-green-500' />
-                                  ),
-                                },
+                                  title: `${section.elements || 'Component Elements'}`,
+                                  description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                                  icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
+                                }
                               }}
+                              statusOptions={[...STATUS_OPTIONS]}
+                              currentStatus={componentStatuses[section.name || idx] || 'rejected'}
+                              onStatusChange={(status) => handleStatusChange(section, status as Status)}
                               engagement={{
                                 likes: 0,
                                 comments: 0,
                                 shares: 0,
                                 isLiked: false,
-                                isBookmarked: true,
+                                isBookmarked: false
                               }}
-                              className='mb-4'
+                              className="mb-4"
                             >
-                              <div className='mt-4 space-y-2'>
-                                <Button
-                                  size='sm'
-                                  className='mb-3'
-                                  onClick={() =>
-                                    handleGetRecommendation(section)
-                                  }
-                                  disabled={recommending}
-                                >
-                                  {recommending &&
-                                  selectedSection?.name === section.name ? (
-                                    <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                                  ) : (
-                                    <Sparkles className='h-4 w-4 mr-2' />
-                                  )}
-                                  Get Recommendations
-                                </Button>
-                                <div className='text-sm text-muted-foreground space-y-1'>
-                                  <div>
-                                    <b>Layouts:</b> {section.style?.layout}
-                                  </div>
-                                  <div>
-                                    <b>Interactions:</b>{' '}
-                                    {section.style?.interactions}
-                                  </div>
-                                  <div>
-                                    <b>Mobile:</b> {section.mobile_behavior}
-                                  </div>
-                                  <div>
-                                    <b>CSS properties:</b>{' '}
-                                    {section?.css_properties || 'N/A'}
-                                  </div>
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <div><b>Layouts:</b> {section.style?.layout}</div>
+                                <div><b>Interactions:</b> {section.style?.interactions}</div>
+                                <div><b>Mobile:</b> {section.mobile_behavior}</div>
+                                <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
+
+                                <div className="flex gap-2 items-center mt-6">
+                                  {STATUS_OPTIONS.map((status) => (
+                                    <Button 
+                                      key={status}
+                                      size="sm"
+                                      variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
+                                      onClick={() => handleStatusChange(section, status)}
+                                    >
+                                      {status === 'rejected' ? 'Reject' : 'Improve'}
+                                    </Button>
+                                  ))}
                                 </div>
                               </div>
                             </SocialCard>
                           ))}
+                          </div>
+                          </TabsContent>
+                        </Tabs>
                       </div>
-                    )}
+                   )}
+                  </div>
+
+                  {/* Design Recommendations Section */}
+                  {tab === 'recommendations' && (
+                    <div className="bg-white rounded-lg shadow-sm p-6">
+                      <div className="text-center py-8">
+                        <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium mb-2">Design Recommendations</h3>
+                        <p className="text-muted-foreground mb-4">Get AI-powered recommendations for confirmed components</p>
+                        <p className="text-sm text-muted-foreground">Confirm components in the UI tab and get recommendations in the AI Analysis tab.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Recommendations Section */}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  {tab === 'ai' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {mappedAnalysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
+                        <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
+                      )}
+                      {mappedAnalysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
+                        <SocialCard
+                          key={section.name || idx}
+                          author={{
+                            name: section.name,
+                            username: "confirmed_component", 
+                            avatar: section.cropped_image_url || "https://via.placeholder.com/40",
+                            timeAgo: "confirmed"
+                          }}
+                          content={{
+                            text: `${section.purpose || 'Confirmed UI Component'}`,
+                            link: {
+                              title: `${section.elements || 'Component Elements'}`,
+                              description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                              icon: <LayoutDashboard className="w-5 h-5 text-green-500" />
+                            }
+                          }}
+                          engagement={{
+                            likes: 0,
+                            comments: 0,
+                            shares: 0,
+                            isLiked: false,
+                            isBookmarked: true
+                          }}
+                          className="mb-4"
+                        >
+                          <div className="mt-4 space-y-2">
+                            <Button 
+                              size="sm"
+                              className="mb-3"
+                              onClick={() => handleGetRecommendation(section)}
+                              disabled={recommending}
+                            >
+                              {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                              Get Recommendations
+                            </Button>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              
+                                <div><b>Layouts:</b> {section.style?.layout}</div>
+                                <div><b>Interactions:</b> {section.style?.interactions}</div>
+                                <div><b>Mobile:</b> {section.mobile_behavior}</div>
+                                <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
+                            </div>
+                          </div>
+                        </SocialCard>
+                      ))}
+                     </div>
+                   )}
                   </div>
 
                   {/* Screenshot Section */}
-                  <div className='bg-white rounded-lg shadow-sm p-6'>
-                    {tab === 'screenshot' && (
-                      <div>
-                        {screenshotUrl && (
-                          <div className='mb-8 text-center'>
-                            <div className='mb-2 text-sm text-muted-foreground'>
-                              Live Screenshot Taken
-                            </div>
-                            <img
-                              src={screenshotUrl}
-                              alt='Website Screenshot'
-                              className='mx-auto rounded shadow max-w-full max-h-[400px]'
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  {tab === 'screenshot' && (
+                    <div>
+                      {screenshotUrl && (
+                        <div className="mb-8 text-center">
+                          <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
+                          <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px]" />
+                        </div>
+                      )}
+                     </div>
+                   )}
                   </div>
                 </div>
 
                 {showRecLog && (
-                  <div className='w-full max-w-xl bg-muted/40 rounded-lg p-4 my-8 mx-auto'>
-                    <h2 className='font-semibold mb-2 flex items-center gap-2'>
-                      <Sparkles className='h-4 w-4 text-primary' />{' '}
-                      Recommendation Progress Log
+                  <div className="w-full max-w-xl bg-muted/40 rounded-lg p-4 my-8 mx-auto">
+                    <h2 className="font-semibold mb-2 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" /> Recommendation Progress Log
                     </h2>
-                    <div className='font-mono text-sm space-y-1'>
+                    <div className="font-mono text-sm space-y-1">
                       {recProgressLog.map((msg, i) => (
                         <div key={i}>{msg}</div>
                       ))}
@@ -2176,28 +1619,26 @@ Execute these improvements while preserving all current features and maintaining
           </div>
         </SidebarInset>
       </div>
-
+      
       {/* Loading Screen Overlay */}
       {showLoadingScreen && (
         <AnimatedLoadingSkeleton onClose={handleCloseLoadingScreen} />
       )}
-
+      
       {/* Reasoning-Pro Loading Screen */}
       {waitingForWebhook && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-          <div className='bg-white rounded-lg p-8 max-w-md w-full mx-4'>
-            <div className='text-center mb-6'>
-              <h2 className='text-xl font-semibold mb-2'>
-                Reasoning-Pro Analysis
-              </h2>
-              <p className='text-gray-600 animate-pulse'>{loadingText}</p>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold mb-2">Reasoning-Pro Analysis</h2>
+              <p className="text-gray-600 animate-pulse">{loadingText}</p>
             </div>
             <AnimatedLoadingSkeleton />
           </div>
         </div>
       )}
     </SidebarProvider>
-  );
-};
+  )
+}
 
 export default FeatureReview;

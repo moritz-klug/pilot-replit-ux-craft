@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { analyzeWithScreenshot as analyzeWithScreenshotReal } from './featureExtractionService';
 
-const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';
+const BACKEND_API_URL =
+  import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';
 
 interface RecommendationRequest {
   feature: string;
@@ -71,10 +71,13 @@ const mockAnalysis = {
     },
   ],
   global: {
-    typography: 'SF Pro Display for headings, SF Pro Text for body. Hierarchy: H1 32px, H2 24px, Body 16px',
-    color_palette: 'Primary: #0071e3, Accent: #ff9500, Background: #fff, Text: #111, CTA: #ff9500',
+    typography:
+      'SF Pro Display for headings, SF Pro Text for body. Hierarchy: H1 32px, H2 24px, Body 16px',
+    color_palette:
+      'Primary: #0071e3, Accent: #ff9500, Background: #fff, Text: #111, CTA: #ff9500',
     button_styles: 'Rounded corners, solid fill, bold text, hover shadow',
-    spacing_layout: '24px section padding, 16px grid gap, responsive breakpoints at 768px/1024px',
+    spacing_layout:
+      '24px section padding, 16px grid gap, responsive breakpoints at 768px/1024px',
     iconography: 'Line icons, minimal illustrations',
   },
   ux: {
@@ -84,17 +87,35 @@ const mockAnalysis = {
     design_trends: 'Flat design, glassmorphism on cards, subtle animations',
   },
   business: {
-    summary: 'This is a SaaS website offering productivity tools for remote teams.',
+    summary:
+      'This is a SaaS website offering productivity tools for remote teams.',
     business_type: 'SaaS',
     target_audience: 'Remote teams, tech startups, SMBs',
     keywords: [
-      'productivity', 'remote work', 'collaboration', 'SaaS', 'team management',
-      'workflow', 'cloud', 'startup', 'business', 'tools', 'automation', 'integration',
+      'productivity',
+      'remote work',
+      'collaboration',
+      'SaaS',
+      'team management',
+      'workflow',
+      'cloud',
+      'startup',
+      'business',
+      'tools',
+      'automation',
+      'integration',
     ],
   },
 };
 
-// Removed analyzeWithScreenshot to prevent incorrect usage. Use analyzeWithScreenshot from featureExtractionService.ts directly.
+export async function analyzeWithScreenshot(url: string, uiTest: boolean) {
+  if (uiTest) {
+    await new Promise((r) => setTimeout(r, 1200));
+    return mockAnalysis;
+  }
+  // Only call the real backend if UI Test Mode is OFF
+  // ...existing real backend call...
+}
 
 export async function approveComponent(sectionId: string, uiTest: boolean) {
   if (uiTest) {
@@ -105,13 +126,16 @@ export async function approveComponent(sectionId: string, uiTest: boolean) {
   // ...existing real backend call...
 }
 
-export async function getRecommendations(confirmedSections: string[], uiTest: boolean) {
+export async function getRecommendations(
+  confirmedSections: string[],
+  uiTest: boolean
+) {
   if (uiTest) {
     await new Promise((r) => setTimeout(r, 800));
     // Return a mock recommendation for each confirmed section
-    return confirmedSections.map(sectionName => ({
+    return confirmedSections.map((sectionName) => ({
       section: sectionName,
-      text: `Mock recommendation for ${sectionName}.`
+      text: `Mock recommendation for ${sectionName}.`,
     }));
   }
   // Only call the real backend if UI Test Mode is OFF
@@ -119,7 +143,9 @@ export async function getRecommendations(confirmedSections: string[], uiTest: bo
 }
 
 export class FutureHouseService {
-  async getRecommendations(request: RecommendationRequest): Promise<RecommendationResponse> {
+  async getRecommendations(
+    request: RecommendationRequest
+  ): Promise<RecommendationResponse> {
     try {
       const response = await axios.post(
         `${BACKEND_API_URL}/recommendations`,
@@ -137,7 +163,10 @@ export class FutureHouseService {
     }
   }
 
-  async getRelevantHeuristics(feature: string, currentDesign: string): Promise<number[]> {
+  async getRelevantHeuristics(
+    feature: string,
+    currentDesign: string
+  ): Promise<number[]> {
     try {
       const response = await axios.post(
         `${BACKEND_API_URL}/relevant-heuristics`,
@@ -156,4 +185,4 @@ export class FutureHouseService {
   }
 }
 
-export const futureHouseService = new FutureHouseService(); 
+export const futureHouseService = new FutureHouseService();
