@@ -584,23 +584,33 @@ Keep the structure consistent but modify the specific research points based on t
     }
     try:
         task_response = client.run_tasks_until_done(task_data)
-        answer = getattr(task_response, 'answer', '')
-        formatted_answer = getattr(task_response, 'formatted_answer', '')
-        papers = []
-        if hasattr(task_response, 'references') and task_response.references:
-            for ref in task_response.references:
-                papers.append({
-                    "title": ref.get('title', ''),
-                    "authors": ref.get('authors', []),
-                    "year": ref.get('year', 0),
-                    "url": ref.get('url', ''),
-                    "relevance": ref.get('snippet', '')
-                })
-        recommendations = [rec.strip() for rec in answer.split('\n') if rec.strip()]
+        print("DEBUG: Raw FutureHouse API response:", task_response)
+        # answer = task_response.answer
+        # formatted_answer = task_response.formatted_answer
+        # print("DEBUG: answer:", answer)
+        # print("DEBUG: formatted_answer:", formatted_answer)
+        
+        # Extract references from formatted_answer (after the "References" section)
+        import re
+
+        references = []
+        # if "References" in formatted_answer:
+        #     # Split on "References" and take the part after
+        #     refs_text = formatted_answer.split("References", 1)[-1]
+        #     # Each reference is typically a numbered list
+        #     refs = re.findall(r'\d+\.\s*\((.*?)\):\s*(.*)', refs_text)
+        #     for ref in refs:
+        #         # ref[0] is the citation key, ref[1] is the title/description
+        #         references.append({
+        #             "citation": ref[0],
+        #             "description": ref[1]
+        #         })
+        # recommendations = [rec.strip() for rec in answer.split('\n') if rec.strip()]
         return {
             "prompt": prompt.strip(),
-            "recommendations": recommendations,
-            "papers": papers
+            "task_response": task_response,
+            # "recommendations": recommendations,
+            # "papers": references,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FutureHouse API error: {str(e)}")
