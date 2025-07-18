@@ -136,6 +136,24 @@ export class FutureHouseService {
       throw error;
     }
   }
+
+  async getRelevantHeuristics(feature: string, currentDesign: string): Promise<number[]> {
+    try {
+      const response = await axios.post(
+        `${BACKEND_API_URL}/relevant-heuristics`,
+        { feature, currentDesign },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data.relevant;
+    } catch (error) {
+      console.error('Error getting relevant heuristics from backend:', error);
+      throw error;
+    }
+  }
 }
 
 export const futureHouseService = new FutureHouseService(); 

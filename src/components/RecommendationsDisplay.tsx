@@ -12,10 +12,10 @@ import { UITestModeContext } from '../App';
 
 interface Paper {
   title: string;
-  authors: string[];
-  year: number;
+  authors?: string[];
+  year?: number;
   url: string;
-  relevance: string;
+  relevance?: string;
 }
 
 interface RecommendationsDisplayProps {
@@ -45,11 +45,15 @@ export function RecommendationsDisplay({
                 {papers.map((paper, index) => (
                   <div key={index} className="space-y-2">
                     <h4 className="font-medium">{paper.title}</h4>
+                    {paper.authors && paper.year && (
                     <p className="text-sm text-muted-foreground">
-                      {paper.authors.join(', ')} ({paper.year})
-                    </p>
+                        {paper.authors.join(', ')} ({paper.year})
+                      </p>
+                    )}
+                  {paper.relevance && (
                     <p className="text-sm">{paper.relevance}</p>
-                    <a
+                    )}
+                  <a
                       href={paper.url}
                       target="_blank"
                       rel="noopener noreferrer"

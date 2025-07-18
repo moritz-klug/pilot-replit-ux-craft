@@ -25,5 +25,32 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Global webhook handler for n8n responses
+      window.handleWebhookResponse = function(data) {
+        console.log("Received webhook response:", data);
+        
+        // Try to call the handleWebhookInput function if it exists
+        if (window.handleWebhookInput) {
+          window.handleWebhookInput(data);
+        } else if (window.processWebhookResponse) {
+          window.processWebhookResponse(data);
+        } else {
+          // Store in sessionStorage for polling
+          sessionStorage.setItem('webhookResponse', JSON.stringify(data));
+          
+          // Dispatch custom event
+          const event = new CustomEvent('webhookResponse', { detail: data });
+          window.dispatchEvent(event);
+        }
+      };
+      
+      // Listen for postMessage from n8n iframe or popup
+      window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'webhook-response') {
+          window.handleWebhookResponse(event.data.data);
+        }
+      });
+    </script>
   </body>
 </html>

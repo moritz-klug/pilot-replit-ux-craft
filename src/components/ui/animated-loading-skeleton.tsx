@@ -1,137 +1,220 @@
-import React from 'react'
-import { motion } from 'framer-motion'
-import { X } from 'lucide-react'
-import { Button } from './button'
+import React, { useEffect, useState } from 'react'
+import { motion, useAnimation } from 'framer-motion'
 
-interface AnimatedLoadingSkeletonProps {
-  onClose?: () => void
+// Interface for grid configuration structure
+interface GridConfig {
+    numCards: number // Total number of cards to display
+    cols: number // Number of columns in the grid
+    xBase: number // Base x-coordinate for positioning
+    yBase: number // Base y-coordinate for positioning
+    xStep: number // Horizontal step between cards
+    yStep: number // Vertical step between cards
 }
 
-const AnimatedLoadingSkeleton: React.FC<AnimatedLoadingSkeletonProps> = ({ onClose }) => {
+interface AnimatedLoadingSkeletonProps {
+    onClose?: () => void
+}
+
+const AnimatedLoadingSkeleton = ({ onClose }: AnimatedLoadingSkeletonProps) => {
+    const [windowWidth, setWindowWidth] = useState(0) // State to store window width for responsiveness
+    const controls = useAnimation() // Controls for Framer Motion animations
+
+    // Dynamically calculates grid configuration based on window width
+    const getGridConfig = (width: number): GridConfig => {
+        const numCards = 6 // Fixed number of cards
+        const cols = width >= 1024 ? 3 : width >= 640 ? 2 : 1 // Set columns based on screen width
+        return {
+            numCards,
+            cols,
+            xBase: 40, // Starting x-coordinate
+            yBase: 60, // Starting y-coordinate
+            xStep: 210, // Horizontal spacing
+            yStep: 230 // Vertical spacing
+        }
+    }
+
+    // Generates random animation paths for the search icon
+    const generateSearchPath = (config: GridConfig) => {
+        const { numCards, cols, xBase, yBase, xStep, yStep } = config
+        const rows = Math.ceil(numCards / cols) // Calculate rows based on cards and columns
+        let allPositions = []
+
+        // Generate grid positions for cards
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                if ((row * cols + col) < numCards) {
+                    allPositions.push({
+                        x: xBase + (col * xStep),
+                        y: yBase + (row * yStep)
+                    })
+                }
+            }
+        }
+
+        // Shuffle positions to create random animations
+        const numRandomCards = 4
+        const shuffledPositions = allPositions
+            .sort(() => Math.random() - 0.5)
+            .slice(0, numRandomCards)
+
+        // Ensure loop completion by adding the starting position
+        shuffledPositions.push(shuffledPositions[0])
+
+        return {
+            x: shuffledPositions.map(pos => pos.x),
+            y: shuffledPositions.map(pos => pos.y),
+            scale: Array(shuffledPositions.length).fill(1.2),
+            transition: {
+                duration: shuffledPositions.length * 2,
+                repeat: Infinity as any, // Loop animation infinitely
+                ease: "easeInOut" as any, // Ease function for smooth animation
+                times: shuffledPositions.map((_, i) => i / (shuffledPositions.length - 1))
+            }
+        }
+    }
+
+    // Handles window resize events and updates the window width
+    useEffect(() => {
+        setWindowWidth(window.innerWidth)
+        const handleResize = () => setWindowWidth(window.innerWidth)
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
+    // Updates animation path whenever the window width changes
+    useEffect(() => {
+        const config = getGridConfig(windowWidth)
+        controls.start(generateSearchPath(config))
+    }, [windowWidth, controls])
+
     // Variants for frame animations
     const frameVariants = {
-        hidden: { opacity: 0, scale: 0.95 },
-        visible: { opacity: 1, scale: 1, transition: { duration: 0.5 } }
+        hidden: { opacity: 0, scale: 0.95 }, // Initial state (hidden)
+        visible: { opacity: 1, scale: 1, transition: { duration: 0.5 } } // Transition to visible state
     }
 
     // Variants for individual card animations
     const cardVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: (i: number) => ({
+        hidden: { y: 20, opacity: 0 }, // Initial state (off-screen)
+        visible: (i: number) => ({ // Animate based on card index
             y: 0,
             opacity: 1,
-            transition: { delay: i * 0.1, duration: 0.4 }
+            transition: { delay: i * 0.1, duration: 0.4 } // Staggered animation
         })
     }
 
+    // Glow effect variants for the search icon
+    const glowVariants = {
+        animate: {
+            boxShadow: [
+                "0 0 20px rgba(59, 130, 246, 0.2)",
+                "0 0 35px rgba(59, 130, 246, 0.4)",
+                "0 0 20px rgba(59, 130, 246, 0.2)"
+            ],
+            scale: [1, 1.1, 1], // Pulsating effect
+            transition: {
+                duration: 1,
+                repeat: Infinity as any,
+                ease: "easeInOut" as any // Smooth pulsation
+            }
+        }
+    }
+
+    const config = getGridConfig(windowWidth) // Get current grid configuration
+
     return (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
-            {/* Close button */}
+        <motion.div
+            className="w-full max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg"
+            variants={frameVariants}
+            initial="hidden"
+            animate="visible"
+        >
+            {/* Optional close button */}
             {onClose && (
-                <div className="absolute top-6 right-6">
-                    <Button
-                        variant="ghost"
-                        size="icon"
+                <div className="flex justify-end mb-4">
+                    <button
                         onClick={onClose}
-                        className="h-10 w-10"
+                        className="text-gray-500 hover:text-gray-700 focus:outline-none"
                     >
-                        <X className="h-5 w-5" />
-                    </Button>
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
             )}
+            
+            <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Analyzing Your Website</h2>
+                <p className="text-gray-600">Our AI is examining your site for UX improvements...</p>
+            </div>
 
-            <motion.div
-                className="w-full max-w-4xl mx-auto p-6"
-                variants={frameVariants}
-                initial="hidden"
-                animate="visible"
-            >
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-semibold mb-2">Generating Recommendations</h2>
-                    <p className="text-muted-foreground">Please wait while we analyze your components...</p>
-                </div>
-
-                <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 p-8">
-                    {/* Animated search icon */}
+            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+                {/* Search icon with animation */}
+                <motion.div
+                    className="absolute z-10 pointer-events-none"
+                    animate={controls}
+                    style={{ left: 24, top: 24 }}
+                >
                     <motion.div
-                        className="absolute top-8 left-8 z-10"
-                        animate={{
-                            x: [0, 200, 400, 600, 0],
-                            y: [0, 100, 200, 50, 0],
-                        }}
-                        transition={{
-                            duration: 4,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                        }}
+                        className="bg-blue-500/20 p-3 rounded-full backdrop-blur-sm"
+                        variants={glowVariants}
+                        animate="animate"
                     >
-                        <motion.div
-                            className="bg-blue-500/20 p-3 rounded-full backdrop-blur-sm"
-                            animate={{
-                                scale: [1, 1.1, 1],
-                            }}
-                            transition={{
-                                duration: 1,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                            }}
+                        <svg
+                            className="w-6 h-6 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                         >
-                            <svg
-                                className="w-6 h-6 text-blue-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                />
-                            </svg>
-                        </motion.div>
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
                     </motion.div>
+                </motion.div>
 
-                    {/* Grid of animated cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {[...Array(6)].map((_, i) => (
+                {/* Grid of animated cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[...Array(config.numCards)].map((_, i) => (
+                        <motion.div
+                            key={i}
+                            variants={cardVariants}
+                            initial="hidden"
+                            animate="visible"
+                            custom={i} // Index-based animation delay
+                            whileHover={{ scale: 1.02 }} // Slight scale on hover
+                            className="bg-white rounded-lg shadow-sm p-4"
+                        >
+                            {/* Card placeholders */}
                             <motion.div
-                                key={i}
-                                variants={cardVariants}
-                                initial="hidden"
-                                animate="visible"
-                                custom={i}
-                                whileHover={{ scale: 1.02 }}
-                                className="bg-white rounded-lg shadow-sm p-4"
-                            >
-                                {/* Card placeholders */}
-                                <motion.div
-                                    className="h-32 bg-gray-200 rounded-md mb-3"
-                                    animate={{
-                                        backgroundColor: ["#f3f4f6", "#e5e7eb", "#f3f4f6"],
-                                    }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                />
-                                <motion.div
-                                    className="h-3 w-3/4 bg-gray-200 rounded mb-2"
-                                    animate={{
-                                        backgroundColor: ["#f3f4f6", "#e5e7eb", "#f3f4f6"],
-                                    }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                />
-                                <motion.div
-                                    className="h-3 w-1/2 bg-gray-200 rounded"
-                                    animate={{
-                                        backgroundColor: ["#f3f4f6", "#e5e7eb", "#f3f4f6"],
-                                    }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                />
-                            </motion.div>
-                        ))}
-                    </div>
+                                className="h-32 bg-gray-200 rounded-md mb-3"
+                                animate={{
+                                    background: ["#f3f4f6", "#e5e7eb", "#f3f4f6"],
+                                }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            />
+                            <motion.div
+                                className="h-3 w-3/4 bg-gray-200 rounded mb-2"
+                                animate={{
+                                    background: ["#f3f4f6", "#e5e7eb", "#f3f4f6"],
+                                }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            />
+                            <motion.div
+                                className="h-3 w-1/2 bg-gray-200 rounded"
+                                animate={{
+                                    background: ["#f3f4f6", "#e5e7eb", "#f3f4f6"],
+                                }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            />
+                        </motion.div>
+                    ))}
                 </div>
-            </motion.div>
-        </div>
+            </div>
+        </motion.div>
     )
 }
 
