@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 import glob
 from typing import List
 import openai
-import reimport re
+import re
 
 # Correct import for the official client
 from futurehouse_client import FutureHouseClient, JobNames
@@ -1018,6 +1018,9 @@ def get_prompt_code(request):
         raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
 
+
+
+
 @app.post("/recommendation-prompt-code", response_model=RecommendationPromptCodeResponse)
 def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
     if not OPENROUTER_API_KEY:
@@ -1032,6 +1035,121 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
         print(f"[ERROR] Failed to generate prompt and code: {result}")
 
     return RecommendationPromptCodeResponse(**result)
+
+
+class OpenRouterPromptRequest(BaseModel):
+    feature_name: str
+    screenshot_url: str
+    feature_extraction_result: dict
+
+@app.post("/openrouter-generate-research-prompt")
+async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
+    """
+    Sends a detailed prompt and screenshot to OpenRouter and returns the research prompt output.
+    """
+    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY.startswith("sk-..."):
+        raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
+
+    # Build the OpenRouter prompt
+    openrouter_prompt = f"""Identify the {request.feature_name} section and provide text details of the section from the screenshot.
+Combine the result of the text details and feature extraction result to fill the necessary placeholder for prompt.
+Feature Extraction Result:
+{json.dumps(request.feature_extraction_result, indent=2)}
+
+Prompt:
+Given a website section's information and global design context:
+1. Section-specific details:
+
+   - Name: {{featureName}}
+
+   - Detailed Description: {{detailedDescription}}
+
+2. Global website context:
+
+   - Analysis Summary: {{analysisSummary}}
+
+   - Branding Overview: {{brandingOverview}}
+Generate a research request prompt for FutureHouse API using this format and only output the research request:
+Research request: Provide a comprehensive analysis of {{featureName}} design in {{business_type}} websites with supporting research studies and data.
+Key areas to address:
+1. User Experience Research
+   - User behavior patterns specific to this section type
+   - Interaction design effectiveness studies
+   - Section-specific conversion metrics
+   - Accessibility considerations
+2. Design Implementation
+   - Layout optimization techniques
+   - Visual hierarchy best practices
+   - Component interaction patterns
+   - Responsive design approaches
+3. Performance Impact
+   - Loading and rendering metrics
+   - Mobile-first considerations
+   - Technical implementation guidelines
+   - Optimization strategies
+4. Content Strategy
+   - Content hierarchy research
+   - Element placement studies
+   - Information architecture findings
+   - User engagement patterns
+5. Business Impact
+   - Conversion rate influences
+   - User journey effectiveness
+   - Brand alignment metrics
+   - ROI measurements
+Format requirements:
+- Include quantitative data where available
+- Cite specific research studies
+- Provide actionable guidelines
+- Include success metrics
+- Address cross-device considerations
+Target audience context:
+{{business_type}} / {{target_audience}}
+Keep the structure consistent but modify the specific research points based on the section's unique purpose and elements.
+"""
+
+    openrouter_data = {
+        'model': 'anthropic/claude-3.5-sonnet',
+        'messages': [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": openrouter_prompt},
+                    # {"type": "image_url", "image_url": {"url": request.screenshot_url}}
+                ]
+            }
+        ],
+        'temperature': 0.3,
+        'max_tokens': 3000
+    }
+    headers = {
+        'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+        'Content-Type': 'application/json',
+    }
+    resp = requests.post(OPENROUTER_API_URL, json=openrouter_data, headers=headers)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
+    result = resp.json()
+    openrouter_prompt = result['choices'][0]['message']['content'].strip()
+    print(f"DEBUG: openrouter_prompt: {openrouter_prompt}")
+    
+
+    # Assume research_prompt is the string you got from OpenRouter
+    keyword = "Research request:"
+    if keyword in openrouter_prompt:
+        prompt_to_FH = openrouter_prompt.split(keyword, 1)[1].strip()
+        if prompt_to_FH.startswith(keyword):
+            prompt_to_FH = prompt_to_FH[len(keyword):].lstrip()
+    else:
+        prompt_to_FH = openrouter_prompt.strip()
+    print(f"DEBUG: prompt_to_FH: {prompt_to_FH}")
+
+    return {
+        "feature_name": request.feature_name,
+        "prompt_to_FH": openrouter_prompt,
+        # "screenshot_url": request.screenshot_url,
+        # "raw_openrouter_response": result
+    }
 
 
 @app.post("/futurehouse-research-prompt")
