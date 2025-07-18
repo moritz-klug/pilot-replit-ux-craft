@@ -12,17 +12,18 @@ import base64
 import uuid
 from fastapi.staticfiles import StaticFiles
 import glob
+import re
 
 # Correct import for the official client
 from futurehouse_client import FutureHouseClient, JobNames
 
 # Load environment variables from .env file
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
-print("DEBUG: FUTURE_HOUSE_API_KEY =", os.getenv('FUTURE_HOUSE_API_KEY'))
+print("DEBUG: FUTURE_HOUSE_API_KEY =", os.getenv("FUTURE_HOUSE_API_KEY"))
 
-FUTURE_HOUSE_API_KEY = os.getenv('FUTURE_HOUSE_API_KEY', '')
-FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY', '')
+FUTURE_HOUSE_API_KEY = os.getenv("FUTURE_HOUSE_API_KEY", "")
+FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY", "")
 
 app = FastAPI()
 
@@ -35,8 +36,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class AnalyzeRequest(BaseModel):
     url: str
+
 
 async def analysis_and_screenshot_stream(url: str):
     """
@@ -46,19 +49,21 @@ async def analysis_and_screenshot_stream(url: str):
     screenshot_id = None
     try:
         # Step 1: Trigger screenshot server
-        yield "event: progress\ndata: {\"message\": \"📸 Requesting screenshot...\"}\n\n"
+        yield 'event: progress\ndata: {"message": "📸 Requesting screenshot..."}\n\n'
         screenshot_payload = {"url": url, "full_page": True}
-        response = requests.post("http://localhost:8001/screenshot", json=screenshot_payload, timeout=10)
+        response = requests.post(
+            "http://localhost:8001/screenshot", json=screenshot_payload, timeout=10
+        )
         response.raise_for_status()
         screenshot_id = response.json().get("screenshot_id")
-        yield f"event: screenshot_id\ndata: {{\"screenshot_id\": \"{screenshot_id}\"}}\n\n"
-        yield "event: progress\ndata: {\"message\": \"✅ Screenshot requested. Analyzing URL...\"}\n\n"
+        yield f'event: screenshot_id\ndata: {{"screenshot_id": "{screenshot_id}"}}\n\n'
+        yield 'event: progress\ndata: {"message": "✅ Screenshot requested. Analyzing URL..."}\n\n'
 
     except requests.exceptions.RequestException as e:
         error_message = f"Failed to connect to screenshot server: {e}"
-        yield f"event: error\ndata: {{\"error\": \"{error_message}\"}}\n\n"
+        yield f'event: error\ndata: {{"error": "{error_message}"}}\n\n'
         # Continue without screenshot
-    
+
     # Step 2: Simulate LLM analysis stream (replace with actual logic later)
     # This is where the future logic for analyzing the page content AND the screenshot
     # to identify and describe UI sections will go.
@@ -70,8 +75,8 @@ async def analysis_and_screenshot_stream(url: str):
         "Compiling final report and recommendations...",
     ]
     for step in analysis_steps:
-        await asyncio.sleep(1) # Simulate work
-        yield f"event: progress\ndata: {{\"message\": \"{step}\"}}\n\n"
+        await asyncio.sleep(1)  # Simulate work
+        yield f'event: progress\ndata: {{"message": "{step}"}}\n\n'
 
     # Step 3: Yield final analysis result
     final_analysis_data = {
@@ -79,10 +84,22 @@ async def analysis_and_screenshot_stream(url: str):
             "title": "Simulated UI/UX Analysis",
             "summary": "This is a simulated analysis. The full implementation will provide a detailed breakdown of UI components identified from the screenshot.",
             "components": [
-                {"name": "Header", "description": "Contains navigation and logo. Good contrast.", "style_info": "position: sticky"},
-                {"name": "Hero Section", "description": "Main call-to-action is clear.", "style_info": "background: #f0f0f0"},
-                {"name": "Footer", "description": "Includes contact information and social links.", "style_info": "padding: 2rem"}
-            ]
+                {
+                    "name": "Header",
+                    "description": "Contains navigation and logo. Good contrast.",
+                    "style_info": "position: sticky",
+                },
+                {
+                    "name": "Hero Section",
+                    "description": "Main call-to-action is clear.",
+                    "style_info": "background: #f0f0f0",
+                },
+                {
+                    "name": "Footer",
+                    "description": "Includes contact information and social links.",
+                    "style_info": "padding: 2rem",
+                },
+            ],
         }
     }
     yield f"event: analysis_complete\ndata: {json.dumps(final_analysis_data)}\n\n"
@@ -94,14 +111,15 @@ async def analyze_url_with_screenshot(request: AnalyzeRequest):
     Takes a URL, triggers a screenshot, and streams back analysis progress.
     """
     return StreamingResponse(
-        analysis_and_screenshot_stream(request.url),
-        media_type="text/event-stream"
+        analysis_and_screenshot_stream(request.url), media_type="text/event-stream"
     )
+
 
 class RecommendationRequest(BaseModel):
     feature: str
     currentDesign: str
-    context: str = ''
+    context: str = ""
+
 
 class Paper(BaseModel):
     title: str
@@ -110,9 +128,11 @@ class Paper(BaseModel):
     url: str
     relevance: str
 
+
 class RecommendationResponse(BaseModel):
     recommendations: list[str]
     papers: list[Paper]
+
 
 @app.post("/recommendations", response_model=RecommendationResponse)
 def get_recommendations(request: RecommendationRequest):
@@ -131,32 +151,37 @@ def get_recommendations(request: RecommendationRequest):
     try:
         task_response = client.run_tasks_until_done(task_data)
         # The response may contain answer, formatted_answer, and references
-        answer = getattr(task_response, 'answer', '')
-        formatted_answer = getattr(task_response, 'formatted_answer', '')
+        answer = getattr(task_response, "answer", "")
+        formatted_answer = getattr(task_response, "formatted_answer", "")
         # Extract references/papers if available
         papers = []
-        if hasattr(task_response, 'references') and task_response.references:
+        if hasattr(task_response, "references") and task_response.references:
             for ref in task_response.references:
-                papers.append(Paper(
-                    title=ref.get('title', ''),
-                    authors=ref.get('authors', []),
-                    year=ref.get('year', 0),
-                    url=ref.get('url', ''),
-                    relevance=ref.get('snippet', '')
-                ))
+                papers.append(
+                    Paper(
+                        title=ref.get("title", ""),
+                        authors=ref.get("authors", []),
+                        year=ref.get("year", 0),
+                        url=ref.get("url", ""),
+                        relevance=ref.get("snippet", ""),
+                    )
+                )
         # Recommendations: split answer or formatted_answer into actionable items
-        recommendations = [rec.strip() for rec in answer.split('\n') if rec.strip()]
+        recommendations = [rec.strip() for rec in answer.split("\n") if rec.strip()]
         return RecommendationResponse(recommendations=recommendations, papers=papers)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FutureHouse API error: {str(e)}")
 
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', 'sk-...')  # Replace with your key or .env
-OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-OPENROUTER_MODEL = 'openrouter/auto'  # Can be changed
-CROPS_DIR = os.path.join(os.path.dirname(__file__), 'section_crops')
+
+OPENROUTER_API_KEY = os.getenv(
+    "OPENROUTER_API_KEY", "sk-..."
+)  # Replace with your key or .env
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "openrouter/auto"  # Can be changed
+CROPS_DIR = os.path.join(os.path.dirname(__file__), "section_crops")
 os.makedirs(CROPS_DIR, exist_ok=True)
 
-ANALYSIS_PROMPT = '''You are an advanced UI/UX analyst, visual design expert, and business intelligence extractor. Given website URL and screenshot, perform the following complete analysis pipeline:
+ANALYSIS_PROMPT = """You are an advanced UI/UX analyst, visual design expert, and business intelligence extractor. Given website URL and screenshot, perform the following complete analysis pipeline:
 1. Visual Analysis & Cropping
 Identify and crop UI sections into separate labeled images
 2. Per-Section Structured Breakdown
@@ -200,165 +225,208 @@ Blog topics or product categories
 
 Then as an outcome user receives the sections with cropped images and all the other details.
 Show sections with all the details etc. 
-'''
+"""
+
 
 class AnalyzeUIRequest(BaseModel):
     url: str
+
 
 class ChatRequest(BaseModel):
     feature_name: str
     context: str = ""
     message: str
     model: str = "openrouter/auto"
-    history: list[dict] = [] # previous chat messages
+    history: list[dict] = []  # previous chat messages
+
 
 class ChatResponse(BaseModel):
     response: str
 
+
 import time
+
 
 def sse_event(event: str, data: str) -> str:
     return f"event: {event}\ndata: {data}\n\n"
 
-@app.get('/analyze-ui')
+
+@app.get("/analyze-ui")
 async def analyze_ui(request: Request):
-    url = request.query_params.get('url')
+    url = request.query_params.get("url")
     if not url:
+
         async def event_stream():
-            print('[DEBUG] Missing url parameter')
-            yield sse_event('error', '{"error": "Missing url parameter."}')
+            print("[DEBUG] Missing url parameter")
+            yield sse_event("error", '{"error": "Missing url parameter."}')
             return
+
         return StreamingResponse(event_stream(), media_type="text/event-stream")
+
     async def event_stream():
         try:
-            print('[DEBUG] Requesting screenshot for URL:', url)
-            yield sse_event('progress', '{"message": "📸 Requesting screenshot..."}')
+            print("[DEBUG] Requesting screenshot for URL:", url)
+            yield sse_event("progress", '{"message": "📸 Requesting screenshot..."}')
             screenshot_payload = {"url": url, "full_page": True}
-            screenshot_response = requests.post("http://localhost:8001/screenshot", json=screenshot_payload, timeout=30)
+            screenshot_response = requests.post(
+                "http://localhost:8001/screenshot", json=screenshot_payload, timeout=30
+            )
             screenshot_response.raise_for_status()
             screenshot_id = screenshot_response.json().get("screenshot_id")
-            screenshots_dir = os.path.join(os.path.dirname(__file__), 'screenshots')
-            print('[DEBUG] Absolute screenshots_dir:', os.path.abspath(screenshots_dir))
-            pattern = f'_{screenshot_id}.png'
-            print('[DEBUG] Manual search for files ending with:', pattern)
+            screenshots_dir = os.path.join(os.path.dirname(__file__), "screenshots")
+            print("[DEBUG] Absolute screenshots_dir:", os.path.abspath(screenshots_dir))
+            pattern = f"_{screenshot_id}.png"
+            print("[DEBUG] Manual search for files ending with:", pattern)
             screenshot_path = None
             for i in range(30):
                 files_in_dir = os.listdir(screenshots_dir)
                 matching_files = [f for f in files_in_dir if f.endswith(pattern)]
-                print(f'[DEBUG] Attempt {i+1}: Files in screenshots_dir:', files_in_dir)
+                print(f"[DEBUG] Attempt {i+1}: Files in screenshots_dir:", files_in_dir)
                 if matching_files:
-                    screenshot_path = os.path.abspath(os.path.normpath(os.path.join(screenshots_dir, matching_files[0])))
-                    print('[DEBUG] Found screenshot file:', screenshot_path)
+                    screenshot_path = os.path.abspath(
+                        os.path.normpath(
+                            os.path.join(screenshots_dir, matching_files[0])
+                        )
+                    )
+                    print("[DEBUG] Found screenshot file:", screenshot_path)
                     break
                 await asyncio.sleep(1)
             if not screenshot_path:
-                print('[ERROR] Screenshot not ready after timeout (manual search)')
-                yield sse_event('error', '{"error": "Screenshot not ready after timeout."}')
+                print("[ERROR] Screenshot not ready after timeout (manual search)")
+                yield sse_event(
+                    "error", '{"error": "Screenshot not ready after timeout."}'
+                )
                 return
-            print('[DEBUG] Screenshot requested, id:', screenshot_id)
-            print('[DEBUG] Checking for screenshot at:', screenshot_path)
+            print("[DEBUG] Screenshot requested, id:", screenshot_id)
+            print("[DEBUG] Checking for screenshot at:", screenshot_path)
 
             # 2. Wait for screenshot to be ready
-            yield sse_event('progress', '{"message": "⏳ Waiting for screenshot to be ready..."}')
+            yield sse_event(
+                "progress", '{"message": "⏳ Waiting for screenshot to be ready..."}'
+            )
             for i in range(30):
                 if os.path.exists(screenshot_path):
-                    print(f'[DEBUG] Screenshot file found after {i+1} seconds:', screenshot_path)
+                    print(
+                        f"[DEBUG] Screenshot file found after {i+1} seconds:",
+                        screenshot_path,
+                    )
                     break
                 await asyncio.sleep(1)
             else:
-                print('[ERROR] Screenshot not ready after timeout')
-                yield sse_event('error', '{"error": "Screenshot not ready after timeout."}')
+                print("[ERROR] Screenshot not ready after timeout")
+                yield sse_event(
+                    "error", '{"error": "Screenshot not ready after timeout."}'
+                )
                 return
-            yield sse_event('progress', '{"message": "✅ Screenshot ready. Sending to LLM..."}')
+            yield sse_event(
+                "progress", '{"message": "✅ Screenshot ready. Sending to LLM..."}'
+            )
 
             # 3. Send screenshot + URL to OpenRouter LLM
             try:
-                print('[DEBUG] Encoding screenshot as base64')
-                with open(screenshot_path, 'rb') as img_file:
-                    img_b64 = base64.b64encode(img_file.read()).decode('utf-8')
+                print("[DEBUG] Encoding screenshot as base64")
+                with open(screenshot_path, "rb") as img_file:
+                    img_b64 = base64.b64encode(img_file.read()).decode("utf-8")
                 # Prepare vision API format for OpenRouter
                 image_data_url = f"data:image/png;base64,{img_b64}"
                 data = {
-                    'model': OPENROUTER_MODEL,
-                    'messages': [
+                    "model": OPENROUTER_MODEL,
+                    "messages": [
                         {
                             "role": "user",
                             "content": [
-                                {"type": "text", "text": f"Website URL: {url}. {ANALYSIS_PROMPT}"},
-                                {"type": "image_url", "image_url": {"url": image_data_url}}
-                            ]
+                                {
+                                    "type": "text",
+                                    "text": f"Website URL: {url}. {ANALYSIS_PROMPT}",
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": image_data_url},
+                                },
+                            ],
                         }
-                    ]
+                    ],
                 }
                 headers = {
-                    'Authorization': f'Bearer {OPENROUTER_API_KEY}',
-                    'Content-Type': 'application/json',
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
                 }
-                print('[DEBUG] Sending request to OpenRouter LLM')
+                print("[DEBUG] Sending request to OpenRouter LLM")
                 # Save request to file for debugging
                 import datetime
+
                 debug_filename = f'openrouter_request_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")}.txt'
                 debug_path = os.path.join(os.path.dirname(__file__), debug_filename)
-                with open(debug_path, 'w', encoding='utf-8') as f:
-                    f.write('MODEL: ' + str(OPENROUTER_MODEL) + '\n')
-                    f.write('HEADERS: ' + str(headers) + '\n')
+                with open(debug_path, "w", encoding="utf-8") as f:
+                    f.write("MODEL: " + str(OPENROUTER_MODEL) + "\n")
+                    f.write("HEADERS: " + str(headers) + "\n")
                     import json as _json
-                    f.write('DATA: ' + _json.dumps(data, indent=2))
-                yield sse_event('progress', '{"message": "🤖 Waiting for LLM analysis..."}')
+
+                    f.write("DATA: " + _json.dumps(data, indent=2))
+                yield sse_event(
+                    "progress", '{"message": "🤖 Waiting for LLM analysis..."}'
+                )
                 resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
-                print('[DEBUG] LLM response status:', resp.status_code)
-                print('[DEBUG] LLM response text (first 500 chars):', resp.text[:500])
+                print("[DEBUG] LLM response status:", resp.status_code)
+                print("[DEBUG] LLM response text (first 500 chars):", resp.text[:500])
                 if resp.status_code != 200:
-                    print('[ERROR] OpenRouter error:', resp.text)
-                    yield sse_event('error', f'{{"error": "OpenRouter error: {resp.text}"}}')
+                    print("[ERROR] OpenRouter error:", resp.text)
+                    yield sse_event(
+                        "error", f'{{"error": "OpenRouter error: {resp.text}"}}'
+                    )
                     return
                 llm_result = resp.json()
             except Exception as e:
-                print('[ERROR] Exception during LLM call:', e)
-                yield sse_event('error', f'{{"error": "Failed to call LLM: {str(e)}"}}')
+                print("[ERROR] Exception during LLM call:", e)
+                yield sse_event("error", f'{{"error": "Failed to call LLM: {str(e)}"}}')
                 return
 
             # 4. Parse LLM response
             try:
-                print('[DEBUG] Parsing LLM response')
-                analysis = json.loads(llm_result['choices'][0]['message']['content'])
-                print('[DEBUG] Parsed analysis:', str(analysis)[:500])
+                print("[DEBUG] Parsing LLM response")
+                analysis = json.loads(llm_result["choices"][0]["message"]["content"])
+                print("[DEBUG] Parsed analysis:", str(analysis)[:500])
             except Exception as e:
-                print('[ERROR] Failed to parse LLM response:', e)
-                yield sse_event('error', f'{{"error": "Failed to parse LLM response: {e}"}}')
+                print("[ERROR] Failed to parse LLM response:", e)
+                yield sse_event(
+                    "error", f'{{"error": "Failed to parse LLM response: {e}"}}'
+                )
                 return
 
             # 5. Save cropped images to disk and replace base64 with URLs
-            for section in analysis.get('sections', []):
-                if 'cropped_image_base64' in section:
-                    img_bytes = base64.b64decode(section['cropped_image_base64'])
+            for section in analysis.get("sections", []):
+                if "cropped_image_base64" in section:
+                    img_bytes = base64.b64decode(section["cropped_image_base64"])
                     crop_id = str(uuid.uuid4())
-                    crop_path = os.path.join(CROPS_DIR, f'section_{crop_id}.png')
-                    print('[DEBUG] Saving cropped image:', crop_path)
-                    async with aiofiles.open(crop_path, 'wb') as f:
+                    crop_path = os.path.join(CROPS_DIR, f"section_{crop_id}.png")
+                    print("[DEBUG] Saving cropped image:", crop_path)
+                    async with aiofiles.open(crop_path, "wb") as f:
                         await f.write(img_bytes)
-                    section['cropped_image_url'] = f'/section-crops/section_{crop_id}.png'
-                    del section['cropped_image_base64']
+                    section["cropped_image_url"] = (
+                        f"/section-crops/section_{crop_id}.png"
+                    )
+                    del section["cropped_image_base64"]
 
-            analysis['screenshot_id'] = screenshot_id
-            print('[DEBUG] Yielding analysis result')
-            yield sse_event('progress', '{"message": "🎉 Analysis complete."}')
-            yield sse_event('result', json.dumps(analysis))
+            analysis["screenshot_id"] = screenshot_id
+            print("[DEBUG] Yielding analysis result")
+            yield sse_event("progress", '{"message": "🎉 Analysis complete."}')
+            yield sse_event("result", json.dumps(analysis))
         except Exception as e:
-            print('[ERROR] Exception in event_stream:', e)
-            yield sse_event('error', f'{{"error": "Internal server error: {e}"}}')
+            print("[ERROR] Exception in event_stream:", e)
+            yield sse_event("error", f'{{"error": "Internal server error: {e}"}}')
             return
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_feature(request: ChatRequest):
     """
     Chat endpoint that uses OpenRouter to provide feature-specific advice
     """
-    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY.startswith('sk-...'):
+    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY.startswith("sk-..."):
         raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
-    
+
     # Create a specialized prompt for UI/UX assistance
     system_prompt = f"""You are an expert UI/UX consultant specializing in the {request.feature_name} component. 
     
@@ -382,53 +450,51 @@ async def chat_with_feature(request: ChatRequest):
 
     try:
         data = {
-            'model': OPENROUTER_MODEL,
-            'messages': [
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user", 
-                    "content": request.message
-                }
+            "model": OPENROUTER_MODEL,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": request.message},
             ],
-            'temperature': 0.7,
-            'max_tokens': 1000
+            "temperature": 0.7,
+            "max_tokens": 1000,
         }
-        
+
         headers = {
-            'Authorization': f'Bearer {OPENROUTER_API_KEY}',
-            'Content-Type': 'application/json',
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
         }
-        
-        print(f'[DEBUG] Sending chat request for {request.feature_name}')
+
+        print(f"[DEBUG] Sending chat request for {request.feature_name}")
         resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
-        
+
         if resp.status_code != 200:
-            print('[ERROR] OpenRouter chat error:', resp.text)
-            raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
-            
+            print("[ERROR] OpenRouter chat error:", resp.text)
+            raise HTTPException(
+                status_code=500, detail=f"OpenRouter error: {resp.text}"
+            )
+
         result = resp.json()
-        response_text = result['choices'][0]['message']['content']
-        
+        response_text = result["choices"][0]["message"]["content"]
+
         return ChatResponse(response=response_text)
-        
+
     except Exception as e:
-        print('[ERROR] Exception during chat:', e)
+        print("[ERROR] Exception during chat:", e)
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+
 
 class FirecrawlAnalyzeRequest(BaseModel):
     url: str
 
-@app.post('/firecrawl-analyze')
+
+@app.post("/firecrawl-analyze")
 async def firecrawl_analyze(request: FirecrawlAnalyzeRequest):
     """
     Takes a URL, calls Firecrawl API, and returns the structured UI analysis.
     """
     if not FIRECRAWL_API_KEY:
         raise HTTPException(status_code=500, detail="Firecrawl API key not set.")
-    firecrawl_url = 'https://api.firecrawl.dev/extract'
+    firecrawl_url = "https://api.firecrawl.dev/extract"
     schema = {
         "type": "object",
         "properties": {
@@ -444,7 +510,7 @@ async def firecrawl_analyze(request: FirecrawlAnalyzeRequest):
                         "js_code": {"type": "string"},
                         "js_links": {"type": "array", "items": {"type": "string"}},
                         "interactions": {"type": "string"},
-                        "full_description": {"type": "string"}
+                        "full_description": {"type": "string"},
                     },
                     "required": [
                         "section_name",
@@ -454,22 +520,18 @@ async def firecrawl_analyze(request: FirecrawlAnalyzeRequest):
                         "js_code",
                         "js_links",
                         "interactions",
-                        "full_description"
-                    ]
-                }
+                        "full_description",
+                    ],
+                },
             },
-            "global_styles": {"type": "string"}
+            "global_styles": {"type": "string"},
         },
-        "required": ["ui_components", "global_styles"]
+        "required": ["ui_components", "global_styles"],
     }
-    payload = {
-        "url": request.url,
-        "schema": schema,
-        "agent": {"model": "FIRE-1"}
-    }
+    payload = {"url": request.url, "schema": schema, "agent": {"model": "FIRE-1"}}
     headers = {
         "Authorization": f"Bearer {FIRECRAWL_API_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     try:
         resp = requests.post(firecrawl_url, json=payload, headers=headers, timeout=60)
@@ -478,10 +540,9 @@ async def firecrawl_analyze(request: FirecrawlAnalyzeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Firecrawl API error: {str(e)}")
 
+
 @app.post("/futurehouse-research-prompt")
-def generate_futurehouse_prompt(
-    data: dict = Body(...)
-):
+def generate_futurehouse_prompt(data: dict = Body(...)):
     """
     Accepts feature extraction and global context, returns a research prompt for FutureHouse API.
     Expects data = {
@@ -500,25 +561,29 @@ def generate_futurehouse_prompt(
         }
     }
     """
-    section = data.get('section', {})
-    global_ctx = data.get('global', {})
+    section = data.get("section", {})
+    global_ctx = data.get("global", {})
 
-    section_name = section.get('name', '[section_name]')
-    elements = ', '.join(section.get('elements', [])) or '[list of elements]'
-    purpose = section.get('purpose', '[section_purpose]')
-    style_details = section.get('style', '[style_details]')
+    section_name = section.get("name", "[section_name]")
+    elements = ", ".join(section.get("elements", [])) or "[list of elements]"
+    purpose = section.get("purpose", "[section_purpose]")
+    style_details = section.get("style", "[style_details]")
     if isinstance(style_details, dict):
-        style_details = ', '.join(f"{k}: {v}" for k, v in style_details.items())
-    mobile_specifics = section.get('mobile_behavior', '[mobile_specifics]')
+        style_details = ", ".join(f"{k}: {v}" for k, v in style_details.items())
+    mobile_specifics = section.get("mobile_behavior", "[mobile_specifics]")
 
-    business_type = global_ctx.get('business_type', '[business_type]')
-    target_audience = global_ctx.get('target_audience', '[target_audience]')
-    design_system = global_ctx.get('design_system', '[typography, colors, layout principles]')
+    business_type = global_ctx.get("business_type", "[business_type]")
+    target_audience = global_ctx.get("target_audience", "[target_audience]")
+    design_system = global_ctx.get(
+        "design_system", "[typography, colors, layout principles]"
+    )
     if isinstance(design_system, dict):
-        design_system = ', '.join(f"{k}: {v}" for k, v in design_system.items())
-    ux_architecture = global_ctx.get('ux_architecture', '[page_flow, emotional_strategy]')
+        design_system = ", ".join(f"{k}: {v}" for k, v in design_system.items())
+    ux_architecture = global_ctx.get(
+        "ux_architecture", "[page_flow, emotional_strategy]"
+    )
     if isinstance(ux_architecture, dict):
-        ux_architecture = ', '.join(f"{k}: {v}" for k, v in ux_architecture.items())
+        ux_architecture = ", ".join(f"{k}: {v}" for k, v in ux_architecture.items())
 
     prompt = f"""
 Given a website section's information and global design context, generate a comprehensive research analysis prompt for FutureHouse API using this structure:
@@ -574,7 +639,7 @@ Keep the structure consistent but modify the specific research points based on t
 """
 
     # Call FutureHouse API with the generated prompt
-    FUTURE_HOUSE_API_KEY = os.getenv('FUTURE_HOUSE_API_KEY', '')
+    FUTURE_HOUSE_API_KEY = os.getenv("FUTURE_HOUSE_API_KEY", "")
     if not FUTURE_HOUSE_API_KEY:
         raise HTTPException(status_code=500, detail="Future House API key not set.")
     client = FutureHouseClient(api_key=FUTURE_HOUSE_API_KEY)
@@ -585,35 +650,50 @@ Keep the structure consistent but modify the specific research points based on t
     try:
         task_response = client.run_tasks_until_done(task_data)
         print("DEBUG: Raw FutureHouse API response:", task_response)
-        # answer = task_response.answer
-        # formatted_answer = task_response.formatted_answer
-        # print("DEBUG: answer:", answer)
-        # print("DEBUG: formatted_answer:", formatted_answer)
-        
-        # Extract references from formatted_answer (after the "References" section)
-        import re
 
+        # Safely extract answer and formatted_answer from task_response
+        if (
+            not task_response
+            or not isinstance(task_response, list)
+            or len(task_response) == 0
+        ):
+            raise ValueError("Invalid or empty response from FutureHouse API")
+
+        # Get the first response object
+        response_obj = task_response[0]
+
+        # Safely extract answer and formatted_answer with error handling
+        if isinstance(response_obj, dict):
+            answer = response_obj.get("answer", "")
+            formatted_answer = response_obj.get("formatted_answer", "")
+        else:
+            answer = getattr(response_obj, "answer", "")
+            formatted_answer = getattr(response_obj, "formatted_answer", "")
+
+        # Extract references from formatted_answer
         references = []
-        # if "References" in formatted_answer:
-        #     # Split on "References" and take the part after
-        #     refs_text = formatted_answer.split("References", 1)[-1]
-        #     # Each reference is typically a numbered list
-        #     refs = re.findall(r'\d+\.\s*\((.*?)\):\s*(.*)', refs_text)
-        #     for ref in refs:
-        #         # ref[0] is the citation key, ref[1] is the title/description
-        #         references.append({
-        #             "citation": ref[0],
-        #             "description": ref[1]
-        #         })
-        # recommendations = [rec.strip() for rec in answer.split('\n') if rec.strip()]
+        if formatted_answer and isinstance(formatted_answer, str):
+            if "References" in formatted_answer:
+                refs_text = formatted_answer.split("References", 1)[-1]
+                # Each reference is typically a numbered list
+                refs = re.findall(r"\d+\.\s*$(.*?)$:\s*(.*)", refs_text)
+                for ref in refs:
+                    references.append({"citation": ref[0], "description": ref[1]})
+
+        # Split answer into recommendations if answer exists and is a string
+        recommendations = []
+        if answer and isinstance(answer, str):
+            recommendations = [rec.strip() for rec in answer.split("\n") if rec.strip()]
+
         return {
             "prompt": prompt.strip(),
-            "task_response": task_response,
-            # "recommendations": recommendations,
-            # "papers": references,
+            "task_response": {"answer": answer, "formatted_answer": formatted_answer},
+            "recommendations": recommendations,
+            "papers": references,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FutureHouse API error: {str(e)}")
+
 
 @app.get("/test-openrouter")
 def test_openrouter():
@@ -622,14 +702,14 @@ def test_openrouter():
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     data = {
         "model": "openai/gpt-3.5-turbo",
         "messages": [
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Test connection"}
-        ]
+            {"role": "user", "content": "Test connection"},
+        ],
     }
     try:
         resp = requests.post(url, headers=headers, json=data, timeout=30)
@@ -638,12 +718,14 @@ def test_openrouter():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
+
 # Serve cropped images statically
-app.mount('/section-crops', StaticFiles(directory=CROPS_DIR), name='section-crops')
+app.mount("/section-crops", StaticFiles(directory=CROPS_DIR), name="section-crops")
 
 if __name__ == "__main__":
     import uvicorn
+
     print("Starting Main API Server...")
     print("Server will be available at: http://localhost:8000")
     print("API Documentation: http://localhost:8000/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000)
