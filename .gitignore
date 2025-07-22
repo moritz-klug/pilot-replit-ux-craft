@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 screenshots
+section_crops
 saved_example
 .env
 .env.local
@@ -33,4 +34,7 @@ saved_example
 .env.test
 .env.production
 __pycache__
+*.py[cod]
 old_code
+*.pyc
+

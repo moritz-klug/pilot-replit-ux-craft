@@ -1,13 +1,12 @@
 import os
 import asyncio
-from openai.types.batch import Errors
 import requests
 import json
-from fastapi import FastAPI, HTTPException, UploadFile, Request, Body
+from fastapi import FastAPI, HTTPException, UploadFile, Request, BackgroundTasks, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 import aiofiles
 import base64
 import uuid
@@ -19,7 +18,7 @@ import re
 
 # Correct import for the official client
 from futurehouse_client import FutureHouseClient, JobNames
-from feature_extraction import extract_features_logic
+from feature_extraction import extract_features_logic, extract_bounding_boxes_only
 
 # Load environment variables from .env file
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -42,10 +41,105 @@ app.add_middleware(
 
 
 
+async def wait_for_screenshot(screenshot_id: str, timeout_seconds: int = 30) -> str:
+    """
+    Helper function to wait for screenshot to be ready with consistent logic.
+    Returns the full path to the screenshot file when ready.
+    """
+    screenshots_dir = os.path.join(os.path.dirname(__file__), 'screenshots')
+    pattern = f'_{screenshot_id}.png'
+    
+    print(f'[DEBUG] Waiting for screenshot with pattern: {pattern}')
+    
+    for i in range(timeout_seconds):
+        try:
+            if not os.path.exists(screenshots_dir):
+                print(f'[DEBUG] Screenshots directory does not exist: {screenshots_dir}')
+                await asyncio.sleep(1)
+                continue
+                
+            files_in_dir = os.listdir(screenshots_dir)
+            matching_files = [f for f in files_in_dir if f.endswith(pattern)]
+            
+            if matching_files:
+                screenshot_path = os.path.abspath(os.path.normpath(os.path.join(screenshots_dir, matching_files[0])))
+                
+                # Check if file exists and has content
+                if os.path.exists(screenshot_path) and os.path.getsize(screenshot_path) > 0:
+                    print(f'[DEBUG] Screenshot ready after {i+1} seconds: {screenshot_path}')
+                    # Small delay to ensure file is fully written to disk
+                    await asyncio.sleep(0.5)
+                    return screenshot_path
+                    
+        except Exception as e:
+            print(f'[DEBUG] Error checking for screenshot (attempt {i+1}): {e}')
+        
+        await asyncio.sleep(1)
+    
+    raise HTTPException(status_code=408, detail=f"Screenshot not ready after {timeout_seconds} seconds timeout")
+
+def check_existing_screenshot(screenshot_id: str) -> Optional[str]:
+    """
+    Check if a screenshot with the given ID already exists and is valid.
+    Returns the screenshot path if found and valid, None otherwise.
+    """
+    if not screenshot_id:
+        return None
+        
+    screenshots_dir = os.path.join(os.path.dirname(__file__), 'screenshots')
+    pattern = f'_{screenshot_id}.png'
+    
+    try:
+        if not os.path.exists(screenshots_dir):
+            return None
+            
+        files_in_dir = os.listdir(screenshots_dir)
+        matching_files = [f for f in files_in_dir if f.endswith(pattern)]
+        
+        if matching_files:
+            screenshot_path = os.path.join(screenshots_dir, matching_files[0])
+            if os.path.exists(screenshot_path) and os.path.getsize(screenshot_path) > 0:
+                print(f'[DEBUG] Found existing valid screenshot: {screenshot_path}')
+                return screenshot_path
+                
+    except Exception as e:
+        print(f'[DEBUG] Error checking existing screenshot: {e}')
+    
+    return None
+
+async def request_screenshot_and_wait(url: str, timeout_seconds: int = 30) -> tuple[str, str]:
+    """
+    Helper function to request a screenshot and wait for it to be ready.
+    Returns (screenshot_id, screenshot_path) when ready.
+    """
+    print(f'[DEBUG] Requesting screenshot for URL: {url}')
+    screenshot_payload = {"url": url, "full_page": True, "hide_popups": True}
+    
+    try:
+        response = requests.post("http://localhost:8001/screenshot", json=screenshot_payload, timeout=30)
+        response.raise_for_status()
+        screenshot_id = response.json().get("screenshot_id")
+        
+        if not screenshot_id:
+            raise HTTPException(status_code=500, detail="No screenshot ID returned from screenshot service")
+        
+        print(f'[DEBUG] Screenshot requested, ID: {screenshot_id}')
+        
+        # Wait for screenshot to be ready
+        screenshot_path = await wait_for_screenshot(screenshot_id, timeout_seconds)
+        
+        return screenshot_id, screenshot_path
+        
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=503, detail=f"Failed to connect to screenshot server: {e}")
 
 class AnalyzeRequest(BaseModel):
     url: str
 
+class BoundingBoxRequest(BaseModel):
+    url: str
+    sections: list
+    screenshot_url: str
 
 async def analysis_and_screenshot_stream(url: str):
     """
@@ -55,11 +149,9 @@ async def analysis_and_screenshot_stream(url: str):
     screenshot_id = None
     try:
         # Step 1: Trigger screenshot server
-        yield 'event: progress\ndata: {"message": "📸 Requesting screenshot..."}\n\n'
-        screenshot_payload = {"url": url, "full_page": True}
-        response = requests.post(
-            "http://localhost:8001/screenshot", json=screenshot_payload, timeout=10
-        )
+        yield "event: progress\ndata: {\"message\": \"📸 Requesting screenshot...\"}\n\n"
+        screenshot_payload = {"url": url, "full_page": True, "hide_popups": True}
+        response = requests.post("http://localhost:8001/screenshot", json=screenshot_payload, timeout=10)
         response.raise_for_status()
         screenshot_id = response.json().get("screenshot_id")
         yield f'event: screenshot_id\ndata: {{"screenshot_id": "{screenshot_id}"}}\n\n'
@@ -227,7 +319,7 @@ OPENROUTER_MODEL = 'mistralai/mistral-small-3.1-24b-instruct'  # Can be changed
 CROPS_DIR = os.path.join(os.path.dirname(__file__), 'section_crops')
 os.makedirs(CROPS_DIR, exist_ok=True)
 
-ANALYSIS_PROMPT = """You are an advanced UI/UX analyst, visual design expert, and business intelligence extractor. Given website URL and screenshot, perform the following complete analysis pipeline:
+ANALYSIS_PROMPT = '''You are an advanced UI/UX analyst, visual design expert, and business intelligence extractor. Given website URL and screenshot, perform the following complete analysis pipeline:
 1. Visual Analysis & Cropping
 Identify and crop UI sections into separate labeled images
 2. Per-Section Structured Breakdown
@@ -242,6 +334,7 @@ Style Details:
   - Layouts (columns, grids, containers)
   - Interactions (hover, scroll animations, sticky behavior)
 Mobile Behavior: How is the section responsive or adaptive?
+Bounding_box Coordinates of Feature(x, y, width, height as percentages)
 3. Global Design System Summary
 Return the overall style architecture used across the website:
 Typography: Fonts used, heading/body hierarchy, font sizes
@@ -269,10 +362,9 @@ Service/feature blocks
 Blog topics or product categories
  Return ~10–20 keywords.
 
-Then as an outcome user receives the sections with cropped images and all the other details.
+Provide realistic bounding box coordinates based on the visual layout.
 Show sections with all the details etc. 
-"""
-
+'''
 
 class AnalyzeUIRequest(BaseModel):
     url: str
@@ -312,62 +404,12 @@ async def analyze_ui(request: Request):
 
     async def event_stream():
         try:
-            print("[DEBUG] Requesting screenshot for URL:", url)
-            yield sse_event("progress", '{"message": "📸 Requesting screenshot..."}')
-            screenshot_payload = {"url": url, "full_page": True}
-            screenshot_response = requests.post(
-                "http://localhost:8001/screenshot", json=screenshot_payload, timeout=30
-            )
-            screenshot_response.raise_for_status()
-            screenshot_id = screenshot_response.json().get("screenshot_id")
-            screenshots_dir = os.path.join(os.path.dirname(__file__), "screenshots")
-            print("[DEBUG] Absolute screenshots_dir:", os.path.abspath(screenshots_dir))
-            pattern = f"_{screenshot_id}.png"
-            print("[DEBUG] Manual search for files ending with:", pattern)
-            screenshot_path = None
-            for i in range(30):
-                files_in_dir = os.listdir(screenshots_dir)
-                matching_files = [f for f in files_in_dir if f.endswith(pattern)]
-                print(f"[DEBUG] Attempt {i+1}: Files in screenshots_dir:", files_in_dir)
-                if matching_files:
-                    screenshot_path = os.path.abspath(
-                        os.path.normpath(
-                            os.path.join(screenshots_dir, matching_files[0])
-                        )
-                    )
-                    print("[DEBUG] Found screenshot file:", screenshot_path)
-                    break
-                await asyncio.sleep(1)
-            if not screenshot_path:
-                print("[ERROR] Screenshot not ready after timeout (manual search)")
-                yield sse_event(
-                    "error", '{"error": "Screenshot not ready after timeout."}'
-                )
-                return
-            print("[DEBUG] Screenshot requested, id:", screenshot_id)
-            print("[DEBUG] Checking for screenshot at:", screenshot_path)
-
-            # 2. Wait for screenshot to be ready
-            yield sse_event(
-                "progress", '{"message": "⏳ Waiting for screenshot to be ready..."}'
-            )
-            for i in range(30):
-                if os.path.exists(screenshot_path):
-                    print(
-                        f"[DEBUG] Screenshot file found after {i+1} seconds:",
-                        screenshot_path,
-                    )
-                    break
-                await asyncio.sleep(1)
-            else:
-                print("[ERROR] Screenshot not ready after timeout")
-                yield sse_event(
-                    "error", '{"error": "Screenshot not ready after timeout."}'
-                )
-                return
-            yield sse_event(
-                "progress", '{"message": "✅ Screenshot ready. Sending to LLM..."}'
-            )
+            yield sse_event('progress', '{"message": "📸 Requesting screenshot..."}')
+            
+            # Use the new helper function for consistent screenshot handling
+            screenshot_id, screenshot_path = await request_screenshot_and_wait(url, timeout_seconds=30)
+            
+            yield sse_event('progress', '{"message": "✅ Screenshot ready. Sending to LLM..."}')
 
             # 3. Send screenshot + URL to OpenRouter LLM
             try:
@@ -528,6 +570,199 @@ async def chat_with_feature(request: ChatRequest):
     except Exception as e:
         print("[ERROR] Exception during chat:", e)
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+
+class FirecrawlAnalyzeRequest(BaseModel):
+    url: str
+
+@app.post('/firecrawl-analyze')
+async def firecrawl_analyze(request: FirecrawlAnalyzeRequest):
+    """
+    Takes a URL, calls Firecrawl API, and returns the structured UI analysis.
+    """
+    if not FIRECRAWL_API_KEY:
+        raise HTTPException(status_code=500, detail="Firecrawl API key not set.")
+    firecrawl_url = 'https://api.firecrawl.dev/extract'
+    schema = {
+        "type": "object",
+        "properties": {
+            "ui_components": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "section_name": {"type": "string"},
+                        "html_content": {"type": "string"},
+                        "css_styles_description": {"type": "string"},
+                        "css_styles_code": {"type": "string"},
+                        "js_code": {"type": "string"},
+                        "js_links": {"type": "array", "items": {"type": "string"}},
+                        "interactions": {"type": "string"},
+                        "full_description": {"type": "string"}
+                    },
+                    "required": [
+                        "section_name",
+                        "html_content",
+                        "css_styles_description",
+                        "css_styles_code",
+                        "js_code",
+                        "js_links",
+                        "interactions",
+                        "full_description"
+                    ]
+                }
+            },
+            "global_styles": {"type": "string"}
+        },
+        "required": ["ui_components", "global_styles"]
+    }
+    payload = {
+        "url": request.url,
+        "schema": schema,
+        "agent": {"model": "FIRE-1"}
+    }
+    headers = {
+        "Authorization": f"Bearer {FIRECRAWL_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    try:
+        resp = requests.post(firecrawl_url, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Firecrawl API error: {str(e)}")
+
+@app.post("/extract-features")
+async def extract_features(request: Request):
+    """
+    Enhanced 2-phase analysis: Text-only first, then targeted bounding box detection.
+    Much more cost-effective than full visual analysis.
+    Includes improved screenshot timing coordination.
+    """
+    print("[DEBUG] /extract-features endpoint called with 2-phase analysis")
+    
+    try:
+        # Parse the request to get the URL
+        body = await request.json()
+        url = body.get('url')
+        
+        if not url:
+            raise HTTPException(status_code=400, detail="URL is required")
+        
+        print(f"[DEBUG] Ensuring screenshot is ready for URL: {url}")
+        
+                 # First, ensure we have a screenshot ready with proper timing
+        # This prevents the race condition where feature extraction runs before screenshot is ready
+        try:
+            print(f"[DEBUG] Starting screenshot coordination for feature extraction...")
+            screenshot_id, screenshot_path = await request_screenshot_and_wait(url, timeout_seconds=45)
+            print(f"[DEBUG] ✅ Screenshot confirmed ready for feature extraction: {screenshot_id}")
+            print(f"[DEBUG] Screenshot path: {screenshot_path}")
+            
+            # Add screenshot info to the request body for the extraction logic
+            body['screenshot_id'] = screenshot_id
+            body['screenshot_path'] = screenshot_path
+            body['screenshot_url'] = f"http://localhost:8001/screenshot/{screenshot_id}"
+            body['screenshot_coordination_success'] = True
+            
+            # Create a new request object with the enhanced body
+            class EnhancedRequest:
+                def __init__(self, enhanced_body):
+                    self._body = enhanced_body
+                
+                async def json(self):
+                    return self._body
+            
+            enhanced_request = EnhancedRequest(body)
+            print(f"[DEBUG] Proceeding with feature extraction with guaranteed screenshot availability")
+            
+        except HTTPException as e:
+            print(f"[WARNING] Screenshot coordination failed: {e.detail}")
+            print(f"[WARNING] Falling back to original extraction logic - may fail if screenshot not ready")
+            # Continue with original request if screenshot fails - extraction logic might handle it
+            enhanced_request = request
+        
+        # Now call the extraction logic with confirmed screenshot availability
+        return await extract_features_logic(enhanced_request)
+        
+    except Exception as e:
+        print(f"[ERROR] Error in extract_features coordination: {e}")
+        # Fallback to original logic if coordination fails
+        return await extract_features_logic(request)
+
+@app.post("/extract-bounding-boxes") 
+async def extract_bounding_boxes(request: BoundingBoxRequest):
+    """
+    Targeted bounding box detection for known features.
+    Used as second phase after text-only analysis.
+    """
+    print("[DEBUG] /extract-bounding-boxes endpoint called")
+    try:
+        coordinates = await extract_bounding_boxes_only(
+            request.screenshot_url, 
+            request.sections, 
+            request.url
+        )
+        return {"bounding_boxes": coordinates}
+    except Exception as e:
+        print(f"[ERROR] Bounding box extraction failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/test-bounding-boxes")
+async def test_bounding_boxes():
+    """
+    Test endpoint to verify the 2-phase analysis is working.
+    """
+    print("[DEBUG] /test-bounding-boxes endpoint called")
+    
+    test_url = "https://www.marketing-lokalhelden.de/"
+    test_request_body = {"url": test_url}
+    
+    # Create a mock request
+    class MockRequest:
+        async def json(self):
+            return test_request_body
+    
+    try:
+        result = await extract_features_logic(MockRequest())
+        sections_with_bbox = [s for s in result.get('sections', []) if s.get('bounding_box')]
+        
+        return {
+            "status": "success",
+            "url": test_url,
+            "total_sections": len(result.get('sections', [])),
+            "sections_with_bounding_boxes": len(sections_with_bbox),
+            "sections": result.get('sections', [])[:3],  # Return first 3 for debugging
+            "message": f"Analysis complete. {len(sections_with_bbox)} out of {len(result.get('sections', []))} sections have bounding boxes."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "message": "Failed to analyze website"
+        }
+
+@app.get("/test-openrouter")
+def test_openrouter():
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set.")
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "openai/gpt-3.5-turbo",
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Test connection"}
+        ]
+    }
+    try:
+        resp = requests.post(url, headers=headers, json=data, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
 # Serve cropped images statically
 app.mount("/section-crops", StaticFiles(directory=CROPS_DIR), name="section-crops")
@@ -850,6 +1085,189 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
         # Fallback if result is not a dict
         return RecommendationPromptCodeResponse(prompt="", code="", style="")
 
+class CropFeatureRequest(BaseModel):
+    screenshot_url: str
+    bounding_box: dict
+    feature_name: str
+
+@app.post("/crop-feature")
+async def crop_feature(request: CropFeatureRequest):
+    """
+    Crop a feature from a screenshot using bounding box coordinates.
+    Returns a URL to the cropped image.
+    """
+    try:
+        from PIL import Image
+        import io
+        
+        # Parse screenshot URL to get the file path
+        screenshot_id = request.screenshot_url.replace("http://localhost:8001/screenshot/", "")
+        screenshots_dir = os.path.join(os.path.dirname(__file__), 'screenshots')
+        
+        # Find the actual screenshot file
+        screenshot_path = None
+        for file in os.listdir(screenshots_dir):
+            if screenshot_id in file:
+                screenshot_path = os.path.join(screenshots_dir, file)
+                break
+        
+        if not screenshot_path or not os.path.exists(screenshot_path):
+            raise HTTPException(status_code=404, detail="Screenshot not found")
+        
+        # Extract bounding box coordinates (percentages)
+        bbox = request.bounding_box
+        x_percent = bbox.get('x', 0)
+        y_percent = bbox.get('y', 0)
+        width_percent = bbox.get('width', 100)
+        height_percent = bbox.get('height', 100)
+        
+        # Open the image and calculate pixel coordinates
+        with Image.open(screenshot_path) as img:
+            img_width, img_height = img.size
+            
+            # Convert percentages to pixels
+            x = int((x_percent / 100) * img_width)
+            y = int((y_percent / 100) * img_height)
+            width = int((width_percent / 100) * img_width)
+            height = int((height_percent / 100) * img_height)
+            
+            # Ensure coordinates are within image bounds
+            x = max(0, min(x, img_width))
+            y = max(0, min(y, img_height))
+            width = max(1, min(width, img_width - x))
+            height = max(1, min(height, img_height - y))
+            
+            # Crop the image
+            cropped_img = img.crop((x, y, x + width, y + height))
+            
+            # Save the cropped image
+            crop_id = str(uuid.uuid4())
+            safe_feature_name = re.sub(r'[^a-zA-Z0-9_-]', '_', request.feature_name.lower())
+            crop_filename = f'feature_{safe_feature_name}_{crop_id}.png'
+            crop_path = os.path.join(CROPS_DIR, crop_filename)
+            
+            cropped_img.save(crop_path, 'PNG')
+            
+            # Return URL to the cropped image
+            crop_url = f'/section-crops/{crop_filename}'
+            print(f"[Backend] Feature '{request.feature_name}' cropped and saved to: {crop_url}")
+            
+            return {
+                "success": True,
+                "crop_url": crop_url,
+                "message": f"Feature '{request.feature_name}' cropped successfully"
+            }
+            
+    except ImportError:
+        raise HTTPException(status_code=500, detail="PIL (Pillow) not available for image processing")
+    except Exception as e:
+        print(f"[Backend] Error cropping feature: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to crop feature: {str(e)}")
+
+@app.post("/retry-bounding-boxes")
+async def retry_bounding_boxes(request: Request):
+    """
+    Retry bounding box detection for sections that don't have them yet.
+    This is useful when the initial analysis couldn't get the screenshot in time.
+    """
+    try:
+        body = await request.json()
+        sections = body.get("sections", [])
+        website_url = body.get("url", "")
+        screenshot_id = body.get("screenshot_id", "")
+        
+        if not sections:
+            raise HTTPException(status_code=400, detail="No sections provided")
+        
+        print(f"[Backend] Retrying bounding boxes for {len(sections)} sections")
+        print(f"[Backend] Website URL: {website_url}")
+        print(f"[Backend] Screenshot ID: {screenshot_id}")
+        
+        # Try to find the screenshot using the screenshot_id
+        screenshot_url = None
+        screenshot_path = None
+        
+        if screenshot_id:
+            screenshot_path = check_existing_screenshot(screenshot_id)
+            if screenshot_path:
+                screenshot_url = f"http://localhost:8001/screenshot/{screenshot_id}"
+                print(f"[Backend] Found existing screenshot: {screenshot_url}")
+        
+        # If no existing screenshot found, try to take a new one
+        if not screenshot_url:
+            print("[Backend] No existing screenshot found, requesting new one...")
+            try:
+                new_screenshot_id, screenshot_path = await request_screenshot_and_wait(website_url, timeout_seconds=30)
+                screenshot_url = f"http://localhost:8001/screenshot/{new_screenshot_id}"
+                print(f"[Backend] New screenshot ready: {screenshot_url}")
+            except Exception as e:
+                print(f"[Backend] Failed to request new screenshot: {e}")
+        
+        if not screenshot_url:
+            raise HTTPException(status_code=404, detail="No screenshot available for bounding box detection")
+        
+        # Extract bounding boxes
+        from feature_extraction import extract_bounding_boxes_only
+        bounding_boxes = await extract_bounding_boxes_only(screenshot_url, sections, website_url)
+        
+        if not bounding_boxes:
+            return {"success": False, "message": "No bounding boxes detected", "sections": sections}
+        
+        # Merge bounding boxes with sections (same logic as in extract_features_logic)
+        sections_with_boxes = []
+        sections_matched = 0
+        
+        for section in sections:
+            section_name = section.get('name', '')
+            
+            # Find matching bounding box with fuzzy matching
+            matching_box = None
+            best_match_score = 0
+            
+            for bbox in bounding_boxes:
+                bbox_name = bbox.get('name', '').lower().strip()
+                section_name_clean = section_name.lower().strip()
+                
+                match_score = 0
+                if bbox_name == section_name_clean:
+                    match_score = 100
+                elif bbox_name in section_name_clean or section_name_clean in bbox_name:
+                    match_score = 80
+                elif any(word in bbox_name for word in section_name_clean.split() if len(word) > 2):
+                    match_score = 60
+                elif any(word in section_name_clean for word in bbox_name.split() if len(word) > 2):
+                    match_score = 60
+                
+                if match_score > best_match_score:
+                    best_match_score = match_score
+                    matching_box = bbox
+            
+            if matching_box and best_match_score >= 60:
+                section['bounding_box'] = {
+                    'x': matching_box['x'],
+                    'y': matching_box['y'], 
+                    'width': matching_box['width'],
+                    'height': matching_box['height']
+                }
+                sections_matched += 1
+                print(f"[Backend] ✅ Added bounding box to '{section_name}' (score: {best_match_score})")
+            
+            sections_with_boxes.append(section)
+        
+        # Apply validation
+        from feature_extraction import validate_and_fix_bounding_boxes
+        sections_with_boxes = validate_and_fix_bounding_boxes(sections_with_boxes)
+        
+        return {
+            "success": True,
+            "message": f"Successfully added bounding boxes to {sections_matched}/{len(sections)} sections",
+            "sections": sections_with_boxes,
+            "screenshot_url": screenshot_url
+        }
+        
+    except Exception as e:
+        print(f"[Backend] Error in retry_bounding_boxes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 mock_extraction_result = {
     "websiteFeatures": [
@@ -897,8 +1315,8 @@ mock_extraction_result = {
 
 class OpenRouterPromptRequest(BaseModel):
     feature_name: str
-    # screenshot_url: str
-    # feature_extraction_result: dict
+    screenshot_url: str = None
+    feature_extraction_result: dict = None
 
 @app.post("/openrouter-generate-research-prompt")
 async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
@@ -908,11 +1326,12 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
     if not OPENROUTER_API_KEY or OPENROUTER_API_KEY.startswith("sk-..."):
         raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
 
-    # For testing, use the mock data instead of request.feature_extraction_result
-    extraction_result = mock_extraction_result  # <-- use mock here
-
-    # If you want to use the real data when provided, do:
-    # extraction_result = request.feature_extraction_result or mock_extraction_result
+    # Use the real extraction result instead of mock data
+    extraction_result = request.feature_extraction_result or mock_extraction_result
+    
+    print(f"[Backend] Using extraction result with {len(extraction_result.get('websiteFeatures', []))} features")
+    print(f"[Backend] Available features: {[f.get('featureName') for f in extraction_result.get('websiteFeatures', [])]}")
+    print(f"[Backend] Looking for feature: '{request.feature_name}'")
 
     openrouter_prompt = build_openrouter_prompt(extraction_result, request.feature_name)
 

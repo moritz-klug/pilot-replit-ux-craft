@@ -90,28 +90,28 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
     const triggerN8nWebhook = async (chatContent: string) => {
         try {
             console.log("Triggering n8n webhook...");
-            
+
             // Set up webhook response listener BEFORE sending the request
             const currentUrl = (window as any).currentAnalysisUrl || chatContent;
             sessionStorage.setItem('analysisUrl', currentUrl);
-            
+
             // Create a promise that resolves when webhook response is received
             const webhookPromise = new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     reject(new Error("Webhook timeout"));
-                }, 30000); // 30 second timeout
-                
+                }, 60000); // 30 second timeout
+
                 const handleWebhookResponse = (data: any) => {
                     clearTimeout(timeout);
                     console.log("Received webhook response, navigating to feature-review");
                     resolve(data);
                 };
-                
+
                 // Listen for webhook response
                 window.addEventListener('webhookResponse', (event: any) => {
                     handleWebhookResponse(event.detail);
                 });
-                
+
                 // Also check for stored response
                 const checkStoredResponse = () => {
                     const stored = sessionStorage.getItem('webhookResponse');
@@ -120,11 +120,11 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
                         handleWebhookResponse(JSON.parse(stored));
                     }
                 };
-                
+
                 const pollInterval = setInterval(checkStoredResponse, 1000);
                 setTimeout(() => clearInterval(pollInterval), 30000);
             });
-            
+
             // Trigger the webhook
             const response = await fetch(N8N_WEBHOOK_URL, {
                 method: "POST",
@@ -141,58 +141,58 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
             });
 
             console.log("Webhook triggered successfully, waiting for response...");
-            
+
             toast({
                 title: "Reasoning-Pro Activated",
                 description: "Processing your request... This may take 8-15 minutes.",
             });
-            
+
             // Wait for webhook response
             try {
                 const webhookData = await webhookPromise;
-                
+
                 // Navigate with the webhook data
-                navigate('/feature-review', { 
-                    state: { 
-                        url: currentUrl, 
+                navigate('/feature-review', {
+                    state: {
+                        url: currentUrl,
                         webhookData: webhookData,
-                        isReasoningPro: true 
-                    } 
+                        isReasoningPro: true
+                    }
                 });
-                
+
                 toast({
                     title: "Analysis Complete",
                     description: "Your Reasoning-Pro analysis is ready!",
                 });
-                
+
             } catch (timeoutError) {
                 console.log("Webhook timeout, navigating anyway...");
-                
+
                 // Navigate with waiting state if timeout
-                navigate('/feature-review', { 
-                    state: { 
-                        url: currentUrl, 
+                navigate('/feature-review', {
+                    state: {
+                        url: currentUrl,
                         waitingForWebhook: true,
-                        isReasoningPro: true 
-                    } 
+                        isReasoningPro: true
+                    }
                 });
             }
-            
+
         } catch (error) {
             console.error("Error triggering n8n webhook:", error);
-            
+
             // Still navigate since the webhook might work despite fetch error
             const currentUrl = (window as any).currentAnalysisUrl || chatContent;
             sessionStorage.setItem('analysisUrl', currentUrl);
-            
-            navigate('/feature-review', { 
-                state: { 
-                    url: currentUrl, 
+
+            navigate('/feature-review', {
+                state: {
+                    url: currentUrl,
                     waitingForWebhook: true,
-                    isReasoningPro: true 
-                } 
+                    isReasoningPro: true
+                }
             });
-            
+
             toast({
                 title: "Reasoning-Pro Activated",
                 description: "Processing your request... This may take 8-15 minutes.",
@@ -223,7 +223,7 @@ export function AnimatedAiInput({ value, onChange, onSubmit, disabled }: Animate
             if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
                 await triggerN8nWebhook(value);
             }
-            
+
             onSubmit();
             adjustHeight(true);
         }
