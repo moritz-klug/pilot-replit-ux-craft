@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { PromptSuggestion } from '@/components/ui/prompt-suggestion';
 import { PromptInput, PromptInputTextarea, PromptInputActions } from '@/components/ui/prompt-input';
@@ -11,9 +11,9 @@ interface FeatureChatbotProps {
   onTypingChange?: (isTyping: boolean) => void;
 }
 
-const FeatureChatbot: React.FC<FeatureChatbotProps> = ({ featureName, onChatUpdate, onTypingChange }) => {
+const FeatureChatbot = forwardRef(({ featureName, onChatUpdate, onTypingChange }: FeatureChatbotProps, ref) => {
   const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean; id: string }>>([]);
+  const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean; id: string; loading?: boolean }>>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentBotResponse, setCurrentBotResponse] = useState("");
 
@@ -98,6 +98,26 @@ For specific technical recommendations, please ensure the backend server is runn
     setInputValue(suggestion);
     setTimeout(() => handleSend(), 100); // Small delay to ensure state is updated
   };
+
+  useImperativeHandle(ref, () => ({
+    addBotMessage: (text) => {
+      setMessages(prev => [...prev, { text, isUser: false, id: Date.now().toString() }]);
+    },
+    addLoadingMessage: (text) => {
+      setMessages(prev => [...prev, { text, isUser: false, id: Date.now().toString(), loading: true }]);
+    },
+    updateLastBotMessage: (text) => {
+      setMessages(prev => {
+        const lastIdx = prev.length - 1;
+        if (lastIdx >= 0 && !prev[lastIdx].isUser) {
+          const updated = [...prev];
+          updated[lastIdx] = { ...updated[lastIdx], text, loading: false };
+          return updated;
+        }
+        return prev;
+      });
+    }
+  }));
 
   return (
     <div className="h-full flex flex-col space-y-4 overflow-hidden">
@@ -193,6 +213,6 @@ For specific technical recommendations, please ensure the backend server is runn
       </PromptInput>
     </div>
   );
-};
+});
 
 export default FeatureChatbot;

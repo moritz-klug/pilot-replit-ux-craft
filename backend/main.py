@@ -1109,7 +1109,7 @@ Keep the structure consistent but modify the specific research points based on t
 """
 
     openrouter_data = {
-        'model': 'anthropic/claude-3.5-sonnet',
+        'model': 'mistralai/mistral-small-3.2-24b-instruct:free', # anthropic/claude-3.5-sonnet
         'messages': [
             {
                 "role": "user",

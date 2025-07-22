@@ -34,6 +34,26 @@ type SubTab = typeof SUBTABS[number];
 const CHATBOT_TABS = ['mockups', 'improvements', 'sources'] as const;
 type ChatbotTab = typeof CHATBOT_TABS[number];
 
+const mockOpenRouterRequest = {
+  feature_name: "Hero Section",
+  screenshot_url: "https://example.com/screenshot-hero-section.png",
+  feature_extraction_result: {
+    analysisSummary: "I'll use the Airtop tool to analyze www.marketing-lokalhelden.de and extract its features.\n\n**Browsing website with Airtop...**\n\nBased on my thorough analysis of the website, here are the distinct UI/UX features:",
+    features: [
+      {
+        featureName: "Navigation Bar",
+        detailedDescription: "Fixed-position navigation bar spanning full width at the top of the page with white background (#FFFFFF). Features the 'Marketing Lokalhelden' logo on the left side with an orange icon beside black text in sans-serif font. Main navigation links positioned on the right in black sans-serif font (approximately 15px) with 25px spacing between items. Navigation includes a prominent orange CTA button (#F7931E) with white text and rounded corners. The bar has a subtle light gray bottom border (#F2F2F2, 1px) and transforms into a hamburger menu on mobile devices. Includes approximately 20px padding on top and bottom with a clean, minimal design that maintains good contrast against the page content."
+      },
+      {
+        featureName: "Hero Section",
+        detailedDescription: "Full-width hero section positioned immediately below the navigation with white background (#FFFFFF). Left side features a bold headline in large sans-serif font (36-40px) in dark text (#333333) with key phrases highlighted in orange (#F7931E). Below is a subheadline in medium-weight sans-serif font (18-20px) in dark gray (#555555). Contains two call-to-action buttons: primary orange button (#F7931E) with white text and rounded corners (8px radius), and secondary transparent button with orange border and orange text. Right side displays a professional illustration of a marketing specialist working with digital elements in blue and orange color scheme. The section has approximately 80-100px padding on top and bottom with content aligned to maintain visual hierarchy. On mobile devices, the layout stacks with the image appearing below the text content."
+      }
+      // ... (add more features if needed)
+    ],
+    brandingOverview: "The website features a clean, professional design focused on marketing services for local businesses, with consistent use of orange (#F7931E) and blue (#1E2A4A) as primary brand colors throughout all sections. The layout follows modern web design principles with proper spacing, typography hierarchy, and responsive behavior across different screen sizes."
+  }
+};
+
 // Helper skeletons for each section
 const SectionSkeleton = ({ title }: { title: string }) => (
   <div className="bg-white rounded-lg shadow-sm p-6 mb-8 animate-pulse">
@@ -84,6 +104,7 @@ const FeatureReview: React.FC = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [loadingText, setLoadingText] = useState('');
   const [waitingForWebhook, setWaitingForWebhook] = useState(false);
+  const chatbotRef = useRef<any>(null);
   
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -798,7 +819,7 @@ Execute these improvements while preserving all current features and maintaining
     if (status === 'improved') {
       setShowLoadingScreen(true);
       // Simulate loading time then update status and show chatbot
-      setTimeout(() => {
+      setTimeout(async () => {
         setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
         setShowLoadingScreen(false);
         // Directly set the tab to show the chatbot interface
@@ -807,6 +828,44 @@ Execute these improvements while preserving all current features and maintaining
         setCurrentChatFeature(featureName);
         setCurrentFeatureDescription(section.description || section.purpose || 'No design description available');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
+
+        // --- NEW: Trigger OpenRouter API call here ---
+        // 1. Call OpenRouter to get the prompt
+        const openRouterRes = await fetch('http://localhost:8000/openrouter-generate-research-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...mockOpenRouterRequest
+            // feature_name: featureName,
+            // screenshot_url: section.cropped_image_url, // or whatever you have
+            // feature_extraction_result: section // or the right structure 
+          })
+        });
+        const { prompt_to_FH } = await openRouterRes.json();
+
+        // 2. Show the prompt in the chat
+        chatbotRef.current?.addBotMessage(prompt_to_FH);
+
+        console.log("[DEBUG]: prompt_to_FH", prompt_to_FH);
+
+        // 3. Add a loading message for FutureHouse
+        chatbotRef.current?.addLoadingMessage("FutureHouse is analyzing... (this may take a few minutes)");
+
+        // 4. Call FutureHouse with the prompt
+        const fhRes = await fetch('http://localhost:8000/futurehouse-research-prompt-direct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: prompt_to_FH })
+        });
+        const { task_response } = await fhRes.json();
+        console.log("DEBUG: task_response", task_response);
+
+        // 5. Update the last bot message with the FutureHouse result
+        chatbotRef.current?.updateLastBotMessage(
+          typeof task_response === 'string'
+            ? task_response
+            : JSON.stringify(task_response, null, 2)
+        );
       }, 3000);
     } else {
       setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
@@ -1020,6 +1079,7 @@ Execute these improvements while preserving all current features and maintaining
                 <div className="flex gap-4 h-full">
                   <div className="w-1/2 h-full">
                     <FeatureChatbot 
+                    ref={chatbotRef}
                     featureName={currentChatFeature}
                     onChatUpdate={handleChatUpdate}
                     onTypingChange={setIsTyping}
