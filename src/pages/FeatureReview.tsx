@@ -82,7 +82,6 @@ const FeatureReview: React.FC = () => {
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
   const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
-  const [currentFeatureElement, setCurrentFeatureElement] = useState<any[]>([]);
   const [currentFeatureDescription, setCurrentFeatureDescription] = useState<string | null>(null);
   const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
   const [chatHistory, setChatHistory] = useState([]);
@@ -493,8 +492,7 @@ const FeatureReview: React.FC = () => {
         setTab('chatbot');
         const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
         setCurrentChatFeature(featureName);
-        setCurrentFeatureElement(section.elements || []);
-        setCurrentFeatureDescription(section.description || section.purpose || 'No design description available');
+        setCurrentFeatureDescription(section.detailedDescription || 'No design description available');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
       }, 3000);
     } else {
@@ -601,7 +599,7 @@ const FeatureReview: React.FC = () => {
     
     const hasChatResponse = chatHistory.some(msg => !msg.isUser);
 
-    if ( chatHistory.length > 0 && currentChatFeature && currentFeatureElement && !isFetching && hasChatResponse ) {
+    if ( chatHistory.length > 0 && currentChatFeature && currentFeatureDescription&& !isFetching && hasChatResponse ) {
       const latestResponse = chatHistory.filter(msg => !msg.isUser).pop();
       const responseContent = latestResponse.text;
 
@@ -620,7 +618,7 @@ const FeatureReview: React.FC = () => {
         fetchCodeAndPrompt(chatHistory);
       }
     }
-  }, [chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureElement, OutputTypeSelected, outputType, FrameworkType, PlatformType,lastOutputType, lastFrameworkType, lastPlatformType]);
+  }, [chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription, OutputTypeSelected, outputType, FrameworkType, PlatformType,lastOutputType, lastFrameworkType, lastPlatformType]);
 
   // Reset processed chat ref when switching features
   React.useEffect(() => {
@@ -639,7 +637,7 @@ const FeatureReview: React.FC = () => {
       
       const requestBody = {
         featureName: currentChatFeature,
-        featureElement: currentFeatureElement,
+        featureDescription: currentFeatureDescription,
         latestRecommendation: latestRecommendation,
         outputType: outputType,
         framework: FrameworkType,

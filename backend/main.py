@@ -622,7 +622,7 @@ def enrich_recommendation(request: EnrichRecommendationRequest):
 
 class RecommendationPromptCodeRequest(BaseModel):
     featureName: str
-    featureElement: str
+    featureDescription: str
     latestRecommendation: str
     outputType: Optional[str] = None
     framework: Optional[str] = None
@@ -698,31 +698,31 @@ def get_prompt_code(request):
 
     if request.outputType == 'code':
         output_prompt = (
-            f"Please provide improved frontend code according to the recommendation implementing the UI/UX feature using {request.framework}. "
+            f"Please provide improved frontend code according to the recommendation using {request.framework}. "
             f"The code should reflect modern, accessible, and visually appealing design best practices."
-            f"The code should be separated into a {request.framework} and a css style code"
-            f"Return ONLY code without markdown or file names.\n\n"
-            f"Format:\n"
+            f"The output should include:\n"
+            f"1. The component/page code in {request.framework} (JavaScript, JSX, etc.)\n"
+            f"2. A separate CSS stylesheet or styling block.\n\n"
+            f"---FORMAT---\n"
             f"---CODE---\n"
-            f"[code]\n"
+            f"[component code here]\n"
             f"---STYLE---\n"
-            f"[style.css code]\n"
+            f"[CSS code here]\n"
+            f"ONLY return the code. No markdown. No file names. No explanations."
         )
-
-    if request.outputType == 'prompt':
+    elif request.outputType == 'prompt':
         output_prompt = (
-            f"Write a detailed prompt tailored for {request.platform} that can generate a UI implementing the recommendation above. "
-            f"The prompt should result in a clean, user-friendly interface."
-            f"Return ONLY the prompt without markdown or file names.\n\n"
+            f"Write a detailed and effective prompt tailored for {request.platform} that can generate a UI design matching the recommendation.\n"
+            f"The design should be clean, user-friendly, and visually appealing, reflecting the core purpose of the original feature\n\n"
+            f"Return ONLY the prompt. No markdown. No file names. No extra text\n\n"
     )
 
     prompt = (
-        f"You're a senior product designer and frontend engineer. Your task is to help improve a UI feature using the latest UX/UI principles and best practices according to the recommendation.\n"
+        f"You're a senior product designer and frontend engineer. Your task is to improve a UI feature based on a provided expert recommendation.\n"
         f"Given the following UI feature and its improvement recommendation:\n\n"
         f"Feature: {request.featureName}\n"
-        f"Feature element: {request.featureElement}\n"
-        f"Latest recommendation:\n{request.latestRecommendation}\n\n"
-        f"{output_prompt}"
+        f"Feature description: {request.featureDescription}\n"
+        f"Recommendation:\n{request.latestRecommendation}\n\n"
        )
     
     try:
@@ -731,7 +731,7 @@ def get_prompt_code(request):
             'messages': [
                 {
                     "role": "user",
-                    "content": prompt
+                    "content": prompt + output_prompt
                 },
             ],
             'temperature': 0.7,
@@ -745,7 +745,7 @@ def get_prompt_code(request):
         
         print(f'[DEBUG] Requesting code and prompt for {request.featureName}')
         resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
-        
+
         if resp.status_code != 200:
             print('[ERROR] OpenRouter error:', resp.text)
             raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
