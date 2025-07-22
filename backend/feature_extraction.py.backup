@@ -1,0 +1,273 @@
+import os
+import json
+import requests
+from fastapi import HTTPException, Request
+from dotenv import load_dotenv
+
+async def extract_features_logic(request: Request):
+    """
+    Main function to handle feature extraction requests.
+    This is the function that main.py imports and calls.
+    """
+    print("[DEBUG] ===== extract_features_logic started =====")
+    try:
+        load_dotenv()
+        print("[DEBUG] About to parse request body...")
+        body = await request.json()
+        print(f"[DEBUG] Request body parsed: {body}")
+        print(f"[DEBUG] Request body type: {type(body)}")
+        
+        print("[DEBUG] About to call build_openrouter_payload...")
+        result = build_openrouter_payload(body)
+        print(f"[DEBUG] build_openrouter_payload returned: {type(result)}")
+        print(f"[DEBUG] Result content (first 500 chars): {str(result)[:500]}")
+        
+        print("[DEBUG] ===== extract_features_logic completed successfully =====")
+        return result
+    except Exception as e:
+        print(f"[DEBUG] ===== ERROR in extract_features_logic =====")
+        print(f"[DEBUG] Exception type: {type(e)}")
+        print(f"[DEBUG] Exception message: {str(e)}")
+        import traceback
+        print(f"[DEBUG] Full traceback:")
+        traceback.print_exc()
+        print("[DEBUG] ===== END ERROR =====")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def build_openrouter_payload(body, screenshot_image_url=None):
+    print("[DEBUG] ===== build_openrouter_payload started =====")
+    print(f"[DEBUG] Input body: {body}")
+    print(f"[DEBUG] Input body type: {type(body)}")
+    
+    website_url = body.get("url", "https://www.apple.com")
+    print(f"[DEBUG] Website URL: {website_url}")
+    
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    print(f"[DEBUG] API key present: {api_key is not None}")
+    print(f"[DEBUG] API key starts with 'sk-': {api_key.startswith('sk-') if api_key else 'N/A'}")
+    
+    if not api_key:
+        print("[DEBUG] ERROR: OpenRouter API key not configured")
+        raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
+    
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    print("[Backend] Processing body:", body)
+    website_url = body.get("url")
+    use_screenshot = body.get("screenshot", False)
+    print("[Backend] use_screenshot value:", use_screenshot)
+    stream = False  # Always use non-streaming mode for OpenRouter
+    # Validate and normalize website_url
+    if not website_url or not isinstance(website_url, str):
+        print("[Backend] Invalid or missing 'url' for screenshot:", website_url)
+        raise HTTPException(status_code=400, detail="Invalid or missing 'url' for screenshot.")
+    if not (website_url.startswith("http://") or website_url.startswith("https://")):
+        website_url = "https://" + website_url
+        body["url"] = website_url
+
+    # Build the OpenRouter payload for the new simplified schema
+    full_schema = {
+        "name": "ui_ux_site_analysis",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "websiteFeatures": {
+                    "type": "array",
+                    "description": "List of UI features with detailed analysis",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "featureName": {"type": "string", "description": "Feature name"},
+                            "detailedDescription": {"type": "string", "description": "Comprehensive description of the feature"},
+                            "htmlStructure": {"type": "string", "description": "HTML structure of the feature"},
+                            "cssProperties": {"type": "string", "description": "CSS properties and styling"}
+                        },
+                        "required": ["featureName", "detailedDescription", "htmlStructure", "cssProperties"],
+                        "additionalProperties": False
+                    }
+                },
+                "siteUXArchitecture": {
+                    "type": "object", 
+                    "properties": {
+                        "businessContext": {"type": "string"},
+                        "targetAudience": {"type": "string"},
+                        "userGoals": {"type": "string"},
+                        "navigationStructure": {"type": "string"}
+                    },
+                    "required": ["businessContext", "targetAudience"],
+                    "additionalProperties": False
+                }
+            },
+            "required": ["websiteFeatures", "siteUXArchitecture"],
+            "additionalProperties": False
+        }
+    }
+    
+    detailed_prompt = (
+        "You are an advanced UI/UX analyst and web expert. "
+        f"Based on the website URL {website_url}, provide a comprehensive conceptual analysis using typical web design patterns and conventions.\n\n"
+        
+        "IMPORTANT: You must return ONLY a valid JSON object matching the exact schema provided. No explanatory text, no markdown formatting, just pure JSON.\n\n"
+        
+        "Return a JSON object with this EXACT structure:\n"
+        "{\n"
+        '  "websiteFeatures": [\n'
+        "    {\n"
+        '      "featureName": "Header Navigation",\n'
+        '      "detailedDescription": "Comprehensive description...",\n'
+        '      "htmlStructure": "<header>...</header>",\n'
+        '      "cssProperties": "CSS styling details..."\n'
+        "    }\n"
+        "  ],\n"
+        '  "siteUXArchitecture": {\n'
+        '    "businessContext": "Business description...",\n'
+        '    "targetAudience": "Target audience details...",\n'
+        '    "userGoals": "What users want to achieve...",\n'
+        '    "navigationStructure": "How the site is organized..."\n'
+        "  }\n"
+        "}\n\n"
+        
+        "Analyze these typical sections: Header Navigation, Hero Section, Services/Features, Testimonials, Contact/CTA, Footer.\n\n"
+        
+        "CRITICAL: Return ONLY the JSON object. Start directly with { and end with }. No other text."
+    )
+    
+    print("[Backend] Building OpenRouter payload for:", website_url)
+    openrouter_payload = {
+        "model": "openai/gpt-4-turbo",
+        "stream": False,
+        "structured_outputs": True,
+        "require_parameters": True,
+        "reasoning": {
+            "effort": "high",
+            "exclude": True
+        },
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": detailed_prompt
+                    }
+                ]
+            }
+        ]
+    }
+    print(f"[DEBUG] OpenRouter payload built successfully")
+    print(f"[DEBUG] Payload keys: {list(openrouter_payload.keys())}")
+    print(f"[DEBUG] Messages count: {len(openrouter_payload['messages'])}")
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    print(f"[DEBUG] Headers prepared: {list(headers.keys())}")
+    
+    if stream:
+        print("[DEBUG] Stream mode enabled - using streaming response")
+        def event_stream():
+            print("[Backend] Sending streaming request to OpenRouter...")
+            with requests.post(url, json=openrouter_payload, headers=headers, stream=True) as r:
+                for line in r.iter_lines():
+                    if line:
+                        print(f"[DEBUG] Received streaming line: {line}")
+                        yield line.decode('utf-8')
+        return event_stream()
+    else:
+        print("[DEBUG] Non-stream mode - making direct API call")
+        try:
+            print("[DEBUG] About to send POST request to OpenRouter...")
+            print(f"[DEBUG] URL: {url}")
+            print(f"[DEBUG] Payload size: {len(json.dumps(openrouter_payload))} characters")
+            
+            resp = requests.post(url, json=openrouter_payload, headers=headers)
+            print(f"[DEBUG] OpenRouter response status: {resp.status_code}")
+            print(f"[DEBUG] OpenRouter response headers: {dict(resp.headers)}")
+            print(f"[DEBUG] OpenRouter response text length: {len(resp.text)}")
+            print(f"[DEBUG] OpenRouter response text (first 500 chars): {resp.text[:500]}")
+            
+            if resp.status_code != 200:
+                print(f"[DEBUG] OpenRouter error response: {resp.text}")
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            
+            print("[DEBUG] About to parse JSON response...")
+            result = resp.json()
+            print(f"[DEBUG] JSON parsed successfully. Keys: {list(result.keys())}")
+            
+            print("[DEBUG] About to extract content from response...")
+            content_str = result["choices"][0]["message"]["content"]
+            print(f"[DEBUG] Content string length: {len(content_str)}")
+            print(f"[DEBUG] Content string (first 500 chars): {content_str[:500]}")
+            
+            try:
+                print("[DEBUG] About to extract JSON from markdown response...")
+                # OpenRouter returns markdown with JSON in code blocks, so we need to extract the JSON
+                import re
+                
+                # Try multiple approaches to extract JSON
+                json_content = None
+                
+                # Approach 1: Try to find JSON code blocks in the response
+                json_pattern = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
+                json_match = re.search(json_pattern, content_str)
+                
+                if json_match:
+                    print("[DEBUG] Found JSON code block in markdown response")
+                    json_content = json_match.group(1)
+                    print(f"[DEBUG] Extracted JSON content (first 500 chars): {json_content[:500]}")
+                else:
+                    print("[DEBUG] No JSON code block found, trying other approaches...")
+                    
+                    # Approach 2: Look for JSON object start and try to extract from there
+                    json_start = content_str.find('{')
+                    if json_start != -1:
+                        print(f"[DEBUG] Found JSON start at position {json_start}")
+                        potential_json = content_str[json_start:]
+                        
+                        # Try to find the matching closing brace
+                        brace_count = 0
+                        json_end = -1
+                        for i, char in enumerate(potential_json):
+                            if char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    json_end = i + 1
+                                    break
+                        
+                        if json_end != -1:
+                            json_content = potential_json[:json_end]
+                            print(f"[DEBUG] Extracted JSON from position {json_start} to {json_start + json_end}")
+                            print(f"[DEBUG] Extracted JSON content (first 500 chars): {json_content[:500]}")
+                        else:
+                            # Fallback: try the entire potential JSON
+                            json_content = potential_json
+                    else:
+                        # Final fallback: try entire content
+                        json_content = content_str
+                
+                content_json = json.loads(json_content)
+                
+                print(f"[DEBUG] Content JSON parsed successfully. Type: {type(content_json)}")
+                if isinstance(content_json, dict):
+                    print(f"[DEBUG] Content JSON keys: {list(content_json.keys())}")
+                elif isinstance(content_json, list):
+                    print(f"[DEBUG] Content JSON is a list with {len(content_json)} items")
+            except Exception as e:
+                print(f"[DEBUG] Failed to parse content as JSON: {e}")
+                print(f"[DEBUG] Content string that failed to parse: {content_str}")
+                raise HTTPException(status_code=500, detail=f"Failed to parse content as JSON: {e}")
+            
+            print("[DEBUG] ===== build_openrouter_payload completed successfully =====")
+            return content_json
+        except Exception as e:
+            print(f"[DEBUG] ===== ERROR in build_openrouter_payload =====")
+            print(f"[DEBUG] Exception type: {type(e)}")
+            print(f"[DEBUG] Exception message: {str(e)}")
+            import traceback
+            print(f"[DEBUG] Full traceback:")
+            traceback.print_exc()
+            print("[DEBUG] ===== END ERROR =====")
+            raise HTTPException(status_code=500, detail=str(e)) 

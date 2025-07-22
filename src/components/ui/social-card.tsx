@@ -42,6 +42,8 @@ interface SocialCardProps {
   onShare?: () => void;
   onBookmark?: () => void;
   onMore?: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   className?: string;
   children?: React.ReactNode;
 }
@@ -58,6 +60,8 @@ export function SocialCard({
   onShare,
   onBookmark,
   onMore,
+  onMouseEnter,
+  onMouseLeave,
   className,
   children
 }: SocialCardProps) {
@@ -98,17 +102,15 @@ export function SocialCard({
         "rounded-3xl shadow-xl",
         className
       )}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <div>
         <div className="p-6">
           {/* Author section */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              {/* <img
-                src={author?.avatar}
-                alt={author?.name}
-                className="w-10 h-10 rounded-full ring-2 ring-white dark:ring-zinc-800"
-              /> */}
+              <div className="w-10 h-10 rounded-full ring-2 ring-zinc-800 dark:ring-zinc-800 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"></div>
               <div>
                 <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                   {author?.name}

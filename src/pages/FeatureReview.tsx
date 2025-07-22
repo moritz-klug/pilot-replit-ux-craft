@@ -24,6 +24,7 @@ import SourcesDisplay from '../components/SourcesDisplay';
 
 import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group';
 import { Checkbox } from '../components/ui/checkbox';
+import { InteractiveScreenshotViewer } from '../components/InteractiveScreenshotViewer';
 
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
@@ -60,7 +61,10 @@ const FeatureReview: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const urlParams = new URLSearchParams(location.search);
-  const url = location.state?.url || urlParams.get('url') || sessionStorage.getItem('analysisUrl') || 'https://www.apple.com';
+  // Stabilize the URL to prevent infinite re-renders
+  const [url] = useState(() => {
+    return location.state?.url || urlParams.get('url') || sessionStorage.getItem('analysisUrl') || 'https://www.apple.com';
+  });
   const webhookDataFromState = location.state?.webhookData;
 
   const [analysis, setAnalysis] = useState<any>(null);
@@ -89,6 +93,15 @@ const FeatureReview: React.FC = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [loadingText, setLoadingText] = useState('');
   const [waitingForWebhook, setWaitingForWebhook] = useState(false);
+  const [analysisUpdateKey, setAnalysisUpdateKey] = useState(0); // Force re-render key
+  const [hoveredFeatureName, setHoveredFeatureName] = useState<string | null>(null);
+  const [hoveredFeature, setHoveredFeature] = useState<string | null>(null);
+
+  // New state for mockup functionality
+  const [featureCropUrl, setFeatureCropUrl] = useState<string | null>(null);
+  const [croppingFeature, setCroppingFeature] = useState(false);
+  const [cropError, setCropError] = useState<string | null>(null);
+
   const chatbotRef = useRef<any>(null);
 
   // FutureHouse API State
@@ -97,7 +110,7 @@ const FeatureReview: React.FC = () => {
   const [futureHouseReferences, setFutureHouseReferences] = useState<any[]>([]);
   const [futureHouseError, setFutureHouseError] = useState<string | null>(null);
   const [summarizedRecommendations, setSummarizedRecommendations] = useState<string | null>(null);
-  
+
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
   const [selectedPlatform, setSelectedPlatform] = useState('lovable');
@@ -120,12 +133,12 @@ const FeatureReview: React.FC = () => {
   const AVAILABLE_LANGUAGES = ['JavaScript', 'TypeScript'];
   const AVAILABLE_PLATFORMS = ['Lovable', 'Cursor', 'Bolt', 'Vercel', 'Replit', 'Magic', 'Sitebrew'];
 
-  
+
   // Code snippets from Results page
   const codeSnippets = {
-    code: resultCode ||`Your code will show here`,
+    code: resultCode || `Your code will show here`,
     style: resultStyle || `Your CSS styles will show here`
-};
+  };
 
   const platformPrompts = resultPrompt || `Your prompt will show here`;
 
@@ -155,7 +168,7 @@ const FeatureReview: React.FC = () => {
         setLoadingText(loadingTexts[index % loadingTexts.length]);
         index++;
       }, 2000);
-      
+
       return () => clearInterval(interval);
     }
   }, [waitingForWebhook]);
@@ -200,7 +213,7 @@ const FeatureReview: React.FC = () => {
   const handleWebhookInput = (webhookJsonData: any) => {
     console.log("Received webhook data:", webhookJsonData);
     console.log("Current selected model:", selectedModel);
-    
+
     // Only process webhook data if Reasoning-Pro is selected
     if (selectedModel !== "Reasoning-Pro (wait times 8-15min)") {
       console.log("Webhook functionality is only available for Reasoning-Pro model, current model:", selectedModel);
@@ -209,10 +222,10 @@ const FeatureReview: React.FC = () => {
 
     try {
       let sections = [];
-      
+
       console.log("Processing webhook data format...");
       console.log("webhookJsonData structure:", JSON.stringify(webhookJsonData, null, 2));
-      
+
       // Handle different webhook response formats
       if (webhookJsonData.output && webhookJsonData.output.featureName) {
         console.log("Detected single feature response format");
@@ -251,7 +264,7 @@ const FeatureReview: React.FC = () => {
         console.error("Unexpected webhook data format:", webhookJsonData);
         throw new Error("Unexpected webhook data format");
       }
-      
+
       console.log("Created sections:", sections);
 
       // Transform webhook JSON data into analysis structure
@@ -266,7 +279,7 @@ const FeatureReview: React.FC = () => {
           description: "User experience analysis from webhook data"
         },
         business: {
-          title: "Business Analysis", 
+          title: "Business Analysis",
           description: "Business impact analysis from webhook data"
         }
       };
@@ -275,7 +288,8 @@ const FeatureReview: React.FC = () => {
       setWebhookData(webhookJsonData);
       setLoading(false);
       setWaitingForWebhook(false);
-      
+      setAnalysisUpdateKey(prev => prev + 1); // Force re-render
+
       // Initialize component statuses
       const initialStatuses: Record<string, Status> = {};
       sections.forEach((section) => {
@@ -303,15 +317,15 @@ const FeatureReview: React.FC = () => {
     if (selectedModel === "Reasoning-Pro (wait times 8-15min)") {
       (window as any).handleWebhookInput = handleWebhookInput;
       (window as any).processWebhookResponse = handleWebhookInput;
-      
+
       // Also listen for custom webhook events
       const handleCustomWebhook = (event: CustomEvent) => {
         console.log("Received custom webhook event:", event.detail);
         handleWebhookInput(event.detail);
       };
-      
+
       window.addEventListener('webhookResponse', handleCustomWebhook as EventListener);
-      
+
       return () => {
         window.removeEventListener('webhookResponse', handleCustomWebhook as EventListener);
       };
@@ -319,7 +333,7 @@ const FeatureReview: React.FC = () => {
       delete (window as any).handleWebhookInput;
       delete (window as any).processWebhookResponse;
     }
-    
+
     return () => {
       delete (window as any).handleWebhookInput;
       delete (window as any).processWebhookResponse;
@@ -329,10 +343,11 @@ const FeatureReview: React.FC = () => {
   // Listen for webhook response messages and polling
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null;
-    
+
     const handleMessage = (event: MessageEvent) => {
-      console.log("Received message event:", event);
-      if (event.data && event.data.type === 'webhook-response') {
+      // Only process messages from expected origins and with the right structure
+      if (!event.data || typeof event.data !== 'object') return;
+      if (event.data.type === 'webhook-response') {
         console.log("Processing webhook response from message event");
         handleWebhookInput(event.data.data);
       }
@@ -360,7 +375,7 @@ const FeatureReview: React.FC = () => {
     }
 
     window.addEventListener('message', handleMessage);
-    
+
     return () => {
       window.removeEventListener('message', handleMessage);
       if (pollInterval) clearInterval(pollInterval);
@@ -376,7 +391,7 @@ const FeatureReview: React.FC = () => {
           "detailedDescription": "Logo, navigation menu, search icon. Fonts: SF Pro Display, 18px, Bold • Colors: White background, black text, blue accent. Layouts: Interactions: Sticky on scroll, hover underline on nav links. Mobile: CSS properties: N/A"
         },
         {
-          "featureName": "Hero Section", 
+          "featureName": "Hero Section",
           "detailedDescription": "Large full-width banner at the top with dark blue gradient background (#1a237e to #3949ab). Features centered white headline in bold sans-serif font (48px), smaller gray subtitle (16px). Contains prominent orange CTA button (#ff9800) with rounded corners and drop shadow. Background includes subtle geometric pattern overlay. Section height spans 80vh with content vertically centered."
         },
         {
@@ -384,7 +399,7 @@ const FeatureReview: React.FC = () => {
           "detailedDescription": "Horizontal navigation bar with white background and subtle shadow. Logo positioned left, main navigation links center-aligned using SF Pro Display 16px medium weight. Search icon and user account dropdown on right. Sticky positioning on scroll with smooth transition. Hover effects include blue underline animation. Mobile version collapses to hamburger menu."
         }
       ];
-      
+
       // Auto-process mock data after 5 seconds if no real webhook data received
       const mockTimeout = setTimeout(() => {
         if (!analysis && !webhookData && waitingForWebhook) {
@@ -392,12 +407,20 @@ const FeatureReview: React.FC = () => {
           handleWebhookInput(mockWebhookData);
         }
       }, 5000);
-      
+
       return () => clearTimeout(mockTimeout);
     }
   }, [selectedModel, analysis, webhookData, waitingForWebhook]);
 
   useEffect(() => {
+    console.log("[DEBUG] FeatureReview useEffect triggered with dependencies:", {
+      url,
+      uiTest,
+      selectedModel,
+      webhookDataFromState,
+      timestamp: new Date().toISOString()
+    });
+
     setLoading(true);
     setProgressLog([]);
     setError(null);
@@ -427,17 +450,18 @@ const FeatureReview: React.FC = () => {
       analyzeWithScreenshot(url, uiTest).then((mockAnalysis) => {
         setAnalysis(mockAnalysis);
         setLoading(false);
+        setAnalysisUpdateKey(prev => prev + 1); // Force re-render
         setScreenshotUrl(null); // Optionally set a mock screenshot URL if desired
         // The mockAnalysis now uses the new format, so we need to parse it
         if (mockAnalysis.choices && mockAnalysis.choices[0]?.message?.content) {
           try {
             const parsedContent = JSON.parse(mockAnalysis.choices[0].message.content);
             if (parsedContent.websiteFeatures) {
-          const initialStatuses: Record<string, Status> = {};
+              const initialStatuses: Record<string, Status> = {};
               parsedContent.websiteFeatures.forEach((section: any, idx: number) => {
                 initialStatuses[section.featureName || idx] = 'rejected';
-          });
-          setComponentStatuses(initialStatuses);
+              });
+              setComponentStatuses(initialStatuses);
             }
           } catch (e) {
             console.error('Failed to parse mock analysis content:', e);
@@ -461,47 +485,165 @@ const FeatureReview: React.FC = () => {
     async function fetchAnalysis() {
       try {
         console.log("[DEBUG] ===== Frontend: fetchAnalysis started =====");
+        console.log("[DEBUG] fetchAnalysis called at:", new Date().toISOString());
         console.log("[DEBUG] URL to analyze:", url);
         console.log("[DEBUG] API base URL:", MAIN_API_BASE);
-        
+
         setProgressLog(["Sending request to analysis server..."]);
-        
+
+        // First, trigger a screenshot
+        try {
+          setProgressLog(["Taking screenshot..."]);
+          const screenshotResponse = await fetch(`${SCREENSHOT_API_BASE}/screenshot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url,
+              full_page: true,
+              width: 1920,
+              height: 1080,
+              wait_time: 3,
+              hide_popups: true
+            }),
+          });
+
+          if (screenshotResponse.ok) {
+            const screenshotData = await screenshotResponse.json();
+            const screenshotId = screenshotData.screenshot_id;
+
+            // Poll for screenshot availability (background processing)
+            let pollAttempts = 0;
+            const maxPollAttempts = 30; // 30 seconds max
+
+            const pollForScreenshot = async () => {
+              try {
+                const checkResponse = await fetch(`${SCREENSHOT_API_BASE}/screenshot/${screenshotId}`);
+                if (checkResponse.ok) {
+                  setScreenshotUrl(`${SCREENSHOT_API_BASE}/screenshot/${screenshotId}`);
+                  setProgressLog(["Screenshot ready, analyzing features..."]);
+                  return true;
+                }
+              } catch (err) {
+                // Screenshot not ready yet
+              }
+
+              pollAttempts++;
+              if (pollAttempts < maxPollAttempts) {
+                setTimeout(pollForScreenshot, 1000); // Poll every second
+              } else {
+                console.warn('Screenshot polling timeout');
+                setProgressLog(["Screenshot timeout, continuing with analysis..."]);
+              }
+              return false;
+            };
+
+            // Start polling
+            pollForScreenshot();
+          }
+        } catch (screenshotErr) {
+          console.warn('Screenshot failed, continuing without screenshot:', screenshotErr);
+          setProgressLog(["Screenshot failed, continuing with analysis..."]);
+        }
+
+
         const requestBody = { url };
         console.log("[DEBUG] Request body:", requestBody);
         console.log("[DEBUG] About to send POST request to:", `${MAIN_API_BASE}/extract-features`);
-        
+
         const response = await fetch(`${MAIN_API_BASE}/extract-features`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody),
         });
-        
+
         console.log("[DEBUG] Response received");
         console.log("[DEBUG] Response status:", response.status);
         console.log("[DEBUG] Response status text:", response.statusText);
         console.log("[DEBUG] Response headers:", Object.fromEntries(response.headers.entries()));
-        
+
         if (!response.ok) {
           console.log("[DEBUG] Response not OK - throwing error");
           const errorText = await response.text();
           console.log("[DEBUG] Error response text:", errorText);
+
+          // Handle rate limiting with user-friendly message
+          if (response.status === 500 && errorText.includes('429')) {
+            throw new Error('The AI service is temporarily busy. Please try again in a few moments.');
+          }
+
           throw new Error(`Failed to analyze the website. Status: ${response.status}, Text: ${errorText}`);
         }
-        
+
         console.log("[DEBUG] Response is OK - parsing JSON...");
         setProgressLog(["Analysis complete!"]);
-        
+
         const data = await response.json();
+        console.log("[Frontend] Received analysis data:", data);
+        console.log("[Frontend] Sections with bounding boxes:", data.sections?.filter(s => s.bounding_box));
+
         console.log("[DEBUG] JSON parsed successfully");
         console.log("[DEBUG] Data type:", typeof data);
         console.log("[DEBUG] Data keys:", Object.keys(data));
         console.log("[DEBUG] Data content (first 500 chars):", JSON.stringify(data).substring(0, 500));
-        
+
         setAnalysis(data);
         // console.log("[Nichole DEBUG] Analysis:", data);
         setLoading(false);
-        
-        // Initialize statuses - handle both old and new response formats
+        setAnalysisUpdateKey(prev => prev + 1); // Force re-render
+
+        // Check if we need to retry bounding box detection
+        const sectionsWithBboxes = data.sections?.filter(s => s.bounding_box) || [];
+        const totalSections = data.sections?.length || 0;
+        const bboxPercentage = totalSections > 0 ? (sectionsWithBboxes.length / totalSections) * 100 : 0;
+
+        console.log(`[Frontend] Bounding box coverage: ${sectionsWithBboxes.length}/${totalSections} (${bboxPercentage.toFixed(1)}%)`);
+
+        // If less than 70% of sections have bounding boxes, retry
+        if (totalSections > 0 && bboxPercentage < 70) {
+          console.log("[Frontend] Low bounding box coverage, attempting retry...");
+          setProgressLog(prev => [...prev, "Retrying bounding box detection..."]);
+
+          try {
+            const retryResponse = await fetch(`${MAIN_API_BASE}/retry-bounding-boxes`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sections: data.sections,
+                url: url,
+                screenshot_id: data.screenshot_id
+              }),
+            });
+
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              if (retryData.success) {
+                console.log("[Frontend] Retry successful:", retryData.message);
+                setProgressLog(prev => [...prev, `✅ ${retryData.message}`]);
+
+                // Update analysis with new sections that have bounding boxes
+                setAnalysis(prev => ({
+                  ...prev,
+                  sections: retryData.sections
+                }));
+
+                // Update screenshot URL if we got a new one
+                if (retryData.screenshot_url) {
+                  setScreenshotUrl(retryData.screenshot_url);
+                }
+
+                setAnalysisUpdateKey(prev => prev + 1); // Force re-render
+              } else {
+                console.log("[Frontend] Retry failed:", retryData.message);
+                setProgressLog(prev => [...prev, `⚠️ ${retryData.message}`]);
+              }
+            }
+          } catch (retryError) {
+            console.error("[Frontend] Retry request failed:", retryError);
+            setProgressLog(prev => [...prev, "⚠️ Bounding box retry failed"]);
+          }
+        }
+
+        // Initialize statuses
         if (data.sections) {
           console.log("[DEBUG] Using old format (data.sections)");
           // Old format
@@ -517,7 +659,7 @@ const FeatureReview: React.FC = () => {
             const parsedContent = JSON.parse(data.choices[0].message.content);
             console.log("[DEBUG] Parsed content type:", typeof parsedContent);
             console.log("[DEBUG] Parsed content keys:", Object.keys(parsedContent));
-            
+
             if (parsedContent.websiteFeatures) {
               console.log("[DEBUG] Found websiteFeatures, initializing statuses");
               const initialStatuses: Record<string, Status> = {};
@@ -541,7 +683,7 @@ const FeatureReview: React.FC = () => {
           console.log("[DEBUG] Unknown response format");
           console.log("[DEBUG] Data structure:", data);
         }
-        
+
         console.log("[DEBUG] ===== Frontend: fetchAnalysis completed successfully =====");
       } catch (err: any) {
         console.log("[DEBUG] ===== Frontend: fetchAnalysis ERROR =====");
@@ -549,7 +691,7 @@ const FeatureReview: React.FC = () => {
         console.log("[DEBUG] Error message:", err.message);
         console.log("[DEBUG] Error stack:", err.stack);
         console.log("[DEBUG] ===== END ERROR =====");
-        
+
         setError(err.message || 'Connection lost or server error.');
         setLoading(false);
       }
@@ -573,6 +715,10 @@ const FeatureReview: React.FC = () => {
         setCurrentHTMLStructure(section.htmlStructure || '');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
 
+        // Reset crop state when switching features
+        setFeatureCropUrl(null);
+        setCropError(null);
+
         // Wait for React to render the chatbot component before making API calls
         // Use a more reliable approach to wait for the component to be available
         let attempts = 0;
@@ -580,7 +726,7 @@ const FeatureReview: React.FC = () => {
           await new Promise(resolve => setTimeout(resolve, 20));
           attempts++;
         }
-        
+
         if (!chatbotRef.current) {
           console.error("[DEBUG]: chatbotRef.current is still null after waiting");
         }
@@ -592,18 +738,18 @@ const FeatureReview: React.FC = () => {
           console.log('[DEBUG] mappedAnalysis structure:', mappedAnalysis);
           console.log('[DEBUG] Current section:', section);
           console.log('[DEBUG] featureName:', featureName);
-          
+
           // Check if the feature exists in mappedAnalysis
           const matchingFeature = mappedAnalysis.sections.find(s => s.name === featureName);
           console.log('[DEBUG] Matching feature found:', matchingFeature);
-          
+
           // 1. Call OpenRouter to get the prompt
           const openRouterRes = await fetch('http://localhost:8000/openrouter-generate-research-prompt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               feature_name: featureName,
-              screenshot_url: section.cropped_image_url || '',
+              screenshot_url: screenshotUrl || '',
               feature_extraction_result: {
                 websiteFeatures: mappedAnalysis.sections.map(s => ({
                   featureName: s.name,
@@ -712,13 +858,13 @@ const FeatureReview: React.FC = () => {
           });
           const summarizeResponse = await summarizeRes.json();
           console.log("[DEBUG]: Full summarizeResponse:", summarizeResponse);
-          
+
           // Check if summary_text exists in the response
           if (!summarizeResponse.summary_text) {
             console.error("[DEBUG]: summary_text not found in response. Available keys:", Object.keys(summarizeResponse));
             throw new Error("summary_text not found in response");
           }
-          
+
           const { summary_text } = summarizeResponse;
           console.log("[DEBUG]: summary_text:", summary_text);
 
@@ -732,11 +878,11 @@ const FeatureReview: React.FC = () => {
           if (chatbotRef.current) {
             console.log("[DEBUG]: addBotMessage method exists:", typeof chatbotRef.current.addBotMessage);
             console.log("[DEBUG]: updateLastBotMessage method exists:", typeof chatbotRef.current.updateLastBotMessage);
-            
+
             // First add a placeholder message
             chatbotRef.current.addBotMessage("Processing summary...");
             await new Promise(resolve => setTimeout(resolve, 100));
-            
+
             // Then update it with the actual summary
             try {
               chatbotRef.current.updateLastBotMessage(summary_text);
@@ -757,6 +903,7 @@ const FeatureReview: React.FC = () => {
           // In UI Test Mode, just show a mock message
           chatbotRef.current?.addBotMessage("UI Test Mode: Mock analysis complete. This would show real recommendations in production mode.");
         }
+
 
       }, 3000);
     } else {
@@ -823,16 +970,16 @@ const FeatureReview: React.FC = () => {
 
   const handleChatUpdate = (newChatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
     const futurehouseLoading = [
-        "Prompt to FutureHouse:",
-        "FutureHouse is analyzing... (this may take a few minutes)",
-        "FutureHouse analysis started...",
-        "FutureHouse analysis is finished."
-      ];
-    
+      "Prompt to FutureHouse:",
+      "FutureHouse is analyzing... (this may take a few minutes)",
+      "FutureHouse analysis started...",
+      "FutureHouse analysis is finished."
+    ];
+
     const filteredChatHistory = newChatHistory.filter(msg => {
       return !futurehouseLoading.some(prefix => msg.text.startsWith(prefix));
     });
-     
+
     setChatHistory(filteredChatHistory);
   };
 
@@ -849,7 +996,7 @@ const FeatureReview: React.FC = () => {
     if (outputType === 'prompt') {
       setFrameworkType('');
       setLanguage('');
-    } 
+    }
     if (outputType === null) {
       setFrameworkType('');
       setPlatformType('');
@@ -865,21 +1012,21 @@ const FeatureReview: React.FC = () => {
   const handleResetOutput = () => {
     setOutputTypeSelected(false);
   }
-  
+
   const fetchCodeAndPrompt = React.useCallback(async (chatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
     if (isFetching) return;
     setIsFetching(true);
 
     try {
       let latestRecommendation = '';
-      if (chatHistory.length === 1){
+      if (chatHistory.length === 1) {
         latestRecommendation = 'ONLY implement the CRITICAL PRIORITY recommendation or IMPLEMENT FIRST recommendation or HIGH IMPACT recommendation. ' + summarizedRecommendations;
       } else {
         latestRecommendation = chatHistory
-        .filter(msg => !msg.isUser)
-        .pop()?.text || "No latest recommendation available";
+          .filter(msg => !msg.isUser)
+          .pop()?.text || "No latest recommendation available";
       }
-      
+
       const requestBody = {
         featureName: currentChatFeature,
         featureDescription: currentFeatureDescription,
@@ -890,7 +1037,7 @@ const FeatureReview: React.FC = () => {
         language: Language,
         platform: PlatformType,
       };
-      
+
       const response = await fetch(`${MAIN_API_BASE}/recommendation-prompt-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -915,7 +1062,7 @@ const FeatureReview: React.FC = () => {
       setResultCode(decodeBase64(data.code) || '');
       setResultStyle(decodeBase64(data.style) || '');
       setResultPrompt(data.prompt || '');
-      
+
     } catch (error) {
       console.error('Error fetching code and prompt:', error);
     } finally {
@@ -940,15 +1087,15 @@ const FeatureReview: React.FC = () => {
     PlatformType,
     summarizedRecommendations
   ]);
-  
+
   // Effect to fetch code/prompt when needed
   React.useEffect(() => {
-    if (!OutputTypeSelected || 
-        (outputType === 'code' && !FrameworkType) || 
-        (outputType === 'prompt' && !PlatformType)) {
+    if (!OutputTypeSelected ||
+      (outputType === 'code' && !FrameworkType) ||
+      (outputType === 'prompt' && !PlatformType)) {
       return;
     }
-    
+
     const hasChatResponse = chatHistory.some(msg => !msg.isUser);
 
     if (chatHistory.length > 0 && currentChatFeature && currentFeatureDescription && !isFetching && hasChatResponse) {
@@ -983,7 +1130,7 @@ const FeatureReview: React.FC = () => {
 
   const showCodeTabs = hasCode && hasStyle;
   const defaultCodeTab = 'code';
-  
+
   React.useEffect(() => {
     if (!showCodeTabs) {
       setActiveCodeTab(defaultCodeTab);
@@ -999,7 +1146,7 @@ const FeatureReview: React.FC = () => {
     try {
       // Handle different response formats
       let parsedContent;
-      
+
       if (analysis.choices && analysis.choices[0]?.message?.content) {
         // Wrapped format (old)
         parsedContent = JSON.parse(analysis.choices[0].message.content);
@@ -1010,7 +1157,7 @@ const FeatureReview: React.FC = () => {
         console.error('Unknown analysis format:', analysis);
         return;
       }
-      
+
       // Transform the new response format to match frontend expectations
       mappedAnalysis = {
         // Transform websiteFeatures to sections
@@ -1018,9 +1165,10 @@ const FeatureReview: React.FC = () => {
           name: feature.featureName || `Feature ${index + 1}`,
           detailedDescription: feature.detailedDescription || '',
           htmlStructure: feature.htmlStructure || '',
-          css_properties: feature.cssProperties || ''
+          css_properties: feature.cssProperties || '',
+          bounding_box: feature.bounding_box || null
         })) || [],
-        
+
         // Transform brandIdentity to global_design_summary
         global_design_summary: {
           logoUrl: parsedContent.brandIdentity?.logoUrl || '', // Not directly provided
@@ -1028,7 +1176,7 @@ const FeatureReview: React.FC = () => {
           typographyStyles: parsedContent.brandIdentity?.typographyStyles || '',
           designTone: parsedContent.brandIdentity?.designTone || ''
         },
-        
+
         // Transform siteUXArchitecture to ux_architecture
         ux_architecture: {
           page_flow: parsedContent.siteUXArchitecture?.navigationStructure || '',
@@ -1038,7 +1186,7 @@ const FeatureReview: React.FC = () => {
           responsiveness: parsedContent.siteUXArchitecture?.responsiveness || '',
           accessibilityObservations: parsedContent.siteUXArchitecture?.accessibilityObservations || '',
         },
-        
+
         // Transform companyOverview and siteUXArchitecture to business_analysis
         business_analysis: {
           companyName: parsedContent.companyOverview?.companyName || '',
@@ -1060,9 +1208,60 @@ const FeatureReview: React.FC = () => {
   }
 
 
+  // Function to crop the current feature image
+  const cropCurrentFeature = async () => {
+    if (!currentChatFeature || !mappedAnalysis?.sections || !screenshotUrl) {
+      setCropError("Missing feature data or screenshot");
+      return;
+    }
+
+    setCroppingFeature(true);
+    setCropError(null);
+
+    try {
+      // Find the current feature section with bounding box
+      const currentSection = mappedAnalysis.sections.find(
+        (section: any) => section.name === currentChatFeature
+      );
+
+      if (!currentSection?.bounding_box) {
+        throw new Error("No bounding box found for this feature");
+      }
+
+      // Call the backend to crop the feature
+      const response = await fetch(`${MAIN_API_BASE}/crop-feature`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          screenshot_url: screenshotUrl,
+          bounding_box: currentSection.bounding_box,
+          feature_name: currentChatFeature
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to crop feature image');
+      }
+
+      const data = await response.json();
+      setFeatureCropUrl(`${MAIN_API_BASE}${data.crop_url}`);
+    } catch (error: any) {
+      console.error('Error cropping feature:', error);
+      setCropError(error.message || 'Failed to crop feature image');
+    } finally {
+      setCroppingFeature(false);
+    }
+  };
+
+  // Crop feature when mockup tab is opened and we have the necessary data
+  useEffect(() => {
+    if (chatbotTab === 'mockups' && currentChatFeature && !featureCropUrl && !croppingFeature) {
+      cropCurrentFeature();
+    }
+  }, [chatbotTab, currentChatFeature, screenshotUrl, analysis]);
 
   if (loading) {
-  return (
+    return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
         <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
         <p className="text-lg mb-4">Analyzing UI and UX...</p>
@@ -1101,9 +1300,9 @@ const FeatureReview: React.FC = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AppSidebar 
-          activeTab={tab} 
-          onTabChange={setTab} 
+        <AppSidebar
+          activeTab={tab}
+          onTabChange={setTab}
           activeChatbots={activeChatbots}
           onChatSelect={(featureName) => {
             setCurrentChatFeature(featureName);
@@ -1124,11 +1323,11 @@ const FeatureReview: React.FC = () => {
                 {/* Chatbot Content */}
                 <div className="flex gap-4 h-full">
                   <div className="w-1/2 h-full">
-                    <FeatureChatbot 
-                    ref={chatbotRef}
-                    featureName={currentChatFeature}
-                    onChatUpdate={handleChatUpdate}
-                    onTypingChange={setIsTyping}
+                    <FeatureChatbot
+                      ref={chatbotRef}
+                      featureName={currentChatFeature}
+                      onChatUpdate={handleChatUpdate}
+                      onTypingChange={setIsTyping}
                     />
                   </div>
                   <div className="w-1/2 bg-gray-100 rounded-lg h-full p-4">
@@ -1171,14 +1370,82 @@ const FeatureReview: React.FC = () => {
                         })}
                       </div>
                     </div>
-                    
+
                     {/* Tab Content */}
                     <div className="h-[calc(100%-5rem)]">
-                      {chatbotTab === 'mockups' && <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">Mockups content coming soon...</div>}
+                      {chatbotTab === 'mockups' && (
+                        <div className="h-full p-6 bg-background rounded-lg overflow-y-auto space-y-6">
+                          <div>
+                            <h3 className="text-xl font-bold mb-4">Current Feature Preview</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              This shows the current state of "{currentChatFeature}" as captured from the website.
+                            </p>
+
+                            {croppingFeature && (
+                              <div className="flex items-center justify-center min-h-[200px] bg-gray-50 rounded-lg">
+                                <div className="text-center">
+                                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                                  <p className="text-sm text-muted-foreground">Cropping feature image...</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {cropError && (
+                              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <p className="text-red-600 text-sm">Error: {cropError}</p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-2"
+                                  onClick={cropCurrentFeature}
+                                >
+                                  Retry
+                                </Button>
+                              </div>
+                            )}
+
+                            {featureCropUrl && !croppingFeature && (
+                              <div className="bg-white border rounded-lg p-4 shadow-sm">
+                                <img
+                                  src={featureCropUrl}
+                                  alt={`${currentChatFeature} feature preview`}
+                                  className="w-full max-w-md mx-auto rounded-lg border shadow-sm"
+                                  style={{ maxHeight: '300px', objectFit: 'contain' }}
+                                />
+                                <p className="text-xs text-muted-foreground text-center mt-2">
+                                  Current state of {currentChatFeature}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Future Image-to-Image Section */}
+                          <div className="border-t pt-6">
+                            <h3 className="text-lg font-semibold mb-3">Generate Improvements</h3>
+                            <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-8 text-center">
+                              <div className="text-gray-400 mb-3">
+                                <Camera className="h-12 w-12 mx-auto mb-2" />
+                              </div>
+                              <p className="text-gray-600 font-medium mb-2">Image-to-Image Generation</p>
+                              <p
+                                className="text-sm text-gray-500 mb-4 mx-auto"
+                                style={{
+                                  maxWidth: '320px',
+                                  whiteSpace: 'normal',
+                                  wordBreak: 'break-word',
+                                }}
+                              >
+                                Soon you'll be able to generate improved versions of this feature by integrating the suggested improvements of the assistant.
+                              </p>
+
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {chatbotTab === 'improvements' && (
                         <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">
                           <h3 className="text-xl font-bold mb-4 text-center">UX Improvement Results</h3>
-                          
+
                           {!OutputTypeSelected ? (<Card className="mb-6 text-center max-w-md mx-auto">
                             <CardHeader>
                               <CardTitle>Select your output type</CardTitle>
@@ -1187,15 +1454,15 @@ const FeatureReview: React.FC = () => {
                               <div className="mb-4">
                                 <div className="font-medium mb-2 text-lg">What kind of output do you want?</div>
                                 <div className="flex flex-wrap gap-4 mb-4 justify-center">
-                                <ToggleGroup type="single" value={outputType} onValueChange={setOutputType} className="gap-2 justify-center flex flex-wrap">
-                                  <ToggleGroupItem
-                                    value="prompt"
-                                    className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
+                                  <ToggleGroup type="single" value={outputType} onValueChange={setOutputType} className="gap-2 justify-center flex flex-wrap">
+                                    <ToggleGroupItem
+                                      value="prompt"
+                                      className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
                                     >Prompt</ToggleGroupItem>
-                                  <ToggleGroupItem value="code"
-                                    className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
+                                    <ToggleGroupItem value="code"
+                                      className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
                                     >Code</ToggleGroupItem>
-                                </ToggleGroup>
+                                  </ToggleGroup>
                                 </div>
                               </div>
                               {outputType === 'prompt' ? (
@@ -1214,19 +1481,19 @@ const FeatureReview: React.FC = () => {
                                             }
                                           }}
                                           disabled={outputType === 'code' as string}
-                                          />
+                                        />
                                         <span>{platform}</span>
                                       </label>
                                     ))}
                                   </div>
                                   <div className="mt-4 space-y-2">
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    className=" shadow-sm px-8"
-                                    
-                                    onClick={() => setOutputTypeSelected(true)}>OK
-                                  </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      className=" shadow-sm px-8"
+
+                                      onClick={() => setOutputTypeSelected(true)}>OK
+                                    </Button>
                                   </div>
                                 </div>
                               ) : null}
@@ -1248,7 +1515,7 @@ const FeatureReview: React.FC = () => {
                                             }
                                           }}
                                           disabled={outputType === 'prompt' as string}
-                                          />
+                                        />
                                         <span>{framework}</span>
                                       </label>
                                     ))}
@@ -1288,173 +1555,173 @@ const FeatureReview: React.FC = () => {
                             </CardContent>
                           </Card>
                           ) : (
-                          <div className="flex items-center justify-center mb-6">
-                          {outputType === 'code' ? (
-                          <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">
-                              {isFetching ? (
-                                <div className="flex flex-col items-center justify-center min-h-[200px]">
-                                  <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
-                                  <p className="text-lg">Generating code, please wait...</p>
-                                </div>
-                              ) : (
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle>Your {FrameworkType} Code</CardTitle>
-                                    <Button 
-                                      onClick={handleResetOutput} 
-                                      size="lg"
-                                      variant="ghost"
-                                      className="absolute top-4 right-4 shadow-sm px-2"
-                                      > Reset output
-                                    </Button>                                 
-                                  </CardHeader>
-                                  <CardContent className="space-y-4">
-                                    <div className="w-full max-w-xl mx-auto">
-                                      {showCodeTabs && (
-                                        <div className="flex border-b border-border mb-4">
-                                          <button
-                                              className={`px-4 py-2 font-medium ${activeCodeTab === "code" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
-                                            }`}
-                                            onClick={() => setActiveCodeTab("code")}
-                                          >
-                                            Code
-                                          </button>
-                                          <button
-                                                className={`px-4 py-2 font-medium ${activeCodeTab === "style" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
-                                            }`}
-                                            onClick={() => setActiveCodeTab("style")}
-                                          >
-                                            Style
-                                          </button>
-                                        </div>
-                                      )}
-                                    <CodeBlock>
-                                      <CodeBlockGroup className="border-border border-b p-4">
-                                        <div className="flex items-center gap-2">
-                                          <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                                            {activeCodeTab === "code" ? (
-                                              FrameworkType === "Vue"
-                                                ? ".vue"
-                                                : FrameworkType === "React"
-                                                  ? Language === "JavaScript"
-                                                    ? ".js"
-                                                    : ".tsx"
-                                                  : FrameworkType === "Angular"
-                                                    ? ".ts"
-                                                    : FrameworkType
-                                            ) : FrameworkType === "Vue" ? ".vue" : ".css"}
-                                          </div>
-                                        </div>
-                                        <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
-                                          {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            <div className="flex items-center justify-center mb-6">
+                              {outputType === 'code' ? (
+                                <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">
+                                  {isFetching ? (
+                                    <div className="flex flex-col items-center justify-center min-h-[200px]">
+                                      <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
+                                      <p className="text-lg">Generating code, please wait...</p>
+                                    </div>
+                                  ) : (
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle>Your {FrameworkType} Code</CardTitle>
+                                        <Button
+                                          onClick={handleResetOutput}
+                                          size="lg"
+                                          variant="ghost"
+                                          className="absolute top-4 right-4 shadow-sm px-2"
+                                        > Reset output
                                         </Button>
-                                      </CodeBlockGroup>
-                                      <CodeBlockCode 
-                                        code={activeCodeTab === "code" ? codeSnippets.code : codeSnippets.style}
-                                        language={
-                                          activeCodeTab === "code"
-                                            ? FrameworkType === "Vue"
-                                              ? "vue"
-                                              : FrameworkType === "React"
-                                                ? Language === "JavaScript"
-                                                  ? "js"
-                                                  : "tsx"
-                                                : FrameworkType === "Angular"
-                                                  ? "ts"
-                                                  : FrameworkType.toLowerCase()
-                                            : "css"
-                                        }
-                                        theme="github-light"
-                                      />
-                                    </CodeBlock>
-                                  </div>
-                                  
-                                  <div className="mt-6 p-4 bg-blue-50 rounded-md">
-                                    <h3 className="font-semibold mb-2">Integration Instructions:</h3>
-                                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                                      <li>Copy the code snippet above and integrate it into your project</li>
-                                      <li>Ensure you have the necessary dependencies installed (Tailwind CSS for styling)</li>
-                                      <li>Customize the component according to your specific requirements</li>
-                                      <li>Test the implementation across different devices and screen sizes</li>
-                                    </ul>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            )}
-                            </div>
-                              ) : (
-                            <div className="mt-6" >
-                              {isFetching ? (
-                                <div className="flex flex-col items-center justify-center min-h-[200px]">
-                                  <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
-                                  <p className="text-lg">Generating prompt, please wait...</p>
+                                      </CardHeader>
+                                      <CardContent className="space-y-4">
+                                        <div className="w-full max-w-xl mx-auto">
+                                          {showCodeTabs && (
+                                            <div className="flex border-b border-border mb-4">
+                                              <button
+                                                className={`px-4 py-2 font-medium ${activeCodeTab === "code" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                                                  }`}
+                                                onClick={() => setActiveCodeTab("code")}
+                                              >
+                                                Code
+                                              </button>
+                                              <button
+                                                className={`px-4 py-2 font-medium ${activeCodeTab === "style" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                                                  }`}
+                                                onClick={() => setActiveCodeTab("style")}
+                                              >
+                                                Style
+                                              </button>
+                                            </div>
+                                          )}
+                                          <CodeBlock>
+                                            <CodeBlockGroup className="border-border border-b p-4">
+                                              <div className="flex items-center gap-2">
+                                                <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
+                                                  {activeCodeTab === "code" ? (
+                                                    FrameworkType === "Vue"
+                                                      ? ".vue"
+                                                      : FrameworkType === "React"
+                                                        ? Language === "JavaScript"
+                                                          ? ".js"
+                                                          : ".tsx"
+                                                        : FrameworkType === "Angular"
+                                                          ? ".ts"
+                                                          : FrameworkType
+                                                  ) : FrameworkType === "Vue" ? ".vue" : ".css"}
+                                                </div>
+                                              </div>
+                                              <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
+                                                {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                              </Button>
+                                            </CodeBlockGroup>
+                                            <CodeBlockCode
+                                              code={activeCodeTab === "code" ? codeSnippets.code : codeSnippets.style}
+                                              language={
+                                                activeCodeTab === "code"
+                                                  ? FrameworkType === "Vue"
+                                                    ? "vue"
+                                                    : FrameworkType === "React"
+                                                      ? Language === "JavaScript"
+                                                        ? "js"
+                                                        : "tsx"
+                                                      : FrameworkType === "Angular"
+                                                        ? "ts"
+                                                        : FrameworkType.toLowerCase()
+                                                  : "css"
+                                              }
+                                              theme="github-light"
+                                            />
+                                          </CodeBlock>
+                                        </div>
+
+                                        <div className="mt-6 p-4 bg-blue-50 rounded-md">
+                                          <h3 className="font-semibold mb-2">Integration Instructions:</h3>
+                                          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                                            <li>Copy the code snippet above and integrate it into your project</li>
+                                            <li>Ensure you have the necessary dependencies installed (Tailwind CSS for styling)</li>
+                                            <li>Customize the component according to your specific requirements</li>
+                                            <li>Test the implementation across different devices and screen sizes</li>
+                                          </ul>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  )}
                                 </div>
                               ) : (
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle>
-                                      Your {PlatformType} Prompt
-                                    </CardTitle>
-                                    <Button 
-                                      onClick={handleResetOutput} 
-                                      size="sm"
-                                      variant="ghost"
-                                      className="absolute top-4 right-4 shadow-sm px-2"
-                                      > Reset output
-                                    </Button>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <div className="w-full max-w-xl mx-auto">
-                                      <CodeBlock>
-                                        <CodeBlockGroup className="border-border border-b py-2 px-2">
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-muted-foreground text-sm">prompt.txt</span>
+                                <div className="mt-6" >
+                                  {isFetching ? (
+                                    <div className="flex flex-col items-center justify-center min-h-[200px]">
+                                      <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
+                                      <p className="text-lg">Generating prompt, please wait...</p>
+                                    </div>
+                                  ) : (
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle>
+                                          Your {PlatformType} Prompt
+                                        </CardTitle>
+                                        <Button
+                                          onClick={handleResetOutput}
+                                          size="sm"
+                                          variant="ghost"
+                                          className="absolute top-4 right-4 shadow-sm px-2"
+                                        > Reset output
+                                        </Button>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="w-full max-w-xl mx-auto">
+                                          <CodeBlock>
+                                            <CodeBlockGroup className="border-border border-b py-2 px-2">
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-muted-foreground text-sm">prompt.txt</span>
+                                              </div>
+                                              <Button onClick={handleCopyPrompt} variant="ghost" size="icon" className="h-8 w-8">
+                                                {promptCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                              </Button>
+                                            </CodeBlockGroup>
+                                            <CodeBlockCode
+                                              code={platformPrompts}
+                                              language="text"
+                                              theme="github-light"
+                                            />
+                                          </CodeBlock>
+                                        </div>
+                                        <div className="space-y-4">
+                                          <div className="p-4 bg-green-50 rounded-md">
+                                            <h3 className="font-semibold mb-2">How to use this prompt:</h3>
+                                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                                              {PlatformType === 'Lovable' && <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>}
+                                              {PlatformType === 'Cursor' && <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement in your AI IDE</li>}
+                                              {PlatformType === 'Bolt' && <li><strong>Bolt.new:</strong> Copy this prompt to generate improved components with UX enhancements</li>}
+                                              {PlatformType === 'Vercel' && <li><strong>v0 by Vercel:</strong> Use this specification to generate accessible and polished React components</li>}
+                                              {PlatformType === 'Replit' && <li><strong>Replit:</strong> Apply this checklist-style prompt for systematic UX improvements</li>}
+                                              {PlatformType === 'Magic' && <li><strong>Magic Patterns:</strong> Use this JSON specification to generate enhanced UI patterns</li>}
+                                              {PlatformType === 'Sitebrew' && <li><strong>sitebrew.ai:</strong> Apply this XML-formatted brief for comprehensive UX enhancements</li>}
+                                            </ul>
                                           </div>
-                                          <Button onClick={handleCopyPrompt} variant="ghost" size="icon" className="h-8 w-8">
-                                            {promptCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                          </Button>
-                                        </CodeBlockGroup>
-                                        <CodeBlockCode 
-                                          code={platformPrompts} 
-                                          language="text"
-                                          theme="github-light"
-                                        />
-                                      </CodeBlock>
-                                    </div>
-                                    <div className="space-y-4">
-                                      <div className="p-4 bg-green-50 rounded-md">
-                                        <h3 className="font-semibold mb-2">How to use this prompt:</h3>
-                                        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                                          {PlatformType === 'Lovable' && <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>}
-                                          {PlatformType === 'Cursor' && <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement in your AI IDE</li>}
-                                          {PlatformType === 'Bolt' && <li><strong>Bolt.new:</strong> Copy this prompt to generate improved components with UX enhancements</li>}
-                                          {PlatformType === 'Vercel' && <li><strong>v0 by Vercel:</strong> Use this specification to generate accessible and polished React components</li>}
-                                          {PlatformType === 'Replit' && <li><strong>Replit:</strong> Apply this checklist-style prompt for systematic UX improvements</li>}
-                                          {PlatformType === 'Magic' && <li><strong>Magic Patterns:</strong> Use this JSON specification to generate enhanced UI patterns</li>}
-                                          {PlatformType === 'Sitebrew' && <li><strong>sitebrew.ai:</strong> Apply this XML-formatted brief for comprehensive UX enhancements</li>}
-                                        </ul>
-                                      </div>
-                                      
-                                      <div className="p-4 bg-yellow-50 rounded-md">
-                                        <h3 className="font-semibold mb-2">Expected Results:</h3>
-                                        <p className="text-sm text-gray-700">
-                                          This prompt will help AI tools understand the specific UX improvements needed 
-                                          and generate code that follows evidence-based design principles, improving 
-                                          user experience, accessibility, and overall usability of your application.
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
+
+                                          <div className="p-4 bg-yellow-50 rounded-md">
+                                            <h3 className="font-semibold mb-2">Expected Results:</h3>
+                                            <p className="text-sm text-gray-700">
+                                              This prompt will help AI tools understand the specific UX improvements needed
+                                              and generate code that follows evidence-based design principles, improving
+                                              user experience, accessibility, and overall usability of your application.
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  )}
+                                </div>
                               )}
                             </div>
-                            )}
-                          </div>
-                        )}
+                          )}
 
                         </div>
                       )}
-{chatbotTab === 'sources' && (
+                      {chatbotTab === 'sources' && (
                         <SourcesDisplay
                           references={futureHouseReferences}
                           isLoading={futureHouseLoading}
@@ -1478,154 +1745,201 @@ const FeatureReview: React.FC = () => {
                 <div className="space-y-8">
                   {/* UI Components Section */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
-                  {tab === 'ui' && (
-                    <div>
-                      {/* Analysis Overview Accordion */}
-                      <div className="mb-8">
-                        <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value="global-design">
-                            <AccordionTrigger className="text-xl font-semibold">
-                              Global Design System
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Logo URL:</b> {mappedAnalysis.global_design_summary?.logoUrl || 'N/A'}</div>
-                                <div><b>Color Palettes:</b> {mappedAnalysis.global_design_summary?.color_palette || 'N/A'}</div>
-                                <div><b>Typography Styles:</b> {mappedAnalysis.global_design_summary?.typographyStyles || 'N/A'}</div>
-                                <div><b>Design Tone:</b> {mappedAnalysis.global_design_summary?.designTone || 'N/A'}</div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="ux-architecture">
-                            <AccordionTrigger className="text-xl font-semibold">
-                              UX Architecture
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Page Flow:</b> {mappedAnalysis.ux_architecture?.page_flow || 'N/A'}</div>
-                                <div><b>Business Context:</b> {mappedAnalysis.ux_architecture?.businessContext || 'N/A'}</div>
-                                <div><b>Target Audience:</b> {mappedAnalysis.ux_architecture?.targetAudience || 'N/A'}</div>
-                                <div><b>User Goals:</b> {mappedAnalysis.ux_architecture?.userGoals || 'N/A'}</div>
-                                <div><b>Responsiveness:</b> {mappedAnalysis.ux_architecture?.responsiveness || 'N/A'}</div>
-                                <div><b>Accessibility Observations:</b> {mappedAnalysis.ux_architecture?.accessibilityObservations || 'N/A'}</div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="business-audience">
-                            <AccordionTrigger className="text-xl font-semibold">
-                              Business & Audience
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><b>Company Name:</b> {mappedAnalysis.business_analysis?.companyName || 'N/A'}</div>
-                                <div><b>Employee Count:</b> {mappedAnalysis.business_analysis?.employeeCount || 'N/A'}</div>
-                                <div><b>Industry:</b> {mappedAnalysis.business_analysis?.industry || 'N/A'}</div>
-                                <div><b>Headquarters Location:</b> {mappedAnalysis.business_analysis?.headquartersLocation || 'N/A'}</div>
-                                <div><b>Founded Year:</b> {mappedAnalysis.business_analysis?.foundedYear || 'N/A'}</div>
-                                <div><b>External Links:</b>
-                                  <div><b>LinkedIn:</b> {mappedAnalysis.business_analysis?.externalLinks?.linkedIn || 'N/A'}</div>
-                                  <div><b>Facebook:</b> {mappedAnalysis.business_analysis?.externalLinks?.facebook || 'N/A'}</div>
-                                  <div><b>Instagram:</b> {mappedAnalysis.business_analysis?.externalLinks?.instagram || 'N/A'}</div>
+                    {tab === 'ui' && (
+                      <div>
+                        {/* Analysis Overview Accordion */}
+                        <div className="mb-8">
+                          <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="global-design">
+                              <AccordionTrigger className="text-xl font-semibold">
+                                Global Design System
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div><b>Logo URL:</b> {mappedAnalysis.global_design_summary?.logoUrl || 'N/A'}</div>
+                                  <div><b>Color Palettes:</b> {mappedAnalysis.global_design_summary?.color_palette || 'N/A'}</div>
+                                  <div><b>Typography Styles:</b> {mappedAnalysis.global_design_summary?.typographyStyles || 'N/A'}</div>
+                                  <div><b>Design Tone:</b> {mappedAnalysis.global_design_summary?.designTone || 'N/A'}</div>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                            <AccordionItem value="ux-architecture">
+                              <AccordionTrigger className="text-xl font-semibold">
+                                UX Architecture
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div><b>Page Flow:</b> {mappedAnalysis.ux_architecture?.page_flow || 'N/A'}</div>
+                                  <div><b>Business Context:</b> {mappedAnalysis.ux_architecture?.businessContext || 'N/A'}</div>
+                                  <div><b>Target Audience:</b> {mappedAnalysis.ux_architecture?.targetAudience || 'N/A'}</div>
+                                  <div><b>User Goals:</b> {mappedAnalysis.ux_architecture?.userGoals || 'N/A'}</div>
+                                  <div><b>Responsiveness:</b> {mappedAnalysis.ux_architecture?.responsiveness || 'N/A'}</div>
+                                  <div><b>Accessibility Observations:</b> {mappedAnalysis.ux_architecture?.accessibilityObservations || 'N/A'}</div>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                            <AccordionItem value="business-audience">
+                              <AccordionTrigger className="text-xl font-semibold">
+                                Business & Audience
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div><b>Company Name:</b> {mappedAnalysis.business_analysis?.companyName || 'N/A'}</div>
+                                  <div><b>Employee Count:</b> {mappedAnalysis.business_analysis?.employeeCount || 'N/A'}</div>
+                                  <div><b>Industry:</b> {mappedAnalysis.business_analysis?.industry || 'N/A'}</div>
+                                  <div><b>Headquarters Location:</b> {mappedAnalysis.business_analysis?.headquartersLocation || 'N/A'}</div>
+                                  <div><b>Founded Year:</b> {mappedAnalysis.business_analysis?.foundedYear || 'N/A'}</div>
+                                  <div><b>External Links:</b>
+                                    <div><b>LinkedIn:</b> {mappedAnalysis.business_analysis?.externalLinks?.linkedIn || 'N/A'}</div>
+                                    <div><b>Facebook:</b> {mappedAnalysis.business_analysis?.externalLinks?.facebook || 'N/A'}</div>
+                                    <div><b>Instagram:</b> {mappedAnalysis.business_analysis?.externalLinks?.instagram || 'N/A'}</div>
+                                  </div>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </div>
+                        {/* Interactive Layout with Feature Cards and Screenshot */}
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                          {/* Feature Cards Column */}
+                          <div className="space-y-4">
+                            <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
+                              <div className="flex justify-center mb-6">
+                                <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+                                  {SUBTABS.map((sub) => {
+                                    const isActive = uiSubTab === sub;
+                                    return (
+                                      <button
+                                        key={sub}
+                                        onClick={() => setUiSubTab(sub as SubTab)}
+                                        className={cn(
+                                          "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
+                                          "text-foreground/80 hover:text-primary",
+                                          isActive && "bg-muted text-primary",
+                                        )}
+                                      >
+                                        {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                                        {isActive && (
+                                          <motion.div
+                                            layoutId="lamp"
+                                            className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
+                                            initial={false}
+                                            transition={{
+                                              type: "spring",
+                                              stiffness: 300,
+                                              damping: 30,
+                                            }}
+                                          >
+                                            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
+                                              <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
+                                              <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
+                                              <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
+                                            </div>
+                                          </motion.div>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      </div>
-                        <Tabs value={uiSubTab} onValueChange={(value) => setUiSubTab(value as SubTab)} className="w-full">
-                        <div className="flex justify-center mb-6">
-                          <div className="flex items-center gap-3 bg-background/5 backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
-                            {SUBTABS.map((sub) => {
-                              const isActive = uiSubTab === sub;
-                              return (
-                                <button
-                                  key={sub}
-                                  onClick={() => setUiSubTab(sub as SubTab)}
-                                  className={cn(
-                                    "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
-                                    "text-foreground/80 hover:text-primary",
-                                    isActive && "bg-muted text-primary",
-                                  )}
-                                >
-                                  {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                                  {isActive && (
-                                    <motion.div
-                                      layoutId="lamp"
-                                      className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
-                                      initial={false}
-                                      transition={{
-                                        type: "spring",
-                                        stiffness: 300,
-                                        damping: 30,
+                              <TabsContent value={uiSubTab} className="mt-4">
+                                <div className="space-y-6">
+                                  {mappedAnalysis.sections?.filter((section: any, idx: number) => {
+                                    const status = componentStatuses[section.name || idx] || 'rejected';
+                                    if (uiSubTab === 'all') return true;
+                                    return status === uiSubTab;
+                                  }).map((section: any, idx: number) => (
+                                    <SocialCard
+                                      key={section.name || idx}
+                                      author={{
+                                        name: section.name,
+                                        username: "",
+                                        avatar: section.cropped_image_url || "https://via.placeholder.com/40",
+                                        timeAgo: ""
                                       }}
+                                      content={{
+                                        text: `${section.purpose || 'UI Component'}`,
+                                        link: {
+                                          title: `${section.elements || 'Component Elements'}`,
+                                          description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                                          icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
+                                        }
+                                      }}
+                                      statusOptions={[...STATUS_OPTIONS]}
+                                      currentStatus={componentStatuses[section.name || idx] || 'rejected'}
+                                      onStatusChange={(status) => handleStatusChange(section, status as Status)}
+                                      // engagement={{
+                                      //   likes: 0,
+                                      //   comments: 0,
+                                      //   shares: 0,
+                                      //   isLiked: false,
+                                      //   isBookmarked: false
+                                      // }}
+                                      className={`mb-4 transition-all duration-200 cursor-pointer ${hoveredFeatureName === section.name ? 'ring-2 ring-blue-500 shadow-lg' : ''
+                                        }`}
+                                      onMouseEnter={() => setHoveredFeature(section.name)}
+                                      onMouseLeave={() => setHoveredFeature(null)}
                                     >
-                                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
-                                        <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
-                                        <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
-                                        <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <TabsContent value={uiSubTab} className="mt-4">
-                        <div className="grid grid-cols-1 gap-8">
-                          {mappedAnalysis.sections?.filter((section: any, idx: number) => {
-                            const status = componentStatuses[section.name || idx] || 'rejected';
-                            if (uiSubTab === 'all') return true;
-                            return status === uiSubTab;
-                          }).map((section: any, idx: number) => (
-                            <SocialCard
-                              key={section.name || idx}
-                              author={{
-                                name: section.name,
-                              }}
-                              content={{
-                                text: `${section.detailedDescription || 'UI Component'}`,
-                                // link: {
-                                //   title: `${section.elements || 'Component Elements'}`,
-                                //   // description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                                //   // icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
-                                // }
-                              }}
-                              statusOptions={[...STATUS_OPTIONS]}
-                              currentStatus={componentStatuses[section.name || idx] || 'rejected'}
-                              onStatusChange={(status) => handleStatusChange(section, status as Status)}
-                              // engagement={{
-                              //   likes: 0,
-                              //   comments: 0,
-                              //   shares: 0,
-                              //   isLiked: false,
-                              //   isBookmarked: false
-                              // }}
-                              className="mb-4"
-                            >
-                              <div className="text-sm text-muted-foreground space-y-1">
-                                {/* <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div> */}
+                                      <div className="text-sm text-muted-foreground space-y-1">
+                                        <div><b>Layouts:</b> {section.style?.layout}</div>
+                                        <div><b>Interactions:</b> {section.style?.interactions}</div>
+                                        <div><b>Mobile:</b> {section.mobile_behavior}</div>
+                                        <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
+                                        {section.bounding_box && (
+                                          <div className="text-xs bg-blue-50 px-2 py-1 rounded mt-2">
+                                            <b>Position:</b> {Math.round(section.bounding_box.x)}%, {Math.round(section.bounding_box.y)}%
+                                            (W: {Math.round(section.bounding_box.width)}%, H: {Math.round(section.bounding_box.height)}%)
+                                          </div>
+                                        )}
 
-                                <div className="flex gap-2 items-center mt-6">
-                                  {STATUS_OPTIONS.map((status) => (
-                                    <Button 
-                                      key={status}
-                                      size="sm"
-                                      variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
-                                      onClick={() => handleStatusChange(section, status)}
-                                    >
-                                      {status === 'rejected' ? 'Reject' : 'Improve'}
-                                    </Button>
+                                        <div className="flex gap-2 items-center mt-6">
+                                          {STATUS_OPTIONS.map((status) => (
+                                            <Button
+                                              key={status}
+                                              size="sm"
+                                              variant={componentStatuses[section.name || idx] === status ? 'default' : 'outline'}
+                                              onClick={() => handleStatusChange(section, status)}
+                                            >
+                                              {status === 'rejected' ? 'Reject' : 'Improve'}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </SocialCard>
                                   ))}
                                 </div>
-                              </div>
-                            </SocialCard>
-                          ))}
+                              </TabsContent>
+                            </Tabs>
                           </div>
-                          </TabsContent>
-                        </Tabs>
+
+                          {/* Interactive Screenshot Column */}
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                              <Camera className="h-5 w-5 text-blue-500" />
+                              Interactive Screenshot
+                            </h3>
+                            {screenshotUrl ? (
+                              <InteractiveScreenshotViewer
+                                key={`screenshot-${analysisUpdateKey}`} // Force re-render on analysis update
+                                screenshotUrl={screenshotUrl}
+                                sections={mappedAnalysis.sections || []}
+                                hoveredFeature={hoveredFeature}
+                                onFeatureHover={setHoveredFeature}
+                                className="sticky top-4"
+                              />
+                            ) : (
+                              <Card className="h-[600px] flex items-center justify-center">
+                                <div className="text-center text-muted-foreground">
+                                  <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                  <p>No screenshot available</p>
+                                  <p className="text-sm">Screenshot will appear here once analysis is complete</p>
+                                </div>
+                              </Card>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                   )}
+                    )}
                   </div>
 
                   {/* Design Recommendations Section */}
@@ -1642,72 +1956,72 @@ const FeatureReview: React.FC = () => {
 
                   {/* AI Recommendations Section */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
-                  {tab === 'ai' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {mappedAnalysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
-                        <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
-                      )}
-                      {mappedAnalysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
-                        <SocialCard
-                          key={section.name || idx}
-                          author={{
-                            name: section.name,
-                            username: "confirmed_component", 
-                            avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                            timeAgo: "confirmed"
-                          }}
-                          content={{
-                            text: `${section.detailedDescription || 'Confirmed UI Component'}`,
-                            link: {
-                              title: `${section.elements || 'Component Elements'}`,
-                              description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                              icon: <LayoutDashboard className="w-5 h-5 text-green-500" />
-                            }
-                          }}
-                          engagement={{
-                            likes: 0,
-                            comments: 0,
-                            shares: 0,
-                            isLiked: false,
-                            isBookmarked: true
-                          }}
-                          className="mb-4"
-                        >
-                          <div className="mt-4 space-y-2">
-                            <Button 
-                              size="sm"
-                              className="mb-3"
-                              onClick={() => handleGetRecommendation(section)}
-                              disabled={recommending}
-                            >
-                              {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                              Get Recommendations
-                            </Button>
-                            <div className="text-sm text-muted-foreground space-y-1">
+                    {tab === 'ai' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {mappedAnalysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').length === 0 && (
+                          <div className="text-muted-foreground">No improved components. Improve a component in the UI Components tab.</div>
+                        )}
+                        {mappedAnalysis.sections?.filter((section: any, idx: number) => componentStatuses[section.name || idx] === 'improved').map((section: any, idx: number) => (
+                          <SocialCard
+                            key={section.name || idx}
+                            author={{
+                              name: section.name,
+                              username: "confirmed_component",
+                              avatar: section.cropped_image_url || "https://via.placeholder.com/40",
+                              timeAgo: "confirmed"
+                            }}
+                            content={{
+                              text: `${section.detailedDescription || 'Confirmed UI Component'}`,
+                              link: {
+                                title: `${section.elements || 'Component Elements'}`,
+                                description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                                icon: <LayoutDashboard className="w-5 h-5 text-green-500" />
+                              }
+                            }}
+                            engagement={{
+                              likes: 0,
+                              comments: 0,
+                              shares: 0,
+                              isLiked: false,
+                              isBookmarked: true
+                            }}
+                            className="mb-4"
+                          >
+                            <div className="mt-4 space-y-2">
+                              <Button
+                                size="sm"
+                                className="mb-3"
+                                onClick={() => handleGetRecommendation(section)}
+                                disabled={recommending}
+                              >
+                                {recommending && selectedSection?.name === section.name ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                                Get Recommendations
+                              </Button>
+                              <div className="text-sm text-muted-foreground space-y-1">
                                 <div><b>Layouts:</b> {section.style?.layout}</div>
                                 <div><b>Interactions:</b> {section.style?.interactions}</div>
                                 <div><b>Mobile:</b> {section.mobile_behavior}</div>
                                 <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
+                              </div>
                             </div>
-                          </div>
-                        </SocialCard>
-                      ))}
-                     </div>
-                   )}
+                          </SocialCard>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Screenshot Section */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
-                  {tab === 'screenshot' && (
-                    <div>
-                      {screenshotUrl && (
-                        <div className="mb-8 text-center">
-                          <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
-                          <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px]" />
-                        </div>
-                      )}
-                     </div>
-                   )}
+                    {tab === 'screenshot' && (
+                      <div>
+                        {screenshotUrl && (
+                          <div className="mb-8 text-center">
+                            <div className="mb-2 text-sm text-muted-foreground">Live Screenshot Taken</div>
+                            <img src={screenshotUrl} alt="Website Screenshot" className="mx-auto rounded shadow max-w-full max-h-[400px]" />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1728,12 +2042,12 @@ const FeatureReview: React.FC = () => {
           </div>
         </SidebarInset>
       </div>
-      
+
       {/* Loading Screen Overlay */}
       {showLoadingScreen && (
         <AnimatedLoadingSkeleton onClose={handleCloseLoadingScreen} />
       )}
-      
+
       {/* Reasoning-Pro Loading Screen */}
       {waitingForWebhook && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
