@@ -623,9 +623,11 @@ def enrich_recommendation(request: EnrichRecommendationRequest):
 class RecommendationPromptCodeRequest(BaseModel):
     featureName: str
     featureDescription: str
+    htmlStructure: str
     latestRecommendation: str
     outputType: Optional[str] = None
     framework: Optional[str] = None
+    language: Optional[str] = None
     platform: Optional[str] = None
 
 class RecommendationPromptCodeResponse(BaseModel):
@@ -697,19 +699,34 @@ def get_prompt_code(request):
     output_prompt= ''
 
     if request.outputType == 'code':
-        output_prompt = (
-            f"Please provide improved frontend code according to the recommendation using {request.framework}. "
-            f"The code should reflect modern, accessible, and visually appealing design best practices."
-            f"The output should include:\n"
-            f"1. The component/page code in {request.framework} (JavaScript, JSX, etc.)\n"
-            f"2. A separate CSS stylesheet or styling block.\n\n"
-            f"---FORMAT---\n"
-            f"---CODE---\n"
-            f"[component code here]\n"
-            f"---STYLE---\n"
-            f"[CSS code here]\n"
-            f"ONLY return the code. No markdown. No file names. No explanations."
-        )
+        if request.framework == 'Vue':
+            output_prompt = (
+                f"Please provide improved frontend code according to the recommendation using Vue in {request.language}.\n"
+                f"The code should reflect modern, accessible, and visually appealing design best practices.\n"
+                f"Return a single .vue file with the component code and a <style> block for CSS inside the file.\n"
+                f"ONLY return the .vue file. No markdown. No file names. No explanations."
+            )
+        elif request.framework == 'Angular':
+            output_prompt = (
+                f"Please provide improved frontend code according to the recommendation using Angular.\n"
+                f"The code should reflect modern, accessible, and visually appealing design best practices.\n"
+                f"Return a single .ts file with the component code, including an inline template and a <style> block or inline styles inside the file.\n"
+                f"ONLY return the .ts file. No markdown. No file names. No explanations."
+            )
+        else:
+            output_prompt = (
+                f"Please provide improved frontend code according to the recommendation using {request.framework} in {request.language}.\n "
+                f"The code should reflect modern, accessible, and visually appealing design best practices."
+                f"The output should include:\n"
+                f"1. The component/page code in {request.framework} using {request.language}\n"
+                f"2. A separate CSS stylesheet or styling block.\n\n"
+                f"---FORMAT---\n"
+                f"---CODE---\n"
+                f"[component code here]\n"
+                f"---STYLE---\n"
+                f"[CSS code here]\n"
+                f"ONLY return the code. No markdown. No file names. No explanations."
+            )
     elif request.outputType == 'prompt':
         output_prompt = (
             f"Write a detailed and effective prompt tailored for {request.platform} that can generate a UI design matching the recommendation.\n"
@@ -721,7 +738,8 @@ def get_prompt_code(request):
         f"You're a senior product designer and frontend engineer. Your task is to improve a UI feature based on a provided expert recommendation.\n"
         f"Given the following UI feature and its improvement recommendation:\n\n"
         f"Feature: {request.featureName}\n"
-        f"Feature description: {request.featureDescription}\n"
+        f"Feature description:\n{request.featureDescription}\n"
+        f"HTML structure:\n{request.htmlStructure}\n\n"
         f"Recommendation:\n{request.latestRecommendation}\n\n"
        )
     
@@ -766,24 +784,28 @@ def get_prompt_code(request):
             
 
             if request.outputType == 'code':
-                for section in sections:
-                    pattern = rf'---{section}---\n(.*?)(?=\n---|$)'
-                    match = re.search(pattern, response_text, re.DOTALL)
-                    if match:
-                        content = match.group(1).strip()
-                    else:
-                        content = "Code generation failed"
-                    result[section.lower()] = encode_code_block(clean_code(content))
-                
-                # Fallback: if we didn't find the expected format, try to extract code blocks
-                if result['code'] == encode_code_block(clean_code("Code generation failed")):
-                    print('[DEBUG] Fallback parsing for code blocks')
-                    code_blocks = re.findall(r'```(?:javascript|vue|typescript|styles|jsx|tsx|ts|js|html|css)\n(.*?)```', response_text, re.DOTALL)
-                    if code_blocks:
-                        result['code'] = encode_code_block(clean_code(code_blocks[0]))
-                        if len(code_blocks) > 1:
-                            result['style'] = encode_code_block(clean_code(code_blocks[1]))
-                        print(f'[DEBUG] Parsing found {len(code_blocks)} code blocks')
+                if request.framework != 'React':
+                    result['code'] = encode_code_block(clean_code(response_text))
+                    result['style'] = "" 
+                else:
+                    for section in sections:
+                        pattern = rf'---{section}---\n(.*?)(?=\n---|$)'
+                        match = re.search(pattern, response_text, re.DOTALL)
+                        if match:
+                            content = match.group(1).strip()
+                        else:
+                            content = "Code generation failed"
+                        result[section.lower()] = encode_code_block(clean_code(content))
+                    
+                    # Fallback: if we didn't find the expected format, try to extract code blocks
+                    if result['code'] == encode_code_block(clean_code("Code generation failed")):
+                        print('[DEBUG] Fallback parsing for code blocks')
+                        code_blocks = re.findall(r'```(?:javascript|vue|typescript|styles|jsx|tsx|ts|js|html|css)\n(.*?)```', response_text, re.DOTALL)
+                        if code_blocks:
+                            result['code'] = encode_code_block(clean_code(code_blocks[0]))
+                            if len(code_blocks) > 1:
+                                result['style'] = encode_code_block(clean_code(code_blocks[1]))
+                            print(f'[DEBUG] Parsing found {len(code_blocks)} code blocks')
                     
             elif request.outputType == 'prompt':
                 result['prompt'] = response_text.strip()
@@ -829,4 +851,4 @@ if __name__ == "__main__":
     print("Starting Main API Server...")
     print("Server will be available at: http://localhost:8000")
     print("API Documentation: http://localhost:8000/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -83,6 +83,7 @@ const FeatureReview: React.FC = () => {
   const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
   const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
   const [currentFeatureDescription, setCurrentFeatureDescription] = useState<string | null>(null);
+  const [currentFeatureHTMLStructure, setCurrentHTMLStructure] = useState<string>('');
   const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
   const [chatHistory, setChatHistory] = useState([]);
   const [loadingText, setLoadingText] = useState('');
@@ -96,19 +97,6 @@ const FeatureReview: React.FC = () => {
   const { toast } = useToast();
   const [activeCodeTab, setActiveCodeTab] = useState<'code' | 'style'>('code');
 
-  /*
-  const [reactCode, setReactCode] = useState('');
-  const [vueCode, setVueCode] = useState('');
-  const [angularCode, setAngularCode] = useState('');
-  const [lovablePrompt, setLovablePrompt] = useState('');
-  const [cursorPrompt, setCursorPrompt] = useState('');
-  const [boltPrompt, setBoltPrompt] = useState('');
-  const [vercelPrompt, setVercelPrompt] = useState('');
-  const [replitPrompt, setReplitPrompt] = useState('');
-  const [magicPrompt, setMagicPrompt] = useState('');
-  const [sitebrewPrompt, setSitebrewPrompt] = useState('');
-  */
-
   const [resultCode, setResultCode] = useState('');
   const [resultStyle, setResultStyle] = useState('');
   const [resultPrompt, setResultPrompt] = useState('');
@@ -116,9 +104,11 @@ const FeatureReview: React.FC = () => {
   const [outputType, setOutputType] = useState<string | null>(null);
   const [OutputTypeSelected, setOutputTypeSelected] = useState(false);
   const [FrameworkType, setFrameworkType] = useState('');
+  const [Language, setLanguage] = useState('');
   const [PlatformType, setPlatformType] = useState('');
 
   const AVAILABLE_FRAMEWORKS = [ 'React', 'Vue', 'Angular' ];
+  const AVAILABLE_LANGUAGES = [ 'JavaScript', 'TypeScript' ];
   const AVAILABLE_PLATFORMS = [ 'Lovable', 'Cursor', 'Bolt', 'Vercel', 'Replit', 'Magic', 'Sitebrew'];
 
   
@@ -493,6 +483,7 @@ const FeatureReview: React.FC = () => {
         const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
         setCurrentChatFeature(featureName);
         setCurrentFeatureDescription(section.detailedDescription || 'No design description available');
+        setCurrentHTMLStructure(section.htmlStructure || '');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
       }, 3000);
     } else {
@@ -573,6 +564,7 @@ const FeatureReview: React.FC = () => {
     }
     if (outputType === 'prompt'){
       setFrameworkType('');
+      setLanguage('');
     } 
     if (outputType === null) {
       setFrameworkType('');
@@ -584,49 +576,13 @@ const FeatureReview: React.FC = () => {
   const [lastOutputType, setLastOutputType] = useState<string | null>(null);
   const [lastFrameworkType, setLastFrameworkType] = useState('');
   const [lastPlatformType, setLastPlatformType] = useState('');
+  const [lastLanguage, setLastLanguage] = useState('');
 
   const handleResetOutput = () => {
     setOutputTypeSelected(false);
   }
   
-  // Effect to fetch code/prompt when needed
-  React.useEffect(() => {
-    if (!OutputTypeSelected || 
-        (outputType === 'code' && !FrameworkType) || 
-        (outputType === 'prompt' && !PlatformType)) {
-      return;
-    }
-    
-    const hasChatResponse = chatHistory.some(msg => !msg.isUser);
-
-    if ( chatHistory.length > 0 && currentChatFeature && currentFeatureDescription&& !isFetching && hasChatResponse ) {
-      const latestResponse = chatHistory.filter(msg => !msg.isUser).pop();
-      const responseContent = latestResponse.text;
-
-      if ( chatHistory.length > lastChatLength ) {
-        if (latestResponse && !processedChatRef.current.has(latestResponse.id)) {
-          if (responseContent !== lastProcessedChatRef.current) {
-            console.log('[DEBUG] Processing new chat response:', latestResponse.id);
-            processedChatRef.current.add(latestResponse.id);
-            lastProcessedChatRef.current = responseContent;
-            fetchCodeAndPrompt(chatHistory);
-          } else {
-            console.log('[DEBUG] Skipping duplicate chat response');
-          }
-        }
-      } else if ( lastOutputType !== outputType || lastFrameworkType !== FrameworkType || lastPlatformType !== PlatformType ){
-        fetchCodeAndPrompt(chatHistory);
-      }
-    }
-  }, [chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription, OutputTypeSelected, outputType, FrameworkType, PlatformType,lastOutputType, lastFrameworkType, lastPlatformType]);
-
-  // Reset processed chat ref when switching features
-  React.useEffect(() => {
-    processedChatRef.current.clear();
-    lastProcessedChatRef.current = '';
-  }, [currentChatFeature]);
-
-  const fetchCodeAndPrompt = async (chatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
+  const fetchCodeAndPrompt = React.useCallback(async (chatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
     if (isFetching) return;
     setIsFetching(true);
 
@@ -638,9 +594,11 @@ const FeatureReview: React.FC = () => {
       const requestBody = {
         featureName: currentChatFeature,
         featureDescription: currentFeatureDescription,
+        htmlStructure: currentFeatureHTMLStructure,
         latestRecommendation: latestRecommendation,
         outputType: outputType,
         framework: FrameworkType,
+        language: Language,
         platform: PlatformType,
       };
       
@@ -676,13 +634,60 @@ const FeatureReview: React.FC = () => {
       setLastChatLength(chatHistory.length);
       setLastOutputType(outputType);
       setLastFrameworkType(FrameworkType);
+      setLastLanguage(Language);
       setLastPlatformType(PlatformType);
       console.log('lastoutput:', outputType);
       console.log('lastframework:', FrameworkType);
       console.log('lastplatform:', PlatformType);
     }
-  };
+  }, [
+    isFetching,
+    currentChatFeature,
+    currentFeatureDescription,
+    currentFeatureHTMLStructure,
+    outputType,
+    FrameworkType,
+    Language,
+    PlatformType
+  ]);
   
+  // Effect to fetch code/prompt when needed
+  React.useEffect(() => {
+    if (!OutputTypeSelected || 
+        (outputType === 'code' && !FrameworkType) || 
+        (outputType === 'prompt' && !PlatformType)) {
+      return;
+    }
+    
+    const hasChatResponse = chatHistory.some(msg => !msg.isUser);
+
+    if ( chatHistory.length > 0 && currentChatFeature && currentFeatureDescription&& !isFetching && hasChatResponse ) {
+      const latestResponse = chatHistory.filter(msg => !msg.isUser).pop();
+      const responseContent = latestResponse.text;
+
+      if ( chatHistory.length > lastChatLength ) {
+        if (latestResponse && !processedChatRef.current.has(latestResponse.id)) {
+          if (responseContent !== lastProcessedChatRef.current) {
+            console.log('[DEBUG] Processing new chat response:', latestResponse.id);
+            processedChatRef.current.add(latestResponse.id);
+            lastProcessedChatRef.current = responseContent;
+            fetchCodeAndPrompt(chatHistory);
+          } else {
+            console.log('[DEBUG] Skipping duplicate chat response');
+          }
+        }
+      } else if ( lastOutputType !== outputType || lastFrameworkType !== FrameworkType || lastPlatformType !== PlatformType || lastLanguage !== Language ) {
+        fetchCodeAndPrompt(chatHistory);
+      }
+    }
+  }, [chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription, OutputTypeSelected, outputType, FrameworkType, PlatformType,lastOutputType, lastFrameworkType, lastPlatformType, lastLanguage, Language,fetchCodeAndPrompt]);
+
+  // Reset processed chat ref when switching features
+  React.useEffect(() => {
+    processedChatRef.current.clear();
+    lastProcessedChatRef.current = '';
+  }, [currentChatFeature]);
+
   const hasCode = Boolean(resultCode)
   const hasStyle = Boolean(resultStyle)
 
@@ -884,8 +889,10 @@ const FeatureReview: React.FC = () => {
                                           onCheckedChange={(checked) => {
                                             if (checked === true) {
                                               setFrameworkType(framework);
+                                              if (framework == 'Angular') setLanguage('');
                                             } else {
-                                              setFrameworkType(null);
+                                              setFrameworkType('');
+                                              setLanguage('');
                                             }
                                           }}
                                           disabled={outputType === 'prompt' as string}
@@ -894,15 +901,36 @@ const FeatureReview: React.FC = () => {
                                       </label>
                                     ))}
                                   </div>
-                                <div className="mt-4 space-y-2">
-                                <Button
-                                    size="sm"
-                                    variant="default"
-                                    className=" shadow-sm px-8"
-                                    
-                                    onClick={() => setOutputTypeSelected(true)}>OK
-                                  </Button>
-                                </div>
+                                  {/* Language selector only for React */}
+                                  {(FrameworkType === 'React' || FrameworkType === 'Vue') && (
+                                    <div className="mt-4">
+                                      <div className="font-medium mb-2 text-lg">Select language:</div>
+                                      <div className="flex gap-4 justify-center">
+                                        {AVAILABLE_LANGUAGES.map((lang) => (
+                                          <label key={lang} className="flex items-center gap-3 cursor-pointer select-none">
+                                            <Checkbox
+                                              checked={Language === lang}
+                                              onCheckedChange={(checked) => {
+                                                if (checked === true) setLanguage(lang);
+                                                else setLanguage('');
+                                              }}
+                                            />
+                                            <span>{lang}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="mt-4 space-y-2">
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      className=" shadow-sm px-8"
+                                      onClick={() => setOutputTypeSelected(true)}
+                                    >
+                                      OK
+                                    </Button>
+                                  </div>
                                 </div>
                               ) : null}
                             </CardContent>
@@ -954,19 +982,39 @@ const FeatureReview: React.FC = () => {
                                       <CodeBlockGroup className="border-border border-b p-4">
                                         <div className="flex items-center gap-2">
                                           <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                                            {activeCodeTab === "code" ? FrameworkType : "CSS"}
+                                            {activeCodeTab === "code" ? (
+                                              FrameworkType === "Vue"
+                                                ? ".vue"
+                                                : FrameworkType === "React"
+                                                  ? Language === "JavaScript"
+                                                    ? ".js"
+                                                    : ".tsx"
+                                                  : FrameworkType === "Angular"
+                                                    ? ".ts"
+                                                    : FrameworkType
+                                            ) : FrameworkType === "Vue" ? ".vue" : ".css"}
                                           </div>
-                                          <span className="text-muted-foreground text-sm">
-                                            {activeCodeTab === "code" ? FrameworkType === "Angular" ? "typescript" : FrameworkType === "React" ? "tsx" : "ts" : "css"}                                            
-                                          </span>
                                         </div>
                                         <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
                                           {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                                         </Button>
                                       </CodeBlockGroup>
                                       <CodeBlockCode 
-                                        code={ activeCodeTab === "code" ? codeSnippets.code : codeSnippets.style }
-                                        language={ activeCodeTab === "code" ? FrameworkType === "Angular" ? "typescript" : FrameworkType === "React" ? "tsx" : FrameworkType.toLowerCase() : "css" }                                        theme="github-light"
+                                        code={activeCodeTab === "code" ? codeSnippets.code : codeSnippets.style}
+                                        language={
+                                          activeCodeTab === "code"
+                                            ? FrameworkType === "Vue"
+                                              ? "vue"
+                                              : FrameworkType === "React"
+                                                ? Language === "JavaScript"
+                                                  ? "js"
+                                                  : "tsx"
+                                                : FrameworkType === "Angular"
+                                                  ? "ts"
+                                                  : FrameworkType.toLowerCase()
+                                            : "css"
+                                        }
+                                        theme="github-light"
                                       />
                                     </CodeBlock>
                                   </div>
@@ -1368,7 +1416,7 @@ const FeatureReview: React.FC = () => {
                     </div>
                   )}
 
-                  {/* AI Recommendations Section */}
+                 {/* AI Recommendations Section */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
                   {tab === 'ai' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1412,8 +1460,7 @@ const FeatureReview: React.FC = () => {
                               Get Recommendations
                             </Button>
                             <div className="text-sm text-muted-foreground space-y-1">
-                              
-                                <div><b>Layouts:</b> {section.style?.layout}</div>
+                              <div><b>Layouts:</b> {section.style?.layout}</div>
                                 <div><b>Interactions:</b> {section.style?.interactions}</div>
                                 <div><b>Mobile:</b> {section.mobile_behavior}</div>
                                 <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
