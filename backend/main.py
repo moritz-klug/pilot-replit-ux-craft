@@ -1111,6 +1111,21 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
     )
 
 
+def build_context(extraction_result, feature_name):
+    feature = next((f for f in extraction_result["websiteFeatures"] if f["featureName"] == feature_name), None)
+    return {
+        "feature": {
+            "featureName": feature.get("featureName"),
+            "detailedDescription": feature.get("detailedDescription"),
+            "htmlStructure": feature.get("htmlStructure"),
+            "cssProperties": feature.get("cssProperties"),
+        },
+        "siteUXArchitecture": extraction_result.get("siteUXArchitecture"),
+        "brandIdentity": extraction_result.get("brandIdentity"),
+        "companyOverview": extraction_result.get("companyOverview"),
+    }
+
+
 # a helper function to turn your references list into a readable string for the LLM
 def format_references_for_prompt(references):
     if not references:
