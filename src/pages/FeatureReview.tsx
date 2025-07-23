@@ -531,7 +531,12 @@ const FeatureReview: React.FC = () => {
         console.log("[DEBUG]: prompt_to_FH", prompt_to_FH);
 
         // 3. Add a loading message for FutureHouse
+        console.log("[DEBUG]: Adding FutureHouse loading message");
         chatbotRef.current?.addBotMessage("FutureHouse is analyzing... (this may take a few minutes)");
+        console.log("[DEBUG]: FutureHouse loading message added");
+
+        // Small delay to ensure message appears
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // 4. Call FutureHouse with the prompt
         setFutureHouseLoading(true);
@@ -546,14 +551,14 @@ const FeatureReview: React.FC = () => {
         setFutureHouseProgress([]);
 
         // 5. Just tell the user FutureHouse is done
-        chatbotRef.current?.updateLastBotMessage("FutureHouse analysis is finished. Summarizing results...");
+        chatbotRef.current?.addBotMessage("FutureHouse analysis is finished. Summarizing results...");
 
         // 6. Call OpenRouter to summarize recommendations
         const summarizeRes = await fetch('http://localhost:8000/openrouter-summarize-recommendations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            recommendations, // should be an array of strings
+            answer: task_response.answer, // should be an array of strings
             context: { featureName, detailedDescription: section.description },
             references: papers // or whatever your references are called
           })
@@ -703,7 +708,7 @@ const FeatureReview: React.FC = () => {
       setResultCode(decodeBase64(data.code) || '');
       setResultStyle(decodeBase64(data.style) || '');
       setResultPrompt(data.prompt || '');
-
+      
     } catch (error) {
       console.error('Error fetching code and prompt:', error);
     } finally {
@@ -1494,7 +1499,7 @@ const FeatureReview: React.FC = () => {
                     </div>
                   )}
 
-                 {/* AI Recommendations Section */}
+                  {/* AI Recommendations Section */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
                   {tab === 'ai' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1538,7 +1543,7 @@ const FeatureReview: React.FC = () => {
                               Get Recommendations
                             </Button>
                             <div className="text-sm text-muted-foreground space-y-1">
-                              <div><b>Layouts:</b> {section.style?.layout}</div>
+                                <div><b>Layouts:</b> {section.style?.layout}</div>
                                 <div><b>Interactions:</b> {section.style?.interactions}</div>
                                 <div><b>Mobile:</b> {section.mobile_behavior}</div>
                                 <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
