@@ -866,12 +866,8 @@ Execute these improvements while preserving all current features and maintaining
         setFutureHouseLoading(false);
         setFutureHouseProgress([]);
 
-        // 5. Update the last bot message with the FutureHouse result
-        chatbotRef.current?.updateLastBotMessage(
-          typeof task_response === 'string'
-            ? task_response
-            : JSON.stringify(task_response, null, 2)
-        );
+        // 5. Just tell the user FutureHouse is done
+        chatbotRef.current?.updateLastBotMessage("FutureHouse analysis is finished. Summarizing results...");
 
         // 6. Call OpenRouter to summarize recommendations
         const summarizeRes = await fetch('http://localhost:8000/openrouter-summarize-recommendations', {
@@ -883,12 +879,10 @@ Execute these improvements while preserving all current features and maintaining
             references: papers // or whatever your references are called
           })
         });
-        const { improvements } = await summarizeRes.json();
+        const { summary_text } = await summarizeRes.json();
 
         // 7. Show the improvements in the chat
-        chatbotRef.current?.addBotMessage(
-          Array.isArray(improvements) ? improvements.join('\n') : improvements
-        );
+        chatbotRef.current?.addBotMessage(summary_text);
       }, 3000);
     } else {
       setComponentStatuses(prev => ({ ...prev, [section.name || section.id]: status }));
