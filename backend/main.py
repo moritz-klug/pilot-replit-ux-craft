@@ -13,7 +13,7 @@ import base64
 import uuid
 from fastapi.staticfiles import StaticFiles
 import glob
-from typing import List
+from typing import List, Dict, Any
 import openai
 import re
 
@@ -1245,6 +1245,78 @@ def extract_papers_from_formatted_answer(formatted_answer):
         })
     return papers
 
+
+class SummarizeRecommendationsRequest(BaseModel):
+    recommendations: List[str] = []    # or str if you want to accept a single string
+    references: List[Dict[str, Any]] = []
+    context: dict = None          # optional, e.g., feature name, section, etc.
+
+class SummarizeRecommendationsResponse(BaseModel):
+    # improvements: str = ""     # or str, or dict, depending on your needs
+    raw_openrouter_response: dict
+
+
+@app.post("/openrouter-summarize-recommendations", response_model=SummarizeRecommendationsResponse)
+def openrouter_summarize_recommendations(request: SummarizeRecommendationsRequest):
+    """
+    Accepts recommendations from FutureHouse, sends them to OpenRouter to summarize and turn into actionable improvements.
+    """
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set.")
+
+    references_str = format_references_for_prompt(request.references)
+    print(f"[DEBUG]: references_str: {references_str}")
+
+    # Compose the prompt for OpenRouter
+    prompt = (
+        f"Summarize this research result from FutureHouse API but keep the reference when display UI/UX improvement user can take actions on considering the context. "
+        f"Context: {json.dumps(request.context) if request.context else ''}\n\n"
+        f"Recommendations:\n"
+        f"{request.recommendations}"
+        f"References:\n"
+        f"{request.references}"
+    )
+
+    print(f"[DEBUG]: prompt: {prompt}")
+
+    data = {
+        "model": "anthropic/claude-3.5-sonnet",  # or your preferred model
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.3,
+        "max_tokens": 1000,
+    }
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
+    result = resp.json()
+    summary_text = result["choices"][0]["message"]["content"].strip()
+    print(f"[DEBUG]: summary_text: {summary_text}")
+
+    # Optionally, split into a list if you want structured output
+    # improvements = [line.lstrip("-•* ").strip() for line in summary_text.split("\n") if line.strip()]
+
+    return SummarizeRecommendationsResponse(
+        # improvements=improvements,
+        raw_openrouter_response=result
+    )
+
+
+# a helper function to turn your references list into a readable string for the LLM
+def format_references_for_prompt(references):
+    if not references:
+        return ""
+    lines = []
+    for ref in references:
+        # Example: 1. Online Lead Generation in B2B Marketing... (2020) by unknownauthors2020onlineleadgeneration, pages 101-104
+        line = f"{ref.get('number', '')}. {ref.get('title', '')} ({ref.get('authors', '')}, pages {ref.get('pages', '')})"
+        lines.append(line)
+    return "\n".join(lines)
 
 if __name__ == "__main__":
     import uvicorn
