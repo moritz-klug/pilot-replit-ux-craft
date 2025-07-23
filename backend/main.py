@@ -720,7 +720,7 @@ def get_prompt_code(request):
         f"Feature description:\n{request.featureDescription}\n"
         f"HTML structure:\n{request.htmlStructure}\n\n"
         f"Recommendation:\n{request.latestRecommendation}\n\n"
-       )
+    )
     
     try:
         data = {
@@ -742,14 +742,14 @@ def get_prompt_code(request):
         
         print(f'[DEBUG] Requesting code and prompt for {request.featureName}')
         resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
-
+        
         if resp.status_code != 200:
             print('[ERROR] OpenRouter error:', resp.text)
             raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
             
         results = resp.json()
         response_text = results['choices'][0]['message']['content']
-
+        
         try:
             sections = ['CODE', 'STYLE']
             result = {}
@@ -921,7 +921,7 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
     result = resp.json()
     openrouter_prompt = result['choices'][0]['message']['content'].strip()
     print(f"DEBUG: openrouter_prompt: {openrouter_prompt}")
-
+    
     # Find the first occurrence of "provide" (case-insensitive) and extract everything after it
     match = re.search(r"Research request:\s*(Provide.*)", openrouter_prompt, re.IGNORECASE | re.DOTALL)
     if match:
@@ -1041,7 +1041,7 @@ def futurehouse_research_prompt_direct(data: dict = Body(...)):
     try:
         task_response = client.run_tasks_until_done(task_data)
         print("[DEBUG]: Raw FutureHouse API response:", task_response)
-        
+
         # Safely extract answer and formatted_answer from task_response
         if (
             not task_response
@@ -1116,7 +1116,7 @@ def extract_papers_from_formatted_answer(formatted_answer):
 
 
 class SummarizeRecommendationsRequest(BaseModel):
-    recommendations: List[str] = []    # or str if you want to accept a single string
+    answer: str = ""    # The answer from task_response
     references: List[Dict[str, Any]] = []
     context: dict = None          # optional, e.g., feature name, section, etc.
 
@@ -1138,23 +1138,61 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
 
     # Compose the prompt for OpenRouter
     prompt = (
-        f"Summarize this research result from FutureHouse API but keep the reference when display UI/UX improvement user can take actions on considering the context. "
+        f"Using the FutureHouse research findings below, analyze the following website section and generate a comprehensive UI/UX improvement strategy:\n\n"
+        f"[FutureHouse Research Analysis]\n"
+        f"{request.answer}\n\n"
+        f"[Website Section Analysis]\n"
         f"Context: {json.dumps(request.context) if request.context else ''}\n\n"
-        f"Recommendations:\n"
-        f"{request.recommendations}"
+        f"Required Output Format:\n"
+        f"Title: \"Strategic UI/UX Improvements for [Website/Company Name]'s [Section Name]\"\n\n"
+        f"1. Research Summary (Single Paragraph):\n"
+        f"Extract and synthesize from FutureHouse research:\n"
+        f"- Primary research scope\n"
+        f"- Key quantitative findings\n"
+        f"- Critical design principles\n"
+        f"- Performance impact statistics\n"
+        f"- User behavior patterns\n"
+        f"- Technical optimization results\n\n"
+        f"2. Key Improvement Categories:\n"
+        f"[Extract categories directly from FutureHouse research findings]\n"
+        f"For each identified category from the research, provide:\n"
+        f"A. Problem Definition\n"
+        f"- Research-backed issue identification\n"
+        f"- Quantified impact metrics\n"
+        f"- Current performance gaps\n"
+        f"- User behavior data\n"
+        f"B. Strategic Solution\n"
+        f"- Evidence-based recommendations\n"
+        f"- Design specifications aligned with research\n"
+        f"- Implementation considerations:\n"
+        f"   * Desktop optimization\n"
+        f"   * Mobile adaptation\n"
+        f"   * Accessibility requirements\n"
+        f"- Expected outcomes based on research metrics\n\n"
+        f"3. Implementation Roadmap:\n"
+        f"Prioritize based on research impact metrics:\n"
+        f"- High impact items (>X% improvement in research)\n"
+        f"- Medium impact items (Y-X% improvement)\n"
+        f"- Foundation items (required for other improvements)\n\n"
+        f"4. Next Steps:\n"
+        f"Generate component list based on research priorities:\n"
+        f"- [ ] [Component 1] (Impact: XX% from research)\n"
+        f"- [ ] [Component 2] (Impact: YY% from research)\n"
+        f"- [ ] [Component 3] (Impact: ZZ% from research)\n\n"
+        f"Note: Each component's detailed technical implementation is available upon request.\n\n"
         f"References:\n"
-        f"{request.references}"
+        f"{references_str}"
     )
 
     print(f"[DEBUG]: prompt: {prompt}")
 
     data = {
-        "model": "anthropic/claude-3.5-sonnet",  # or your preferred model
+        "model": "anthropic/claude-3.7-sonnet:thinking",  # or your preferred model
         "messages": [
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 1000,
+        "max_tokens": 4000,
     }
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -1211,4 +1249,4 @@ if __name__ == "__main__":
     print("Starting Main API Server...")
     print("Server will be available at: http://localhost:8000")
     print("API Documentation: http://localhost:8000/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000) 
