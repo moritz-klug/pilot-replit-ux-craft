@@ -1720,15 +1720,6 @@ Execute these improvements while preserving all current features and maintaining
           </div>
         </div>
       )}
-      {futureHouseLoading && (
-        <div className="mt-4 p-4 bg-muted rounded-lg">
-          <div className="font-semibold mb-2">FutureHouse Analysis Progress</div>
-          <div className="space-y-1 text-sm">
-            {futureHouseProgress.map((msg, i) => <div key={i}>{msg}</div>)}
-            <div className="animate-pulse text-primary">Analyzing... (this may take a few minutes)</div>
-          </div>
-        </div>
-      )}
     </SidebarProvider>
   )
 }
