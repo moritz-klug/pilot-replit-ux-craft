@@ -13,7 +13,7 @@ import base64
 import uuid
 from fastapi.staticfiles import StaticFiles
 import glob
-from typing import List, Dict, Any
+from typing import List, Optional, Dict, Any
 import openai
 import re
 
@@ -223,7 +223,7 @@ def get_recommendations(request: RecommendationRequest):
 
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', 'sk-...')  # Replace with your key or .env
 OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-OPENROUTER_MODEL = 'mistralai/mistral-small-3.1-24b-instruct:free'  # Can be changed
+OPENROUTER_MODEL = 'mistralai/mistral-small-3.1-24b-instruct'  # Can be changed
 CROPS_DIR = os.path.join(os.path.dirname(__file__), 'section_crops')
 os.makedirs(CROPS_DIR, exist_ok=True)
 
@@ -601,25 +601,28 @@ def enrich_recommendation(request: EnrichRecommendationRequest):
 
 class RecommendationPromptCodeRequest(BaseModel):
     featureName: str
-    currentDesign: str
+    featureDescription: str
+    htmlStructure: str
     latestRecommendation: str
+    outputType: Optional[str] = None
+    framework: Optional[str] = None
+    language: Optional[str] = None
+    platform: Optional[str] = None
 
 class RecommendationPromptCodeResponse(BaseModel):
-    lovable_prompt: str
-    cursor_prompt: str
-    bolt_prompt: str
-    vercel_prompt: str
-    replit_prompt: str
-    magic_prompt: str
-    sitebrew_prompt: str
-    react_code: str  
-    vue_code: str    
-    angular_code: str 
+    prompt: Optional[str] = None
+    code: Optional[str] = None
+    style: Optional[str] = None
 
 def encode_code_block(code: str) -> str:
     if not code:
         return ""
     return base64.b64encode(code.encode('utf-8')).decode('utf-8')
+
+def decode_code_block(encoded_code: str) -> str:
+    if not encoded_code:
+        return ""
+    return base64.b64decode(encoded_code.encode('utf-8')).decode('utf-8')
 
 import time
 
@@ -632,59 +635,104 @@ def retry_get_prompt_code(requests_llm, retry_error, max_retries=3, delay=1.0):
     return result
 
 def has_error(result):
-    errors = {"Could not generate prompt", "Could not generate code"}
-    return any(value in errors for value in result.values())
+    if not result or not isinstance(result, dict):
+        print(f'[DEBUG] has_error: result is not a dict or is None')
+        return True
+    
+    processed_values = {}
+
+    for key in result:
+        old_value = result[key]
+        new_value = ""
+        code_key = {'code', 'style'}
+        if key in code_key:
+            try:
+                new_value = decode_code_block(old_value)
+            except Exception as e:
+                print(f"[DEBUG] Failed to decode '{key}': {e}")
+                new_value = "" 
+        else:
+            new_value = old_value
+        processed_values[key] = new_value
+
+    values = list(processed_values.values())
+
+    # Check for error messages in values
+    errors = {"Could not generate prompt", "Could not generate code", "Code generation failed"}
+    has_error_messages = any(error in str(v) for v in values for error in errors)
+
+    # Check if all values are empty
+    empty = all(not v or v == '' for v in processed_values)
+    
+    return has_error_messages or empty
 
 def get_prompt_code(request):
-    prompt = (
-        f"Feature: {request.featureName}\n"
-        f"Latest recommendation:\n{request.latestRecommendation}\n\n"
-        f"Generate platform-specific prompts and code:\n\n"
-        f"1. React component (TypeScript + styles)\n"
-        f"2. Vue 3 component (Composition API + styles)\n"
-        f"3. Angular component (TypeScript + styles)\n"
-        f"4. Lovable prompt: Optimized for Lovable AI with UX focus\n"
-        f"5. Cursor prompt: For Cursor IDE with technical details\n"
-        f"6. Bolt prompt: For Bolt.new with design trends\n"
-        f"7. Vercel prompt: For v0 with production focus\n"
-        f"8. Replit prompt: For Replit with documentation\n"
-        f"9. Magic prompt: For Magic Patterns with advanced UI\n"
-        f"10. Sitebrew prompt: For sitebrew.ai with enterprise focus\n\n"
-        f"Return ONLY code without markdown or file names.\n\n"
-        f"Format:\n"
-        f"---REACT---\n"
-        f"[React code]\n"
-        f"---VUE---\n"
-        f"[Vue code]\n"
-        f"---ANGULAR---\n"
-        f"[Angular code]\n"
-        f"---LOVABLE---\n"
-        f"[Lovable prompt]\n"
-        f"---CURSOR---\n"
-        f"[Cursor prompt]\n"
-        f"---BOLT---\n"
-        f"[Bolt prompt]\n"
-        f"---VERCEL---\n"
-        f"[Vercel prompt]\n"
-        f"---REPLIT---\n"
-        f"[Replit prompt]\n"
-        f"---MAGIC---\n"
-        f"[Magic prompt]\n"
-        f"---SITEBREW---\n"
-        f"[Sitebrew prompt]\n"
-        f"---END---\n"
+
+    if not (request.outputType and ((request.outputType == 'code' and request.framework) or (request.outputType == 'prompt' and request.platform))):
+        return {
+            'prompt': '',
+            'code': '',
+            'style': '',
+        }
+
+    output_prompt= ''
+
+    if request.outputType == 'code':
+        if request.framework == 'Vue':
+            output_prompt = (
+                f"Please provide improved frontend code according to the recommendation using Vue in {request.language}.\n"
+                f"The code should reflect modern, accessible, and visually appealing design best practices.\n"
+                f"Return a single .vue file with the component code and a <style> block for CSS inside the file.\n"
+                f"ONLY return the .vue file. No markdown. No file names. No explanations."
+            )
+        elif request.framework == 'Angular':
+            output_prompt = (
+                f"Please provide improved frontend code according to the recommendation using Angular.\n"
+                f"The code should reflect modern, accessible, and visually appealing design best practices.\n"
+                f"Return a single .ts file with the component code, including an inline template and a <style> block or inline styles inside the file.\n"
+                f"ONLY return the .ts file. No markdown. No file names. No explanations."
+            )
+        else:
+            output_prompt = (
+                f"Please provide improved frontend code according to the recommendation using {request.framework} in {request.language}.\n "
+                f"The code should reflect modern, accessible, and visually appealing design best practices."
+                f"The output should include:\n"
+                f"1. The component/page code in {request.framework} using {request.language}\n"
+                f"2. A separate CSS stylesheet or styling block.\n\n"
+                f"---FORMAT---\n"
+                f"---CODE---\n"
+                f"[component code here]\n"
+                f"---STYLE---\n"
+                f"[CSS code here]\n"
+                f"ONLY return the code. No markdown. No file names. No explanations."
+            )
+    elif request.outputType == 'prompt':
+        output_prompt = (
+            f"Write a detailed and effective prompt tailored for {request.platform} that can generate a UI design matching the recommendation.\n"
+            f"The design should be clean, user-friendly, and visually appealing, reflecting the core purpose of the original feature\n\n"
+            f"Return ONLY the prompt. No markdown. No file names. No extra text\n\n"
     )
+
+    prompt = (
+        f"You're a senior product designer and frontend engineer. Your task is to improve a UI feature based on a provided expert recommendation.\n"
+        f"Given the following UI feature and its improvement recommendation:\n\n"
+        f"Feature: {request.featureName}\n"
+        f"Feature description:\n{request.featureDescription}\n"
+        f"HTML structure:\n{request.htmlStructure}\n\n"
+        f"Recommendation:\n{request.latestRecommendation}\n\n"
+       )
+    
     try:
         data = {
             'model': OPENROUTER_MODEL,
             'messages': [
                 {
                     "role": "user",
-                    "content": prompt
+                    "content": prompt + output_prompt
                 },
             ],
             'temperature': 0.7,
-            'max_tokens': 8000
+            'max_tokens': 2000
         }
         
         headers = {
@@ -694,23 +742,17 @@ def get_prompt_code(request):
         
         print(f'[DEBUG] Requesting code and prompt for {request.featureName}')
         resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
-        
+
         if resp.status_code != 200:
             print('[ERROR] OpenRouter error:', resp.text)
             raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
             
         results = resp.json()
         response_text = results['choices'][0]['message']['content']
-        
+
         try:
-            sections = ['LOVABLE', 'CURSOR', 'BOLT', 'VERCEL', 'REPLIT', 'MAGIC', 'SITEBREW', 'REACT', 'VUE', 'ANGULAR']
+            sections = ['CODE', 'STYLE']
             result = {}
-            
-            for i, section in enumerate(sections):
-                pattern = rf'---{section}---\n(.*?)\n---(?!{section})'
-                match = re.search(pattern, response_text, re.DOTALL)
-                content = match.group(1).strip() if match else ("Could not generate prompt" if i < 7 else "Could not generate code")
-                result[section.lower() + ('_prompt' if i < 7 else '_code')] = content
             
             def clean_code(code: str) -> str:
                 code = re.sub(r'```[a-zA-Z]*\s*\n?|```[a-zA-Z]*$|```', '', code)
@@ -719,27 +761,44 @@ def get_prompt_code(request):
                 code = re.sub(r'^(vue|tsx|ts|jsx|js|css|html)\s*$', '', code, flags=re.MULTILINE)
                 return '\n'.join(line for line in code.split('\n') if line.strip()).strip()
             
-            for framework_code in ['react_code', 'vue_code', 'angular_code']:
-                result[framework_code] = encode_code_block(clean_code(result[framework_code]))
-            
-            # Just to check if a code or prompt could not be extracted
-            has_error = any(
-                value in ['Could not generate prompt', 'Could not generate code']
-                for value in result.values()
-            )
-            if has_error:
-                print('[DEBUG] LLM response received with errors' )
+
+            if request.outputType == 'code':
+                if request.framework != 'React':
+                    result['code'] = encode_code_block(clean_code(response_text))
+                    result['style'] = "" 
+                else:
+                    for section in sections:
+                        pattern = rf'---{section}---\n(.*?)(?=\n---|$)'
+                        match = re.search(pattern, response_text, re.DOTALL)
+                        if match:
+                            content = match.group(1).strip()
+                        else:
+                            content = "Code generation failed"
+                        result[section.lower()] = encode_code_block(clean_code(content))
+                    
+                    # Fallback: if we didn't find the expected format, try to extract code blocks
+                    if result['code'] == encode_code_block(clean_code("Code generation failed")):
+                        print('[DEBUG] Fallback parsing for code blocks')
+                        code_blocks = re.findall(r'```(?:javascript|vue|typescript|styles|jsx|tsx|ts|js|html|css)\n(.*?)```', response_text, re.DOTALL)
+                        if code_blocks:
+                            result['code'] = encode_code_block(clean_code(code_blocks[0]))
+                            if len(code_blocks) > 1:
+                                result['style'] = encode_code_block(clean_code(code_blocks[1]))
+                            print(f'[DEBUG] Parsing found {len(code_blocks)} code blocks')
+                    
+            elif request.outputType == 'prompt':
+                result['prompt'] = response_text.strip()
 
             return result
                 
         except Exception as e:
             print(f"[ERROR] Failed to parse response sections: {e}")
             print(f"[ERROR] Response text: {results}")
-            error_result = {}
-            for platform in ['lovable', 'cursor', 'bolt', 'vercel', 'replit', 'magic', 'sitebrew']:
-                error_result[f"{platform}_prompt"] = "Could not generate prompt"
-            for framework in ['react', 'vue', 'angular']:
-                error_result[f"{framework}_code"] = encode_code_block("Could not generate code")
+            error_result = {
+                'prompt': '',
+                'code': '',
+                'style': ''
+            }
             return error_result
     
     except Exception as e:
@@ -749,6 +808,7 @@ def get_prompt_code(request):
 
 
 
+# FutureHouse API
 
 @app.post("/recommendation-prompt-code", response_model=RecommendationPromptCodeResponse)
 def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
@@ -760,10 +820,12 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
     
     result = retry_get_prompt_code(request_llm, has_error, max_retries=3, delay=1.0)
 
-    if has_error(result):
-        print(f"[ERROR] Failed to generate prompt and code: {result}")
-
-    return RecommendationPromptCodeResponse(**result)
+    # Ensure result is a proper dictionary with string keys
+    if isinstance(result, dict):
+        return RecommendationPromptCodeResponse(**result)
+    else:
+        # Fallback if result is not a dict
+        return RecommendationPromptCodeResponse(prompt="", code="", style="")
 
 
 mock_extraction_result = {
@@ -1145,4 +1207,4 @@ if __name__ == "__main__":
     print("Starting Main API Server...")
     print("Server will be available at: http://localhost:8000")
     print("API Documentation: http://localhost:8000/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000)

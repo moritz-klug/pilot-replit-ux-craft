@@ -21,6 +21,9 @@ import { cn } from '../lib/utils';
 import AnimatedLoadingSkeleton from '../components/ui/animated-loading-skeleton';
 import FeatureChatbot from '../components/FeatureChatbot';
 
+import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group';
+import { Checkbox } from '../components/ui/checkbox';
+
 const DEMO_MODE = false;
 const SCREENSHOT_API_BASE = 'http://localhost:8001';
 const MAIN_API_BASE = 'http://localhost:8000';
@@ -100,11 +103,16 @@ const FeatureReview: React.FC = () => {
   const [activeChatbots, setActiveChatbots] = useState<Record<string, boolean>>({});
   const [currentChatFeature, setCurrentChatFeature] = useState<string | null>(null);
   const [currentFeatureDescription, setCurrentFeatureDescription] = useState<string | null>(null);
+  const [currentFeatureHTMLStructure, setCurrentHTMLStructure] = useState<string>('');
   const [chatbotTab, setChatbotTab] = useState<ChatbotTab>('mockups');
   const [chatHistory, setChatHistory] = useState([]);
   const [loadingText, setLoadingText] = useState('');
   const [waitingForWebhook, setWaitingForWebhook] = useState(false);
   const chatbotRef = useRef<any>(null);
+
+  // FutureHouse API State
+  const [futureHouseLoading, setFutureHouseLoading] = useState(false);
+  const [futureHouseProgress, setFutureHouseProgress] = useState<string[]>([]);
   
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -112,362 +120,32 @@ const FeatureReview: React.FC = () => {
   const [codeCopied, setCodeCopied] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
   const { toast } = useToast();
+  const [activeCodeTab, setActiveCodeTab] = useState<'code' | 'style'>('code');
 
-  const [reactCode, setReactCode] = useState('');
-  const [vueCode, setVueCode] = useState('');
-  const [angularCode, setAngularCode] = useState('');
-  const [lovablePrompt, setLovablePrompt] = useState('');
-  const [cursorPrompt, setCursorPrompt] = useState('');
-  const [boltPrompt, setBoltPrompt] = useState('');
-  const [vercelPrompt, setVercelPrompt] = useState('');
-  const [replitPrompt, setReplitPrompt] = useState('');
-  const [magicPrompt, setMagicPrompt] = useState('');
-  const [sitebrewPrompt, setSitebrewPrompt] = useState('');
+  const [resultCode, setResultCode] = useState('');
+  const [resultStyle, setResultStyle] = useState('');
+  const [resultPrompt, setResultPrompt] = useState('');
 
-  const [futureHouseLoading, setFutureHouseLoading] = useState(false);
-  const [futureHouseProgress, setFutureHouseProgress] = useState<string[]>([]);
+  const [outputType, setOutputType] = useState<string | null>(null);
+  const [OutputTypeSelected, setOutputTypeSelected] = useState(false);
+  const [FrameworkType, setFrameworkType] = useState('');
+  const [Language, setLanguage] = useState('');
+  const [PlatformType, setPlatformType] = useState('');
 
+  const AVAILABLE_FRAMEWORKS = [ 'React', 'Vue', 'Angular' ];
+  const AVAILABLE_LANGUAGES = [ 'JavaScript', 'TypeScript' ];
+  const AVAILABLE_PLATFORMS = [ 'Lovable', 'Cursor', 'Bolt', 'Vercel', 'Replit', 'Magic', 'Sitebrew'];
+
+  
   // Code snippets from Results page
   const codeSnippets = {
-    react: reactCode ||`import React from 'react';
-
-const ImprovedComponent = () => {
-  return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">
-        Improved UX Component
-      </h1>
-      <p className="text-gray-600">
-        This component implements science-based UX improvements
-        for better user experience and accessibility.
-      </p>
-    </div>
-  );
+    code: resultCode ||`Your code will show here`,
+    style: resultStyle || `Your CSS styles will show here`
 };
 
-export default ImprovedComponent;`,
-    vue: vueCode || `<template>
-  <div class="container mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-4">
-      Improved UX Component
-    </h1>
-    <p class="text-gray-600">
-      This component implements science-based UX improvements
-      for better user experience and accessibility.
-    </p>
-  </div>
-</template>
+  const platformPrompts = resultPrompt || `Your prompt will show here`;
 
-<script>
-export default {
-  name: 'ImprovedComponent'
-}
-</script>`,
-    angular: angularCode || `import { Component } from '@angular/core';
-
-@Component({
-  selector: 'app-improved-component',
-  template: \`
-    <div class="container mx-auto p-6">
-      <h1 class="text-2xl font-bold mb-4">
-        Improved UX Component
-      </h1>
-      <p class="text-gray-600">
-        This component implements science-based UX improvements
-        for better user experience and accessibility.
-      </p>
-    </div>
-  \`
-})
-export class ImprovedComponent { }`
-  };
-
-  const platformPrompts = {
-    lovable: lovablePrompt || `Please implement the following science-based UX improvements for my application:
-
-1. **Visual Hierarchy**: Improve the visual hierarchy by adjusting font sizes, spacing, and color contrast to guide user attention effectively.
-
-2. **Accessibility Enhancements**: Ensure all interactive elements are keyboard accessible and have proper ARIA labels for screen readers.
-
-3. **Loading States**: Add skeleton loaders and progress indicators to provide feedback during data loading.
-
-4. **Error Handling**: Implement user-friendly error messages with clear action steps for recovery.
-
-5. **Responsive Design**: Optimize the layout for mobile devices with appropriate touch targets and spacing.
-
-6. **Micro-interactions**: Add subtle animations and hover effects to provide visual feedback for user actions.
-
-Please apply these improvements while maintaining the existing functionality and ensuring the code follows best practices for React and TypeScript.`,
-    cursor: cursorPrompt || `// UX Improvement Instructions for Cursor AI IDE
-
-Implement the following science-based UX improvements:
-
-1. **Visual Hierarchy Enhancement**
-   - Adjust font sizes, spacing, and color contrast
-   - Guide user attention effectively through the interface
-   - Use consistent typography scales
-
-2. **Accessibility Standards**
-   - Ensure keyboard navigation for all interactive elements
-   - Add proper ARIA labels for screen readers
-   - Maintain WCAG 2.1 AA compliance
-
-3. **Loading States & Feedback**
-   - Implement skeleton loaders for content loading
-   - Add progress indicators for long-running operations
-   - Provide immediate feedback for user actions
-
-4. **Error Handling & Recovery**
-   - Create user-friendly error messages
-   - Provide clear action steps for error recovery
-   - Implement graceful error boundaries
-
-5. **Responsive Design Optimization**
-   - Optimize layouts for mobile devices
-   - Ensure appropriate touch targets (minimum 44px)
-   - Test across different screen sizes
-
-6. **Micro-interactions**
-   - Add subtle animations for state changes
-   - Implement hover effects for interactive elements
-   - Use CSS transitions for smooth interactions
-
-Focus on maintainable code with proper TypeScript types and component composition.`,
-    bolt: boltPrompt || `## UX Enhancement Request for Bolt.new
-
-Create an improved version of the current component with these evidence-based UX enhancements:
-
-### 🎯 **Visual Hierarchy**
-- Implement consistent typography scale (h1-h6, body text)
-- Improve spacing using 8px grid system
-- Enhance color contrast for better readability
-- Use visual weight to guide user attention
-
-### ♿ **Accessibility Improvements**
-- Add semantic HTML structure
-- Implement keyboard navigation support
-- Include ARIA labels and descriptions
-- Ensure color contrast meets WCAG guidelines
-
-### ⏳ **Loading & Feedback States**
-- Add skeleton loading components
-- Implement progress indicators
-- Show immediate feedback for user actions
-- Handle empty and error states gracefully
-
-### 🔧 **Error Handling**
-- Create informative error messages
-- Provide recovery action suggestions
-- Implement error boundaries
-- Add form validation feedback
-
-### 📱 **Mobile Responsiveness**
-- Optimize touch targets (min 44px)
-- Implement mobile-first responsive design
-- Test across device breakpoints
-- Ensure gesture support where appropriate
-
-### ✨ **Micro-interactions**
-- Add smooth transitions and animations
-- Implement hover and focus states
-- Use CSS transforms for performance
-- Create delightful interaction feedback
-
-Please maintain existing functionality while applying these improvements using modern React patterns and TypeScript.`,
-    vercel: vercelPrompt || `# UX Improvement Specification for v0
-
-Transform the current interface with science-backed UX enhancements:
-
-## Visual Design System
-- **Typography**: Implement consistent type scale with proper hierarchy
-- **Spacing**: Use systematic spacing (4px, 8px, 16px, 24px, 32px)
-- **Color**: Ensure AAA contrast ratios for text
-- **Layout**: Apply consistent grid system
-
-## Accessibility Foundation
-- **Semantic HTML**: Use proper heading structure and landmarks
-- **Keyboard Navigation**: Support tab order and focus management  
-- **Screen Readers**: Add descriptive ARIA labels and live regions
-- **Color Independence**: Don't rely solely on color for meaning
-
-## Performance & Feedback
-- **Loading States**: Implement skeleton screens and spinners
-- **Progress Indicators**: Show completion status for multi-step processes
-- **Immediate Feedback**: Acknowledge user actions instantly
-- **Error Recovery**: Provide clear paths to resolve issues
-
-## Mobile Experience
-- **Touch Targets**: Minimum 44px tap areas
-- **Responsive Layout**: Mobile-first responsive design
-- **Gesture Support**: Swipe, pinch, and scroll interactions
-- **Safe Areas**: Respect device-specific UI boundaries
-
-## Interactive Polish
-- **Transitions**: Smooth 200-300ms animations
-- **Hover States**: Clear interactive element feedback
-- **Focus Indicators**: Visible focus rings for accessibility
-- **State Changes**: Animated transitions between states
-
-Generate clean, performant React components with TypeScript support and modern CSS practices.`,
-    replit: replitPrompt || `"""
-UX Enhancement Script for Replit
-
-Improve the current component with research-backed UX principles
-"""
-
-# UX IMPROVEMENT CHECKLIST
-
-## 1. VISUAL HIERARCHY
-- [ ] Implement consistent typography scale
-- [ ] Apply proper spacing system (8px baseline)
-- [ ] Enhance color contrast ratios
-- [ ] Create clear information architecture
-
-## 2. ACCESSIBILITY COMPLIANCE
-- [ ] Add semantic HTML structure
-- [ ] Implement keyboard navigation
-- [ ] Include ARIA attributes
-- [ ] Test with screen reader compatibility
-
-## 3. USER FEEDBACK SYSTEMS
-- [ ] Add loading states for async operations
-- [ ] Implement progress indicators
-- [ ] Create informative error messages
-- [ ] Show success confirmations
-
-## 4. RESPONSIVE BEHAVIOR
-- [ ] Mobile-first responsive design
-- [ ] Touch-friendly interface elements
-- [ ] Appropriate breakpoint handling
-- [ ] Cross-device testing
-
-## 5. INTERACTION DESIGN
-- [ ] Smooth animations and transitions
-- [ ] Clear hover and focus states
-- [ ] Intuitive micro-interactions
-- [ ] Consistent interaction patterns
-
-## IMPLEMENTATION NOTES:
-- Use React functional components with hooks
-- Apply TypeScript for type safety
-- Follow modern CSS practices
-- Maintain existing functionality
-- Test across different screen sizes
-- Ensure backward compatibility
-
-Execute these improvements while preserving all current features and maintaining code quality standards.`,
-    magic: magicPrompt || `{
-  "ux_improvement_request": {
-    "target": "Enhanced User Experience Implementation",
-    "frameworks": ["React", "TypeScript", "Tailwind CSS"],
-    "improvements": {
-      "visual_hierarchy": {
-        "typography": "Implement consistent type scale with proper heading structure",
-        "spacing": "Apply systematic spacing using 8px grid system",
-        "contrast": "Ensure WCAG AA color contrast ratios",
-        "focal_points": "Use visual weight to guide user attention"
-      },
-      "accessibility": {
-        "semantic_html": "Use proper HTML5 semantic elements",
-        "keyboard_nav": "Ensure full keyboard accessibility",
-        "aria_labels": "Add comprehensive ARIA attributes",
-        "screen_reader": "Optimize for assistive technologies"
-      },
-      "loading_states": {
-        "skeleton_screens": "Implement content placeholders",
-        "progress_bars": "Show operation progress",
-        "spinner_components": "Add loading indicators",
-        "feedback_loops": "Provide immediate user feedback"
-      },
-      "error_handling": {
-        "user_friendly_messages": "Clear, actionable error text",
-        "recovery_paths": "Provide solutions for error states",
-        "validation_feedback": "Real-time form validation",
-        "fallback_ui": "Graceful degradation patterns"
-      },
-      "responsive_design": {
-        "mobile_first": "Start with mobile layout design",
-        "touch_targets": "Minimum 44px interactive elements",
-        "breakpoint_testing": "Test across device sizes",
-        "content_priority": "Progressive disclosure on small screens"
-      },
-      "micro_interactions": {
-        "animations": "Subtle 200-300ms transitions",
-        "hover_effects": "Clear interactive feedback",
-        "state_changes": "Smooth component state transitions",
-        "loading_animations": "Engaging wait states"
-      }
-    },
-    "output_requirements": {
-      "maintain_functionality": true,
-      "typescript_support": true,
-      "component_composition": true,
-      "performance_optimized": true,
-      "cross_browser_compatible": true
-    }
-  }
-}`,
-    sitebrew: sitebrewPrompt || `<!-- UX Enhancement Brief for sitebrew.ai -->
-
-<ux-improvement-specification>
-  <project-context>
-    Enhance existing React component with evidence-based UX improvements
-  </project-context>
-
-  <enhancement-goals>
-    <visual-hierarchy>
-      - Establish clear typographic hierarchy (H1-H6, body, captions)
-      - Implement consistent spacing system (4px, 8px, 16px, 24px, 32px)
-      - Optimize color contrast for accessibility (WCAG AA/AAA)
-      - Create visual flow that guides user attention
-    </visual-hierarchy>
-
-    <accessibility-standards>
-      - Semantic HTML structure with proper landmarks
-      - Complete keyboard navigation support
-      - Comprehensive ARIA labeling
-      - Screen reader optimization
-      - Focus management and visible focus indicators
-    </accessibility-standards>
-
-    <user-feedback-systems>
-      - Skeleton loading states for content
-      - Progress indicators for multi-step processes  
-      - Immediate feedback for user actions
-      - Clear error messages with recovery suggestions
-      - Success confirmations and status updates
-    </user-feedback-systems>
-
-    <responsive-experience>
-      - Mobile-first responsive design approach
-      - Touch-optimized interface (44px minimum targets)
-      - Fluid layouts across breakpoints
-      - Content prioritization for small screens
-    </responsive-experience>
-
-    <interaction-polish>
-      - Smooth transitions (200-300ms duration)
-      - Hover and focus state styling
-      - Micro-animations for state changes
-      - Consistent interaction patterns
-    </interaction-polish>
-  </enhancement-goals>
-
-  <technical-requirements>
-    - Maintain all existing functionality
-    - Use React functional components with hooks
-    - TypeScript for type safety
-    - Modern CSS practices (Flexbox/Grid)
-    - Performance-optimized implementation
-  </technical-requirements>
-
-  <deliverables>
-    Enhanced component with improved usability, accessibility, and visual polish while preserving current features and maintaining code quality.
-  </deliverables>
-</ux-improvement-specification>`
-  };
-
-  const promptText = platformPrompts[selectedPlatform as keyof typeof platformPrompts];
+  //const promptText = platformPrompts[PlatformType as keyof typeof platformPrompts];
 
   // Loading text animation for Reasoning-Pro
   const loadingTexts = [
@@ -500,7 +178,7 @@ Execute these improvements while preserving all current features and maintaining
 
   const handleCopyCode = async () => {
     try {
-      await navigator.clipboard.writeText(codeSnippets[selectedFramework as keyof typeof codeSnippets]);
+      await navigator.clipboard.writeText(codeSnippets[activeCodeTab as keyof typeof codeSnippets]);
       setCodeCopied(true);
       toast({
         title: "Code copied!",
@@ -518,7 +196,7 @@ Execute these improvements while preserving all current features and maintaining
 
   const handleCopyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(promptText);
+      await navigator.clipboard.writeText(platformPrompts);
       setPromptCopied(true);
       toast({
         title: "Prompt copied!",
@@ -829,7 +507,8 @@ Execute these improvements while preserving all current features and maintaining
         setTab('chatbot');
         const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
         setCurrentChatFeature(featureName);
-        setCurrentFeatureDescription(section.description || section.purpose || 'No design description available');
+        setCurrentFeatureDescription(section.detailedDescription || 'No design description available');
+        setCurrentHTMLStructure(section.htmlStructure || '');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
 
         // --- NEW: Trigger OpenRouter API call here ---
@@ -953,19 +632,34 @@ Execute these improvements while preserving all current features and maintaining
   const [lastChatLength, setLastChatLength] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const processedChatRef = useRef<Set<string>>(new Set());
+  const lastProcessedChatRef = useRef<string>('');
 
-  // Effect to fetch code/prompt when needed
-  React.useEffect(() => {
-    if (chatHistory.length > 0 && currentChatFeature && currentFeatureDescription && !isFetching) {
-      const hasChatResponse = chatHistory.some(msg => !msg.isUser);
-      const hasNewChat = chatHistory.length > lastChatLength;
-      if (hasChatResponse && hasNewChat && !isTyping) {
-        fetchCodeAndPrompt(chatHistory);
-      }
+  useEffect(() => {
+    if (outputType === 'code'){
+      setPlatformType('');
     }
-  }, [ chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription]);
+    if (outputType === 'prompt'){
+      setFrameworkType('');
+      setLanguage('');
+    } 
+    if (outputType === null) {
+      setFrameworkType('');
+      setPlatformType('');
+      setOutputTypeSelected(false);
+    }
+  }, [outputType]);
 
-  const fetchCodeAndPrompt = async (chatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
+  const [lastOutputType, setLastOutputType] = useState<string | null>(null);
+  const [lastFrameworkType, setLastFrameworkType] = useState('');
+  const [lastPlatformType, setLastPlatformType] = useState('');
+  const [lastLanguage, setLastLanguage] = useState('');
+
+  const handleResetOutput = () => {
+    setOutputTypeSelected(false);
+  }
+  
+  const fetchCodeAndPrompt = React.useCallback(async (chatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
     if (isFetching) return;
     setIsFetching(true);
 
@@ -976,8 +670,13 @@ Execute these improvements while preserving all current features and maintaining
       
       const requestBody = {
         featureName: currentChatFeature,
-        currentDesign: currentFeatureDescription,
-        latestRecommendation: latestRecommendation
+        featureDescription: currentFeatureDescription,
+        htmlStructure: currentFeatureHTMLStructure,
+        latestRecommendation: latestRecommendation,
+        outputType: outputType,
+        framework: FrameworkType,
+        language: Language,
+        platform: PlatformType,
       };
       
       const response = await fetch(`${MAIN_API_BASE}/recommendation-prompt-code`, {
@@ -1001,26 +700,82 @@ Execute these improvements while preserving all current features and maintaining
         }
       };
 
-      setReactCode(decodeBase64(data.react_code) || '');
-      setVueCode(decodeBase64(data.vue_code) || '');
-      setAngularCode(decodeBase64(data.angular_code) || '');
-      setLovablePrompt(data.lovable_prompt || '');
-      setCursorPrompt(data.cursor_prompt || '');
-      setBoltPrompt(data.bolt_prompt || '');
-      setVercelPrompt(data.vercel_prompt || '');
-      setReplitPrompt(data.replit_prompt || '');
-      setMagicPrompt(data.magic_prompt || '');
-      setSitebrewPrompt(data.sitebrew_prompt || '');
-      
-      setLastChatLength(chatHistory.length);
-      
+      setResultCode(decodeBase64(data.code) || '');
+      setResultStyle(decodeBase64(data.style) || '');
+      setResultPrompt(data.prompt || '');
+
     } catch (error) {
       console.error('Error fetching code and prompt:', error);
     } finally {
       setIsFetching(false);
       setLastChatLength(chatHistory.length);
+      setLastOutputType(outputType);
+      setLastFrameworkType(FrameworkType);
+      setLastLanguage(Language);
+      setLastPlatformType(PlatformType);
+      console.log('lastoutput:', outputType);
+      console.log('lastframework:', FrameworkType);
+      console.log('lastplatform:', PlatformType);
     }
-  };
+  }, [
+    isFetching,
+    currentChatFeature,
+    currentFeatureDescription,
+    currentFeatureHTMLStructure,
+    outputType,
+    FrameworkType,
+    Language,
+    PlatformType
+  ]);
+  
+  // Effect to fetch code/prompt when needed
+  React.useEffect(() => {
+    if (!OutputTypeSelected || 
+        (outputType === 'code' && !FrameworkType) || 
+        (outputType === 'prompt' && !PlatformType)) {
+      return;
+    }
+    
+    const hasChatResponse = chatHistory.some(msg => !msg.isUser);
+
+    if ( chatHistory.length > 0 && currentChatFeature && currentFeatureDescription&& !isFetching && hasChatResponse ) {
+      const latestResponse = chatHistory.filter(msg => !msg.isUser).pop();
+      const responseContent = latestResponse.text;
+
+      if ( chatHistory.length > lastChatLength ) {
+        if (latestResponse && !processedChatRef.current.has(latestResponse.id)) {
+          if (responseContent !== lastProcessedChatRef.current) {
+            console.log('[DEBUG] Processing new chat response:', latestResponse.id);
+            processedChatRef.current.add(latestResponse.id);
+            lastProcessedChatRef.current = responseContent;
+            fetchCodeAndPrompt(chatHistory);
+          } else {
+            console.log('[DEBUG] Skipping duplicate chat response');
+          }
+        }
+      } else if ( lastOutputType !== outputType || lastFrameworkType !== FrameworkType || lastPlatformType !== PlatformType || lastLanguage !== Language ) {
+        fetchCodeAndPrompt(chatHistory);
+      }
+    }
+  }, [chatHistory, lastChatLength, isTyping, isFetching, currentChatFeature, currentFeatureDescription, OutputTypeSelected, outputType, FrameworkType, PlatformType,lastOutputType, lastFrameworkType, lastPlatformType, lastLanguage, Language,fetchCodeAndPrompt]);
+
+  // Reset processed chat ref when switching features
+  React.useEffect(() => {
+    processedChatRef.current.clear();
+    lastProcessedChatRef.current = '';
+  }, [currentChatFeature]);
+
+  const hasCode = Boolean(resultCode)
+  const hasStyle = Boolean(resultStyle)
+
+  const showCodeTabs = hasCode && hasStyle;
+  const defaultCodeTab = 'code';
+  
+  React.useEffect(() => {
+    if (!showCodeTabs) {
+      setActiveCodeTab(defaultCodeTab);
+    }
+  }, [showCodeTabs, defaultCodeTab]);
 
   if (loading) {
   return (
@@ -1150,52 +905,193 @@ Execute these improvements while preserving all current features and maintaining
                         <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">
                           <h3 className="text-xl font-bold mb-4 text-center">UX Improvement Results</h3>
                           
-                          <Tabs defaultValue="code" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2 mb-4">
-                              <TabsTrigger value="code">Code</TabsTrigger>
-                              <TabsTrigger value="prompt">Prompt</TabsTrigger>
-                            </TabsList>
-                            
-                            <TabsContent value="code" className="space-y-4">
+                          {!OutputTypeSelected ? (<Card className="mb-6 text-center max-w-md mx-auto">
+                            <CardHeader>
+                              <CardTitle>Select your output type</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="mb-4">
+                                <div className="font-medium mb-2 text-lg">What kind of output do you want?</div>
+                                <div className="flex flex-wrap gap-4 mb-4 justify-center">
+                                <ToggleGroup type="single" value={outputType} onValueChange={setOutputType} className="gap-2 justify-center flex flex-wrap">
+                                  <ToggleGroupItem
+                                    value="prompt"
+                                    className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
+                                    >Prompt</ToggleGroupItem>
+                                  <ToggleGroupItem value="code"
+                                    className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
+                                    >Code</ToggleGroupItem>
+                                </ToggleGroup>
+                                </div>
+                              </div>
+                              {outputType === 'prompt' ? (
+                                <div className="mb-4">
+                                  <div className="font-medium mb-2 text-lg">Select platform:</div>
+                                  <div className="flex flex-wrap gap-4 justify-center">
+                                    {AVAILABLE_PLATFORMS.map((platform) => (
+                                      <label key={platform} className="flex items-center gap-3 cursor-pointer select-none">
+                                        <Checkbox
+                                          checked={PlatformType === platform}
+                                          onCheckedChange={(checked) => {
+                                            if (checked === true) {
+                                              setPlatformType(platform);
+                                            } else {
+                                              setPlatformType(null);
+                                            }
+                                          }}
+                                          disabled={outputType === 'code' as string}
+                                          />
+                                        <span>{platform}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                  <div className="mt-4 space-y-2">
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className=" shadow-sm px-8"
+                                    
+                                    onClick={() => setOutputTypeSelected(true)}>OK
+                                  </Button>
+                                  </div>
+                                </div>
+                              ) : null}
+                              {outputType === 'code' ? (
+                                <div className="mb-4">
+                                  <div className="font-medium mb-2 text-lg">Select framework:</div>
+                                  <div className="flex flex-wrap gap-4 justify-center">
+                                    {AVAILABLE_FRAMEWORKS.map((framework) => (
+                                      <label key={framework} className="flex items-center gap-3 cursor-pointer select-none">
+                                        <Checkbox
+                                          checked={FrameworkType === framework}
+                                          onCheckedChange={(checked) => {
+                                            if (checked === true) {
+                                              setFrameworkType(framework);
+                                              if (framework == 'Angular') setLanguage('');
+                                            } else {
+                                              setFrameworkType('');
+                                              setLanguage('');
+                                            }
+                                          }}
+                                          disabled={outputType === 'prompt' as string}
+                                          />
+                                        <span>{framework}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                  {/* Language selector only for React */}
+                                  {(FrameworkType === 'React' || FrameworkType === 'Vue') && (
+                                    <div className="mt-4">
+                                      <div className="font-medium mb-2 text-lg">Select language:</div>
+                                      <div className="flex gap-4 justify-center">
+                                        {AVAILABLE_LANGUAGES.map((lang) => (
+                                          <label key={lang} className="flex items-center gap-3 cursor-pointer select-none">
+                                            <Checkbox
+                                              checked={Language === lang}
+                                              onCheckedChange={(checked) => {
+                                                if (checked === true) setLanguage(lang);
+                                                else setLanguage('');
+                                              }}
+                                            />
+                                            <span>{lang}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="mt-4 space-y-2">
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      className=" shadow-sm px-8"
+                                      onClick={() => setOutputTypeSelected(true)}
+                                    >
+                                      OK
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </CardContent>
+                          </Card>
+                        ):(
+                          <div className="flex items-center justify-center mb-6">
+                          {outputType === 'code' ? (
+                          <div className="h-full p-6 bg-background rounded-lg overflow-y-auto">
                               {isFetching ? (
                                 <div className="flex flex-col items-center justify-center min-h-[200px]">
                                   <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
-                                  <p className="text-lg">Generating code and prompt, please wait...</p>
+                                  <p className="text-lg">Generating code, please wait...</p>
                                 </div>
                               ) : (
                                 <Card>
                                   <CardHeader>
-                                    <CardTitle>Implementation Code</CardTitle>
+                                    <CardTitle>Your {FrameworkType} Code</CardTitle>
+                                    <Button 
+                                      onClick={handleResetOutput} 
+                                      size="lg"
+                                      variant="ghost"
+                                      className="absolute top-4 right-4 shadow-sm px-2"
+                                      > Reset output
+                                    </Button>                                 
                                   </CardHeader>
                                   <CardContent className="space-y-4">
-                                    <div className="flex items-center gap-4">
-                                      <Select value={selectedFramework} onValueChange={setSelectedFramework}>
-                                        <SelectTrigger className="w-48">
-                                          <SelectValue placeholder="Select framework" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="react">React</SelectItem>
-                                          <SelectItem value="vue">Vue</SelectItem>
-                                          <SelectItem value="angular">Angular</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
                                     <div className="w-full max-w-xl mx-auto">
+                                      {showCodeTabs && (
+                                        <div className="flex border-b border-border mb-4">
+                                          <button
+                                            className={`px-4 py-2 font-medium ${
+                                              activeCodeTab === "code" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                                            }`}
+                                            onClick={() => setActiveCodeTab("code")}
+                                          >
+                                            Code
+                                          </button>
+                                          <button
+                                            className={`px-4 py-2 font-medium ${
+                                              activeCodeTab === "style" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                                            }`}
+                                            onClick={() => setActiveCodeTab("style")}
+                                          >
+                                            Style
+                                          </button>
+                                        </div>
+                                      )}
                                     <CodeBlock>
-                                      <CodeBlockGroup className="border-border border-b py-2 px-2">
+                                      <CodeBlockGroup className="border-border border-b p-4">
                                         <div className="flex items-center gap-2">
                                           <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                                            {selectedFramework.charAt(0).toUpperCase() + selectedFramework.slice(1)}
+                                            {activeCodeTab === "code" ? (
+                                              FrameworkType === "Vue"
+                                                ? ".vue"
+                                                : FrameworkType === "React"
+                                                  ? Language === "JavaScript"
+                                                    ? ".js"
+                                                    : ".tsx"
+                                                  : FrameworkType === "Angular"
+                                                    ? ".ts"
+                                                    : FrameworkType
+                                            ) : FrameworkType === "Vue" ? ".vue" : ".css"}
                                           </div>
-                                          <span className="text-muted-foreground text-sm">component.{selectedFramework === 'react' ? 'tsx' : selectedFramework === 'vue' ? 'vue' : 'ts'}</span>
                                         </div>
                                         <Button onClick={handleCopyCode} variant="ghost" size="icon" className="h-8 w-8">
                                           {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                                         </Button>
                                       </CodeBlockGroup>
                                       <CodeBlockCode 
-                                        code={codeSnippets[selectedFramework as keyof typeof codeSnippets]} 
-                                        language={selectedFramework === 'angular' ? 'typescript' : selectedFramework === 'react' ? 'tsx' : selectedFramework}
+                                        code={activeCodeTab === "code" ? codeSnippets.code : codeSnippets.style}
+                                        language={
+                                          activeCodeTab === "code"
+                                            ? FrameworkType === "Vue"
+                                              ? "vue"
+                                              : FrameworkType === "React"
+                                                ? Language === "JavaScript"
+                                                  ? "js"
+                                                  : "tsx"
+                                                : FrameworkType === "Angular"
+                                                  ? "ts"
+                                                  : FrameworkType.toLowerCase()
+                                            : "css"
+                                        }
                                         theme="github-light"
                                       />
                                     </CodeBlock>
@@ -1213,45 +1109,33 @@ Execute these improvements while preserving all current features and maintaining
                                 </CardContent>
                               </Card>
                             )}
-                            </TabsContent>
-                            
-                            <TabsContent value="prompt" className="space-y-4">
+                            </div>
+                            ):(
+                            <div className="mt-6" >
                               {isFetching ? (
                                 <div className="flex flex-col items-center justify-center min-h-[200px]">
                                   <Loader2 className="h-8 w-8 animate-spin mb-2 text-primary" />
-                                  <p className="text-lg">Generating code and prompt, please wait...</p>
+                                  <p className="text-lg">Generating prompt, please wait...</p>
                                 </div>
                               ) : (
                                 <Card>
                                   <CardHeader>
                                     <CardTitle>
-                                      AI Development Prompt
+                                      Your {PlatformType} Prompt
                                     </CardTitle>
+                                    <Button 
+                                      onClick={handleResetOutput} 
+                                      size="sm"
+                                      variant="ghost"
+                                      className="absolute top-4 right-4 shadow-sm px-2"
+                                      > Reset output
+                                    </Button>
                                   </CardHeader>
                                   <CardContent>
-                                    <div className="flex items-center gap-4 mb-4">
-                                      <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                                        <SelectTrigger className="w-48">
-                                          <SelectValue placeholder="Select platform" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="lovable">Lovable</SelectItem>
-                                          <SelectItem value="cursor">Cursor (or any AI IDE)</SelectItem>
-                                          <SelectItem value="bolt">Bolt.new (Partnership)</SelectItem>
-                                          <SelectItem value="vercel">v0 by Vercel</SelectItem>
-                                          <SelectItem value="replit">Replit</SelectItem>
-                                          <SelectItem value="magic">Magic Patterns</SelectItem>
-                                          <SelectItem value="sitebrew">sitebrew.ai</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
                                     <div className="w-full max-w-xl mx-auto">
                                       <CodeBlock>
                                         <CodeBlockGroup className="border-border border-b py-2 px-2">
                                           <div className="flex items-center gap-2">
-                                            <div className="bg-primary/10 text-primary rounded px-2 py-1 text-xs font-medium">
-                                              {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}
-                                            </div>
                                             <span className="text-muted-foreground text-sm">prompt.txt</span>
                                           </div>
                                           <Button onClick={handleCopyPrompt} variant="ghost" size="icon" className="h-8 w-8">
@@ -1259,7 +1143,7 @@ Execute these improvements while preserving all current features and maintaining
                                           </Button>
                                         </CodeBlockGroup>
                                         <CodeBlockCode 
-                                          code={promptText} 
+                                          code={platformPrompts} 
                                           language="text"
                                           theme="github-light"
                                         />
@@ -1269,13 +1153,13 @@ Execute these improvements while preserving all current features and maintaining
                                       <div className="p-4 bg-green-50 rounded-md">
                                         <h3 className="font-semibold mb-2">How to use this prompt:</h3>
                                         <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                                          {selectedPlatform === 'lovable' && <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>}
-                                          {selectedPlatform === 'cursor' && <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement in your AI IDE</li>}
-                                          {selectedPlatform === 'bolt' && <li><strong>Bolt.new:</strong> Copy this prompt to generate improved components with UX enhancements</li>}
-                                          {selectedPlatform === 'vercel' && <li><strong>v0 by Vercel:</strong> Use this specification to generate accessible and polished React components</li>}
-                                          {selectedPlatform === 'replit' && <li><strong>Replit:</strong> Apply this checklist-style prompt for systematic UX improvements</li>}
-                                          {selectedPlatform === 'magic' && <li><strong>Magic Patterns:</strong> Use this JSON specification to generate enhanced UI patterns</li>}
-                                          {selectedPlatform === 'sitebrew' && <li><strong>sitebrew.ai:</strong> Apply this XML-formatted brief for comprehensive UX enhancements</li>}
+                                          {PlatformType === 'Lovable' && <li><strong>Lovable:</strong> Paste this prompt in the chat to get AI-powered UX improvements</li>}
+                                          {PlatformType === 'Cursor' && <li><strong>Cursor:</strong> Use this as a comprehensive instruction for code enhancement in your AI IDE</li>}
+                                          {PlatformType === 'Bolt' && <li><strong>Bolt.new:</strong> Copy this prompt to generate improved components with UX enhancements</li>}
+                                          {PlatformType === 'Vercel' && <li><strong>v0 by Vercel:</strong> Use this specification to generate accessible and polished React components</li>}
+                                          {PlatformType === 'Replit' && <li><strong>Replit:</strong> Apply this checklist-style prompt for systematic UX improvements</li>}
+                                          {PlatformType === 'Magic' && <li><strong>Magic Patterns:</strong> Use this JSON specification to generate enhanced UI patterns</li>}
+                                          {PlatformType === 'Sitebrew' && <li><strong>sitebrew.ai:</strong> Apply this XML-formatted brief for comprehensive UX enhancements</li>}
                                         </ul>
                                       </div>
                                       
@@ -1291,8 +1175,11 @@ Execute these improvements while preserving all current features and maintaining
                                   </CardContent>
                                 </Card>
                               )}
-                            </TabsContent>
-                          </Tabs>
+                            </div>
+                            )}
+                          </div>
+                        )}
+
                         </div>
                       )}
 {chatbotTab === 'sources' && (
@@ -1607,7 +1494,7 @@ Execute these improvements while preserving all current features and maintaining
                     </div>
                   )}
 
-                  {/* AI Recommendations Section */}
+                 {/* AI Recommendations Section */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
                   {tab === 'ai' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1651,8 +1538,7 @@ Execute these improvements while preserving all current features and maintaining
                               Get Recommendations
                             </Button>
                             <div className="text-sm text-muted-foreground space-y-1">
-                              
-                                <div><b>Layouts:</b> {section.style?.layout}</div>
+                              <div><b>Layouts:</b> {section.style?.layout}</div>
                                 <div><b>Interactions:</b> {section.style?.interactions}</div>
                                 <div><b>Mobile:</b> {section.mobile_behavior}</div>
                                 <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
