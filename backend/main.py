@@ -1252,7 +1252,7 @@ class SummarizeRecommendationsRequest(BaseModel):
     context: dict = None          # optional, e.g., feature name, section, etc.
 
 class SummarizeRecommendationsResponse(BaseModel):
-    # improvements: str = ""     # or str, or dict, depending on your needs
+    summary_text: str = ""     # or str, or dict, depending on your needs
     raw_openrouter_response: dict
 
 
@@ -1300,9 +1300,10 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
 
     # Optionally, split into a list if you want structured output
     # improvements = [line.lstrip("-•* ").strip() for line in summary_text.split("\n") if line.strip()]
+    # print(f"[DEBUG]: improvements: {improvements}")
 
     return SummarizeRecommendationsResponse(
-        # improvements=improvements,
+        summary_text=summary_text,
         raw_openrouter_response=result
     )
 
