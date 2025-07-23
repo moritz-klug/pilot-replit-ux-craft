@@ -1158,6 +1158,7 @@ def futurehouse_research_prompt_direct(data: dict = Body(...)):
     Expects data = { 'prompt': str }
     """
     prompt = data.get("prompt", "")
+    # Call FutureHouse API with the generated prompt
     if not prompt:
         raise HTTPException(status_code=400, detail="Missing prompt in request body.")
     FUTURE_HOUSE_API_KEY = os.getenv("FUTURE_HOUSE_API_KEY", "")
@@ -1170,9 +1171,75 @@ def futurehouse_research_prompt_direct(data: dict = Body(...)):
     }
     try:
         task_response = client.run_tasks_until_done(task_data)
-        return {"task_response": task_response}
+        print("[DEBUG]: Raw FutureHouse API response:", task_response)
+        
+        # Safely extract answer and formatted_answer from task_response
+        if (
+            not task_response
+            or not isinstance(task_response, list)
+            or len(task_response) == 0
+        ):
+            raise ValueError("Invalid or empty response from FutureHouse API")
+
+        # Get the first response object
+        response_obj = task_response[0]
+
+        # Safely extract answer and formatted_answer with error handling
+        if isinstance(response_obj, dict):
+            answer = response_obj.get("answer", "")
+            formatted_answer = response_obj.get("formatted_answer", "")
+        else:
+            answer = getattr(response_obj, "answer", "")
+            formatted_answer = getattr(response_obj, "formatted_answer", "")
+
+        # Extract references from formatted_answer
+        references = []
+        if formatted_answer and isinstance(formatted_answer, str):
+            references = extract_papers_from_formatted_answer(formatted_answer)
+
+        # Split answer into recommendations if answer exists and is a string
+        recommendations = []
+        if answer and isinstance(answer, str):
+            recommendations = [rec.strip() for rec in answer.split("\n") if rec.strip()]
+
+        return {
+            "prompt": prompt.strip(),
+            "task_response": {"answer": answer, "formatted_answer": formatted_answer},
+            "recommendations": recommendations,
+            "papers": references,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FutureHouse API error: {str(e)}")
+
+
+def extract_papers_from_formatted_answer(formatted_answer):
+    papers = []
+    # Find the References section
+    refs_match = re.search(r"References\s*\n(.+)", formatted_answer, re.DOTALL)
+    if not refs_match:
+        return papers  # No references found
+
+    refs_text = refs_match.group(1)
+
+    # Split into individual references (numbered)
+    ref_entries = re.findall(r"\n?\s*(\d+)\.\s*\(([^)]+)\):\s*([^\n]+)", refs_text)
+    # Each entry: (number, citation_key, title)
+    for num, citation_key, title in ref_entries:
+        # Optionally, parse citation_key for more info (e.g., authors, pages)
+        # Example: "unknownauthors2017digitalmarketingin pages 14-18"
+        # You can split by ' pages ' if you want
+        if ' pages ' in citation_key:
+            authors_part, pages_part = citation_key.split(' pages ', 1)
+        else:
+            authors_part, pages_part = citation_key, ''
+        papers.append({
+            "number": int(num),
+            "citation_key": citation_key,
+            "title": title.strip(),
+            "authors": authors_part.strip(),
+            "pages": pages_part.strip(),
+        })
+    return papers
 
 
 # @app.post("/futurehouse-research-prompt")
