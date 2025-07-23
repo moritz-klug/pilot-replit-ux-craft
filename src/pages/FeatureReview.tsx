@@ -526,12 +526,12 @@ const FeatureReview: React.FC = () => {
         const { prompt_to_FH } = await openRouterRes.json();
 
         // 2. Show the prompt in the chat
-        chatbotRef.current?.addBotMessage(prompt_to_FH);
+        chatbotRef.current?.addBotMessage(`Prompt to FutureHouse: ${prompt_to_FH}`);
 
         console.log("[DEBUG]: prompt_to_FH", prompt_to_FH);
 
         // 3. Add a loading message for FutureHouse
-        chatbotRef.current?.addLoadingMessage("FutureHouse is analyzing... (this may take a few minutes)");
+        chatbotRef.current?.addBotMessage("FutureHouse is analyzing... (this may take a few minutes)");
 
         // 4. Call FutureHouse with the prompt
         setFutureHouseLoading(true);

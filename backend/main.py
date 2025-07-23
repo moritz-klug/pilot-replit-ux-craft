@@ -806,6 +806,10 @@ def get_prompt_code(request):
         raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
 
+@app.post("/extract-features")
+async def extract_features(request: Request):
+    print("[DEBUG] /extract-features endpoint called")
+    return await extract_features_logic(request)
 
 
 # FutureHouse API
