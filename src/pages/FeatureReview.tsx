@@ -124,6 +124,9 @@ const FeatureReview: React.FC = () => {
   const [magicPrompt, setMagicPrompt] = useState('');
   const [sitebrewPrompt, setSitebrewPrompt] = useState('');
 
+  const [futureHouseLoading, setFutureHouseLoading] = useState(false);
+  const [futureHouseProgress, setFutureHouseProgress] = useState<string[]>([]);
+
   // Code snippets from Results page
   const codeSnippets = {
     react: reactCode ||`import React from 'react';
@@ -852,19 +855,39 @@ Execute these improvements while preserving all current features and maintaining
         chatbotRef.current?.addLoadingMessage("FutureHouse is analyzing... (this may take a few minutes)");
 
         // 4. Call FutureHouse with the prompt
+        setFutureHouseLoading(true);
+        setFutureHouseProgress(["FutureHouse analysis started..."]);
         const fhRes = await fetch('http://localhost:8000/futurehouse-research-prompt-direct', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: prompt_to_FH })
         });
-        const { task_response } = await fhRes.json();
-        console.log("DEBUG: task_response", task_response);
+        const { task_response, recommendations, papers } = await fhRes.json();
+        setFutureHouseLoading(false);
+        setFutureHouseProgress([]);
 
         // 5. Update the last bot message with the FutureHouse result
         chatbotRef.current?.updateLastBotMessage(
           typeof task_response === 'string'
             ? task_response
             : JSON.stringify(task_response, null, 2)
+        );
+
+        // 6. Call OpenRouter to summarize recommendations
+        const summarizeRes = await fetch('http://localhost:8000/openrouter-summarize-recommendations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recommendations, // should be an array of strings
+            context: { featureName, detailedDescription: section.description },
+            references: papers // or whatever your references are called
+          })
+        });
+        const { improvements } = await summarizeRes.json();
+
+        // 7. Show the improvements in the chat
+        chatbotRef.current?.addBotMessage(
+          Array.isArray(improvements) ? improvements.join('\n') : improvements
         );
       }, 3000);
     } else {
@@ -1694,6 +1717,15 @@ Execute these improvements while preserving all current features and maintaining
               <p className="text-gray-600 animate-pulse">{loadingText}</p>
             </div>
             <AnimatedLoadingSkeleton />
+          </div>
+        </div>
+      )}
+      {futureHouseLoading && (
+        <div className="mt-4 p-4 bg-muted rounded-lg">
+          <div className="font-semibold mb-2">FutureHouse Analysis Progress</div>
+          <div className="space-y-1 text-sm">
+            {futureHouseProgress.map((msg, i) => <div key={i}>{msg}</div>)}
+            <div className="animate-pulse text-primary">Analyzing... (this may take a few minutes)</div>
           </div>
         </div>
       )}
