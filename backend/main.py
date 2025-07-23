@@ -41,6 +41,8 @@ app.add_middleware(
 )
 
 
+
+
 class AnalyzeRequest(BaseModel):
     url: str
 
@@ -764,10 +766,54 @@ def recommendation_prompt_code(request: RecommendationPromptCodeRequest):
     return RecommendationPromptCodeResponse(**result)
 
 
+mock_extraction_result = {
+    "websiteFeatures": [
+        {
+            "featureName": "Hero Section",
+            "detailedDescription": "Located at the top of the page spanning the full width. Features a bold headline 'MARKETING AUS EINER HAND' in dark blue (#1F2659) on the left side with a 48px sans-serif font (Roboto). Below is a subtitle 'Für lokale Unternehmen' in a smaller 24px font. The right side contains an illustration of a person working at a desk with digital marketing elements. The background is white with subtle light blue accents. A prominent call-to-action button 'Kostenlose Erstberatung' appears below the text in orange (#FF5722) with rounded corners (8px) and slight box-shadow. The section has approximately 90px padding on top and bottom, responsive layout that adjusts for mobile viewing.",
+            "htmlStructure": "<section class=\"hero-section\">...</section>",
+            "cssProperties": ".hero-section { ... }"
+        },
+        {
+            "featureName": "Navigation Bar",
+            "detailedDescription": "Fixed-position navigation bar at the top of the page with a white background (#FFFFFF) and subtle box-shadow (0 2px 10px rgba(0,0,0,0.1)). Contains the company logo on the left (30px height) and main menu links on the right. ...",
+            "htmlStructure": "<header class=\"main-header\">...</header>",
+            "cssProperties": ".main-header { ... }"
+        },
+        # ... (other sections as needed)
+    ],
+    "siteUXArchitecture": {
+        "businessContext": "Marketing Lokalhelden provides digital marketing services specifically tailored for local businesses in Germany. ...",
+        "targetAudience": "The primary audience is local business owners and managers in Germany, ...",
+        "userGoals": "Users visiting this site are looking to: 1) Learn about digital marketing solutions ...",
+        "navigationStructure": "The site follows a standard agency structure with a fixed top navigation ...",
+        "responsiveness": "The site employs a responsive design with thoughtful mobile adaptations. ...",
+        "accessibilityObservations": "The site demonstrates several accessibility best practices: proper semantic HTML structure, ..."
+    },
+    "brandIdentity": {
+        "logoUrl": "https://www.marketing-lokalhelden.de/images/logo.svg",
+        "dominantColorPalette": ["#1F2659", "#FF5722", "#FFFFFF", "#F0F5FF", "#F8F9FA"],
+        "typographyStyles": "The site primarily uses the Roboto font family in various weights. ...",
+        "designTone": "The design is professional yet approachable, balancing corporate trustworthiness with friendly accessibility. ..."
+    },
+    "companyOverview": {
+        "companyName": "Marketing Lokalhelden",
+        "employeeCount": "10-20 (estimated based on team references)",
+        "industry": "Digital Marketing Agency",
+        "headquartersLocation": "Berlin, Germany",
+        "foundedYear": "2018",
+        "externalLinks": {
+            "LinkedIn": "https://linkedin.com/company/marketinglokalhelden",
+            "Facebook": "https://facebook.com/marketinglokalhelden",
+            "Instagram": "https://instagram.com/marketinglokalhelden"
+        }
+    }
+}
+
 class OpenRouterPromptRequest(BaseModel):
     feature_name: str
-    screenshot_url: str
-    feature_extraction_result: dict
+    # screenshot_url: str
+    # feature_extraction_result: dict
 
 @app.post("/openrouter-generate-research-prompt")
 async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
@@ -777,63 +823,13 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
     if not OPENROUTER_API_KEY or OPENROUTER_API_KEY.startswith("sk-..."):
         raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
 
-    # Build the OpenRouter prompt
-    openrouter_prompt = f"""Identify the {request.feature_name} section and provide text details of the section from the screenshot.
-Combine the result of the text details and feature extraction result to fill the necessary placeholder for prompt.
-Feature Extraction Result:
-{json.dumps(request.feature_extraction_result, indent=2)}
+    # For testing, use the mock data instead of request.feature_extraction_result
+    extraction_result = mock_extraction_result  # <-- use mock here
 
-Prompt:
-Given a website section's information and global design context:
-1. Section-specific details:
+    # If you want to use the real data when provided, do:
+    # extraction_result = request.feature_extraction_result or mock_extraction_result
 
-   - Name: {{featureName}}
-
-   - Detailed Description: {{detailedDescription}}
-
-2. Global website context:
-
-   - Analysis Summary: {{analysisSummary}}
-
-   - Branding Overview: {{brandingOverview}}
-Generate a research request prompt for FutureHouse API using this format and only output the research request:
-Research request: Provide a comprehensive analysis of {{featureName}} design in {{business_type}} websites with supporting research studies and data.
-Key areas to address:
-1. User Experience Research
-   - User behavior patterns specific to this section type
-   - Interaction design effectiveness studies
-   - Section-specific conversion metrics
-   - Accessibility considerations
-2. Design Implementation
-   - Layout optimization techniques
-   - Visual hierarchy best practices
-   - Component interaction patterns
-   - Responsive design approaches
-3. Performance Impact
-   - Loading and rendering metrics
-   - Mobile-first considerations
-   - Technical implementation guidelines
-   - Optimization strategies
-4. Content Strategy
-   - Content hierarchy research
-   - Element placement studies
-   - Information architecture findings
-   - User engagement patterns
-5. Business Impact
-   - Conversion rate influences
-   - User journey effectiveness
-   - Brand alignment metrics
-   - ROI measurements
-Format requirements:
-- Include quantitative data where available
-- Cite specific research studies
-- Provide actionable guidelines
-- Include success metrics
-- Address cross-device considerations
-Target audience context:
-{{business_type}} / {{target_audience}}
-Keep the structure consistent but modify the specific research points based on the section's unique purpose and elements.
-"""
+    openrouter_prompt = build_openrouter_prompt(extraction_result, request.feature_name)
 
     openrouter_data = {
         'model': 'anthropic/claude-3.5-sonnet', # mistralai/mistral-small-3.2-24b-instruct:free
@@ -875,6 +871,88 @@ Keep the structure consistent but modify the specific research points based on t
         # "screenshot_url": request.screenshot_url,
         # "raw_openrouter_response": result
     }
+
+
+def build_openrouter_prompt(extraction_result, feature_name):
+    # Find the feature section
+    feature = next((f for f in extraction_result["websiteFeatures"] if f["featureName"] == feature_name), None)
+    if not feature:
+        raise ValueError(f"Feature '{feature_name}' not found in extraction result.")
+
+    # Gather global context
+    ux = extraction_result.get("siteUXArchitecture", {})
+    brand = extraction_result.get("brandIdentity", {})
+    company = extraction_result.get("companyOverview", {})
+
+    # Compose the prompt
+    prompt = f"""
+Given the following website section and global context, generate a research request prompt for FutureHouse API using this format and only output the research request.
+
+Section:
+- Name: {feature['featureName']}
+- Description: {feature['detailedDescription']}
+- HTML Structure: {feature.get('htmlStructure', '')}
+- CSS Properties: {feature.get('cssProperties', '')}
+
+Global Context:
+- Business Context: {ux.get('businessContext', '')}
+- Target Audience: {ux.get('targetAudience', '')}
+- User Goals: {ux.get('userGoals', '')}
+- Navigation Structure: {ux.get('navigationStructure', '')}
+- Responsiveness: {ux.get('responsiveness', '')}
+- Accessibility: {ux.get('accessibilityObservations', '')}
+- Brand Colors: {brand.get('dominantColorPalette', '')}
+- Typography: {brand.get('typographyStyles', '')}
+- Design Tone: {brand.get('designTone', '')}
+- Company: {company.get('companyName', '')}, {company.get('industry', '')}, {company.get('headquartersLocation', '')}
+
+Output format:
+Provide a comprehensive analysis of {feature['featureName']} design in {company.get('industry', '')} websites with supporting research studies and data, specifically for {company.get('companyName', '')} based in {company.get('headquartersLocation', '')}.
+Key areas to address:
+1. User Experience Research
+    - Behavioral patterns for {ux.get('targetAudience', '')}
+    - Interaction analysis aligned with {ux.get('userGoals', '')}
+    - Navigation effectiveness within {ux.get('navigationStructure', '')}
+    - Accessibility implementation for {ux.get('accessibilityObservations', '')}
+
+2. Design Implementation
+    - Layout optimization for {ux.get('responsiveness', '')}
+    - Integration with {brand.get('designTone', '')} design principles
+    - Color scheme implementation using {brand.get('dominantColorPalette', '')}
+    - Typography integration of {brand.get('typographyStyles', '')}
+    - Technical Architecture
+
+3. HTML Structure Optimization
+    - HTML structure optimization: {feature.get('htmlStructure', '')}
+    - CSS property implementation: {feature.get('cssProperties', '')}
+    - Responsive framework considerations
+    - Cross-browser compatibility solutions
+
+4. Business Alignment
+    - Alignment with {ux.get('businessContext', '')}
+    - Feature integration within {feature['detailedDescription']}
+    - Performance metrics tracking
+    - ROI measurement framework
+
+5. Implementation Guidelines
+    - Development Standards
+    - Quality assurance protocols
+    - Performance benchmarks
+    - Maintenance requirements
+
+Format requirements:
+    - Include quantitative data and analytics
+    - Reference industry-specific case studies
+    - Provide technical specifications
+    - Document accessibility compliance
+    - Detail responsive design guidelines
+
+Target audience context: Industry: {company.get('industry', '')} Target Users: {ux.get('targetAudience', '')} Business Goals: {ux.get('businessContext', '')}
+
+Please maintain consistent analysis depth across all sections while emphasizing {company.get('companyName', '')}'s specific needs and market position.
+"""
+    return prompt
+
 
 @app.post("/futurehouse-research-prompt-direct")
 def futurehouse_research_prompt_direct(data: dict = Body(...)):
@@ -1043,6 +1121,8 @@ def format_references_for_prompt(references):
         line = f"{ref.get('number', '')}. {ref.get('title', '')} ({ref.get('authors', '')}, pages {ref.get('pages', '')})"
         lines.append(line)
     return "\n".join(lines)
+
+
 
 if __name__ == "__main__":
     import uvicorn

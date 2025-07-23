@@ -5,3 +5,62 @@
 
 
 [DEBUG]: references: [{'number': 1, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 101-104', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '101-104'}, {'number': 2, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 140-143', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '140-143'}, {'number': 3, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 108-111', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '108-111'}, {'number': 4, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 70-73', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '70-73'}, {'number': 5, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 44-48', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '44-48'}, {'number': 6, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 76-79', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '76-79'}, {'number': 7, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 67-70', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '67-70'}, {'number': 8, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 185-188', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '185-188'}, {'number': 9, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 122-125', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '122-125'}, {'number': 10, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 176-181', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '176-181'}, {'number': 11, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 73-76', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '73-76'}, {'number': 12, 'citation_key': 'unknownauthors2022howuserexperience pages 36-39', 'title': 'How user experience design can improve marketing performance of a website', 'authors': 'unknownauthors2022howuserexperience', 'pages': '36-39'}, {'number': 13, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 85-89', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '85-89'}, {'number': 14, 'citation_key': 'unknownauthors2023conversionrateoptimization pages 36-39', 'title': 'Conversion rate optimization in online stores for high involvement products with the use of conjoint analysis', 'authors': 'unknownauthors2023conversionrateoptimization', 'pages': '36-39'}, {'number': 15, 'citation_key': 'unknownauthors2023conversionrateoptimization pages 43-46', 'title': 'Conversion rate optimization in online stores for high involvement products with the use of conjoint analysis', 'authors': 'unknownauthors2023conversionrateoptimization', 'pages': '43-46'}, {'number': 16, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 98-101', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '98-101'}, {'number': 17, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 64-67', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '64-67'}, {'number': 18, 'citation_key': 'unknownauthors2020onlineleadgeneration pages 60-64', 'title': 'Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website', 'authors': 'unknownauthors2020onlineleadgeneration', 'pages': '60-64'}]
+
+
+
+openrouter_prompt = f"""Identify the {request.feature_name} section and provide text details of the section from the screenshot.
+Combine the result of the text details and feature extraction result to fill the necessary placeholder for prompt.
+Feature Extraction Result:
+{json.dumps(request.feature_extraction_result, indent=2)}
+
+Prompt:
+Given a website section's information and global design context:
+1. Section-specific details:
+
+   - Name: {{featureName}}
+
+   - Detailed Description: {{detailedDescription}}
+
+2. Global website context:
+
+   - Analysis Summary: {{analysisSummary}}
+
+   - Branding Overview: {{brandingOverview}}
+Generate a research request prompt for FutureHouse API using this format and only output the research request:
+Research request: Provide a comprehensive analysis of {{featureName}} design in {{business_type}} websites with supporting research studies and data.
+Key areas to address:
+1. User Experience Research
+   - User behavior patterns specific to this section type
+   - Interaction design effectiveness studies
+   - Section-specific conversion metrics
+   - Accessibility considerations
+2. Design Implementation
+   - Layout optimization techniques
+   - Visual hierarchy best practices
+   - Component interaction patterns
+   - Responsive design approaches
+3. Performance Impact
+   - Loading and rendering metrics
+   - Mobile-first considerations
+   - Technical implementation guidelines
+   - Optimization strategies
+4. Content Strategy
+   - Content hierarchy research
+   - Element placement studies
+   - Information architecture findings
+   - User engagement patterns
+5. Business Impact
+   - Conversion rate influences
+   - User journey effectiveness
+   - Brand alignment metrics
+   - ROI measurements
+Format requirements:
+- Include quantitative data where available
+- Cite specific research studies
+- Provide actionable guidelines
+- Include success metrics
+- Address cross-device considerations
+Target audience context:
+{{business_type}} / {{target_audience}}
+Keep the structure consistent but modify the specific research points based on the section's unique purpose and elements.
+"""
