@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
-import { analyzeWithScreenshot } from '../services/featureExtractionService';
+import { analyzeWithScreenshot } from '../services/futureHouseService';
 import { useContext } from 'react';
 import { UITestModeContext, ModelSelectionContext } from '../App';
 import { AnimatedAiInput } from '@/components/ui/animated-ai-input';
@@ -65,7 +65,7 @@ export const Hero = () => {
         // eslint-disable-next-line no-await-in-loop
         await new Promise((r) => setTimeout(r, 500));
       }
-      const mockAnalysis = await analyzeWithScreenshot({ url: url });
+      const mockAnalysis = await analyzeWithScreenshot(url, uiTest);
       setFinalAnalysis(mockAnalysis);
       setScreenshotId('mock123');
       setIsLoading(false);

@@ -808,8 +808,27 @@ def get_prompt_code(request):
 
 @app.post("/extract-features")
 async def extract_features(request: Request):
-    print("[DEBUG] /extract-features endpoint called")
-    return await extract_features_logic(request)
+    print("[DEBUG] ===== /extract-features endpoint called =====")
+    print(f"[DEBUG] Request method: {request.method}")
+    print(f"[DEBUG] Request URL: {request.url}")
+    print(f"[DEBUG] Request headers: {dict(request.headers)}")
+    
+    try:
+        print("[DEBUG] About to call extract_features_logic...")
+        result = await extract_features_logic(request)
+        print(f"[DEBUG] extract_features_logic returned: {type(result)}")
+        print(f"[DEBUG] Result content (first 500 chars): {str(result)[:500]}")
+        print("[DEBUG] ===== /extract-features endpoint completed successfully =====")
+        return result
+    except Exception as e:
+        print(f"[DEBUG] ===== ERROR in /extract-features endpoint =====")
+        print(f"[DEBUG] Exception type: {type(e)}")
+        print(f"[DEBUG] Exception message: {str(e)}")
+        import traceback
+        print(f"[DEBUG] Full traceback:")
+        traceback.print_exc()
+        print("[DEBUG] ===== END ERROR =====")
+        raise
 
 
 # FutureHouse API
