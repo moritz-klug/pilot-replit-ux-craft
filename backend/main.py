@@ -935,8 +935,8 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
                 ]
             }
         ],
-        # 'temperature': 0.3,
-        # 'max_tokens': 8000
+        'temperature': 0.3,
+        'max_tokens': 8000
     }
     headers = {
         'Authorization': f'Bearer {OPENROUTER_API_KEY}',
@@ -1004,7 +1004,6 @@ Company Information:
 REQUIRED OUTPUT:
 ===============
 Output only the research request below, no additional text:
----BEGIN RESEARCH REQUEST---
 Provide a comprehensive analysis of {feature['featureName']} design in {company.get('industry', 'general')} websites with supporting research studies and data, specifically for {company.get('companyName', 'the target company')} based in {company.get('headquartersLocation', 'their location')}.
 KEY RESEARCH AREAS:
 1. User Experience Research
@@ -1043,7 +1042,7 @@ Industry: {company.get('industry', 'Not specified')}
 Target Users: {ux.get('targetAudience', 'Not specified')}
 Business Goals: {ux.get('businessContext', 'Not specified')}
 Maintain consistent analysis depth across all sections while emphasizing {company.get('companyName', 'the company')}'s specific needs and market position in {company.get('headquartersLocation', 'their market')}.
----END RESEARCH REQUEST---"""   
+"""   
     return prompt
 
 
@@ -1252,8 +1251,8 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
         "messages": [
             {"role": "user", "content": prompt}
         ],
-        # "temperature": 0.3,
-        # "max_tokens": 8000,
+        "temperature": 0.3,
+        "max_tokens": 8000,
     }
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",

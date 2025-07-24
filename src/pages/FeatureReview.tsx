@@ -632,14 +632,28 @@ const FeatureReview: React.FC = () => {
           const prompt_to_FH = response.prompt_to_FH;
 
           // 2. Show the prompt in the chat
-          chatbotRef.current?.addBotMessage(`Prompt to FutureHouse: ${prompt_to_FH}`);
+          console.log("[DEBUG]: About to add prompt message to chat");
+          if (chatbotRef.current) {
+            chatbotRef.current.addBotMessage(`Prompt to FutureHouse: ${prompt_to_FH}`);
+            console.log("[DEBUG]: Prompt message added to chat");
+            // Small delay to ensure message is processed
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } else {
+            console.error("[DEBUG]: chatbotRef.current is null when trying to add prompt message");
+          }
 
           console.log("[DEBUG]: prompt_to_FH", prompt_to_FH);
 
           // 3. Add a loading message for FutureHouse immediately
           console.log("[DEBUG]: Adding FutureHouse loading message");
-          chatbotRef.current?.addBotMessage("FutureHouse is analyzing... (this may take a few minutes)");
-          console.log("[DEBUG]: FutureHouse loading message added");
+          if (chatbotRef.current) {
+            chatbotRef.current.addBotMessage("FutureHouse is analyzing... (this may take a few minutes)");
+            console.log("[DEBUG]: FutureHouse loading message added");
+            // Small delay to ensure message is processed
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } else {
+            console.error("[DEBUG]: chatbotRef.current is null when trying to add loading message");
+          }
 
           // 4. Call FutureHouse with the prompt
           setFutureHouseLoading(true);
@@ -664,7 +678,15 @@ const FeatureReview: React.FC = () => {
           setFutureHouseProgress([]);
 
           // 5. Just tell the user FutureHouse is done
-          chatbotRef.current?.addBotMessage("FutureHouse analysis is finished. Summarizing results...");
+          console.log("[DEBUG]: About to add FutureHouse completion message");
+          if (chatbotRef.current) {
+            chatbotRef.current.addBotMessage("FutureHouse analysis is finished. Summarizing results...");
+            console.log("[DEBUG]: FutureHouse completion message added");
+            // Small delay to ensure message is processed
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } else {
+            console.error("[DEBUG]: chatbotRef.current is null when trying to add completion message");
+          }
 
           // 6. Call OpenRouter to summarize recommendations
           const summarizeRes = await fetch('http://localhost:8000/openrouter-summarize-recommendations', {
@@ -690,14 +712,17 @@ const FeatureReview: React.FC = () => {
 
           // Store the summarized recommendations in state
           setSummarizedRecommendations(summary_text);
-          console.log("[DEBUG]: Stored summarizedRecommendations in state:", summary_text);
+          console.log("[DEBUG]: Stored summarizedRecommendations in state:", summarizedRecommendations);
 
           // 7. Show the improvements in the chat
+          console.log("[DEBUG]: About to add final summary message");
           console.log("[DEBUG]: chatbotRef.current:", chatbotRef.current);
           if (chatbotRef.current) {
             console.log("[DEBUG]: addBotMessage method exists:", typeof chatbotRef.current.addBotMessage);
+            // Small delay before adding final message
+            await new Promise(resolve => setTimeout(resolve, 100));
             chatbotRef.current.addBotMessage(summary_text);
-            console.log("[DEBUG]: addBotMessage called successfully");
+            console.log("[DEBUG]: Final summary message added successfully");
           } else {
             console.error("[DEBUG]: chatbotRef.current is null!");
             // Fallback: try to show the message in the console or alert
