@@ -365,7 +365,7 @@ const FeatureReview: React.FC = () => {
       window.removeEventListener('message', handleMessage);
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [waitingForWebhook]);
+  }, []);
 
   // Mock webhook endpoint for testing (only in development)
   useEffect(() => {
@@ -572,6 +572,18 @@ const FeatureReview: React.FC = () => {
         setCurrentFeatureDescription(section.detailedDescription || 'No design description available');
         setCurrentHTMLStructure(section.htmlStructure || '');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
+
+        // Wait for React to render the chatbot component before making API calls
+        // Use a more reliable approach to wait for the component to be available
+        let attempts = 0;
+        while (!chatbotRef.current && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 20));
+          attempts++;
+        }
+        
+        if (!chatbotRef.current) {
+          console.error("[DEBUG]: chatbotRef.current is still null after waiting");
+        }
 
         // Only make API calls if NOT in UI Test Mode
         if (!uiTest) {
@@ -1034,14 +1046,6 @@ const FeatureReview: React.FC = () => {
       mappedAnalysis = null;
     }
   }
-
-  // Debug logging for backend response and mappedAnalysis
-  React.useEffect(() => {
-    if (analysis) {
-      console.log('[DEBUG] Raw backend response:', analysis);
-      console.log('[DEBUG] Mapped analysis:', mappedAnalysis);
-    }
-  }, [analysis, mappedAnalysis]);
 
 
 
