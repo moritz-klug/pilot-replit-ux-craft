@@ -724,7 +724,7 @@ def get_prompt_code(request):
     
     try:
         data = {
-            'model': OPENROUTER_MODEL,
+            'model': 'anthropic/claude-3.7-sonnet:thinking',
             'messages': [
                 {
                     "role": "user",
