@@ -595,7 +595,7 @@ const FeatureReview: React.FC = () => {
               feature_extraction_result: {
                 websiteFeatures: mappedAnalysis.sections.map(s => ({
                   featureName: s.name,
-                  detailedDescription: s.purpose,
+                  detailedDescription: s.detailedDescription,
                   htmlStructure: s.htmlStructure,
                   cssProperties: s.css_properties
                 })),
@@ -975,7 +975,7 @@ const FeatureReview: React.FC = () => {
         // Transform websiteFeatures to sections
         sections: parsedContent.websiteFeatures?.map((feature: any, index: number) => ({
           name: feature.featureName || `Feature ${index + 1}`,
-          purpose: feature.detailedDescription || '',
+          detailedDescription: feature.detailedDescription || '',
           htmlStructure: feature.htmlStructure || '',
           css_properties: feature.cssProperties || ''
         })) || [],
@@ -1551,7 +1551,7 @@ const FeatureReview: React.FC = () => {
                                 name: section.name,
                               }}
                               content={{
-                                text: `${section.purpose || 'UI Component'}`,
+                                text: `${section.detailedDescription || 'UI Component'}`,
                                 // link: {
                                 //   title: `${section.elements || 'Component Elements'}`,
                                 //   // description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
@@ -1624,7 +1624,7 @@ const FeatureReview: React.FC = () => {
                             timeAgo: "confirmed"
                           }}
                           content={{
-                            text: `${section.purpose || 'Confirmed UI Component'}`,
+                            text: `${section.detailedDescription || 'Confirmed UI Component'}`,
                             link: {
                               title: `${section.elements || 'Component Elements'}`,
                               description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
