@@ -1139,12 +1139,35 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
     # Compose the prompt for OpenRouter
     prompt = (
         f"Using the FutureHouse research findings below, analyze the following website section and generate a comprehensive UI/UX improvement strategy:\n\n"
+    
         f"[FutureHouse Research Analysis]\n"
         f"{request.answer}\n\n"
+        
         f"[Website Section Analysis]\n"
         f"Context: {json.dumps(request.context) if request.context else ''}\n\n"
+
+        f"[Reference Database]\n"
+        f"{references_str}\n\n"
+
+        f"REFERENCE MATCHING INSTRUCTIONS:\n"
+        f"1. Extract all citations mentioned in the research analysis\n"
+        f"2. Match each citation against the provided reference database\n"
+        f"3. Use format: [Author, Year] for in-text citations\n"
+        f"4. Flag any citations that cannot be matched\n"
+        f"5. Ensure every claim is properly attributed\n"
+        f"6. Create a validation report showing match success rate\n\n"
+        f"REFERENCE PROCESSING RULES:\n"
+        f"- Only use information that can be properly cited\n"
+        f"- If a citation cannot be matched, note it as [UNVERIFIED]\n"
+        f"- Prioritize information with strong reference backing\n"
+        f"- Include page numbers or section references where available\n"
+        f"- Maintain citation consistency throughout the document\n\n"
+
+        
         f"Required Output Format:\n"
         f"Title: \"Strategic UI/UX Improvements for [Website/Company Name]'s [Section Name]\"\n\n"
+        
+        # KEEPING YOUR ORIGINAL SECTIONS
         f"1. Research Summary (Single Paragraph):\n"
         f"Extract and synthesize from FutureHouse research:\n"
         f"- Primary research scope\n"
@@ -1153,6 +1176,7 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
         f"- Performance impact statistics\n"
         f"- User behavior patterns\n"
         f"- Technical optimization results\n\n"
+        
         f"2. Key Improvement Categories:\n"
         f"[Extract categories directly from FutureHouse research findings]\n"
         f"For each identified category from the research, provide:\n"
@@ -1169,19 +1193,29 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
         f"   * Mobile adaptation\n"
         f"   * Accessibility requirements\n"
         f"- Expected outcomes based on research metrics\n\n"
-        f"3. Implementation Roadmap:\n"
-        f"Prioritize based on research impact metrics:\n"
-        f"- High impact items (>X% improvement in research)\n"
-        f"- Medium impact items (Y-X% improvement)\n"
-        f"- Foundation items (required for other improvements)\n\n"
-        f"4. Next Steps:\n"
-        f"Generate component list based on research priorities:\n"
-        f"- [ ] [Component 1] (Impact: XX% from research)\n"
-        f"- [ ] [Component 2] (Impact: YY% from research)\n"
-        f"- [ ] [Component 3] (Impact: ZZ% from research)\n\n"
-        f"Note: Each component's detailed technical implementation is available upon request.\n\n"
-        f"References:\n"
-        f"{references_str}"
+        
+        # IMPROVED IMPLEMENTATION ROADMAP
+        f"3. Executable Implementation Specifications:\n"
+        f"Prioritized UI/UX improvements with complete implementation details:\n\n"
+        f"CRITICAL PRIORITY (Implement First):\n"
+        f"For each critical component, provide:\n"
+        f"- Component Name: [Descriptive name]\n"
+        f"- Visual Description: [Detailed appearance, layout, colors, typography, spacing]\n"
+        f"- Functional Behavior: [User interactions, state changes, animations, transitions]\n"
+        f"- Content Structure: [Data fields, text content, media elements, hierarchy]\n"
+        f"- Responsive Behavior: [How it adapts across screen sizes, breakpoints]\n"
+        f"- Accessibility Features: [ARIA labels, keyboard navigation, screen reader support]\n"
+        f"- Performance Requirements: [Load time targets, animation frame rates, optimization needs]\n"
+        f"- Integration Points: [APIs, data sources, existing system connections]\n"
+        f"- Success Criteria: [Measurable outcomes, testing requirements]\n"
+        f"- Implementation Context: [Where it fits in the page/app, surrounding elements]\n\n"
+        f"HIGH PRIORITY (Implement Second):\n"
+        f"[Same detailed format as Critical Priority]\n\n"
+        f"MEDIUM PRIORITY (Implement Third):\n"
+        f"[Same detailed format as Critical Priority]\n\n"
+        
+        f"CODE GENERATION READY:\n"
+        f"These descriptions contain sufficient detail for direct code generation without additional clarification.\n\n"
     )
 
     print(f"[DEBUG]: prompt: {prompt}")
@@ -1192,7 +1226,7 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 4000,
+        "max_tokens": 6000,
     }
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
