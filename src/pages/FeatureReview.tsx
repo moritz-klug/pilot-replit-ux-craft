@@ -569,7 +569,7 @@ const FeatureReview: React.FC = () => {
         setTab('chatbot');
         const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
         setCurrentChatFeature(featureName);
-        setCurrentFeatureDescription(section.detailedDescription || 'No design description available');
+        setCurrentFeatureDescription(section.purpose || 'No design description available');
         setCurrentHTMLStructure(section.htmlStructure || '');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
 
@@ -798,7 +798,18 @@ const FeatureReview: React.FC = () => {
   };
 
   const handleChatUpdate = (newChatHistory: Array<{ text: string; isUser: boolean; id: string }>) => {
-    setChatHistory(newChatHistory);
+    const futurehouseLoading = [
+        "Prompt to FutureHouse:",
+        "FutureHouse is analyzing... (this may take a few minutes)",
+        "FutureHouse analysis started...",
+        "FutureHouse analysis is finished."
+      ];
+    
+    const filteredChatHistory = newChatHistory.filter(msg => {
+      return !futurehouseLoading.some(prefix => msg.text.startsWith(prefix));
+    });
+     
+    setChatHistory(filteredChatHistory);
   };
 
   const [lastChatLength, setLastChatLength] = useState(0);
@@ -836,9 +847,14 @@ const FeatureReview: React.FC = () => {
     setIsFetching(true);
 
     try {
-      const latestRecommendation = chatHistory
+      let latestRecommendation = '';
+      if (chatHistory.length === 1){
+        latestRecommendation = 'ONLY implement the CRITICAL PRIORITY recommendation or IMPLEMENT FIRST recommendation or HIGH IMPACT recommendation. ' + summarizedRecommendations;
+      } else {
+        latestRecommendation = chatHistory
         .filter(msg => !msg.isUser)
         .pop()?.text || "No latest recommendation available";
+      }
       
       const requestBody = {
         featureName: currentChatFeature,
@@ -897,7 +913,8 @@ const FeatureReview: React.FC = () => {
     outputType,
     FrameworkType,
     Language,
-    PlatformType
+    PlatformType,
+    summarizedRecommendations
   ]);
   
   // Effect to fetch code/prompt when needed
