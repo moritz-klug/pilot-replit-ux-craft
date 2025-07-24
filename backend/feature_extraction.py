@@ -56,7 +56,7 @@ def build_openrouter_payload(body, screenshot_image_url=None):
     
     print("[DEBUG] Building OpenRouter payload...")
     openrouter_payload = {
-        "model": "deepseek/deepseek-chat-v3-0324:free", # anthropic/claude-3.7-sonnetdeepseek/deepseek-chat-v3-0324:free
+        "model": "anthropic/claude-3.7-sonnet", # deepseek/deepseek-chat-v3-0324:free
         "stream": False,
         "structured_outputs": True,
         "require_parameters": True,

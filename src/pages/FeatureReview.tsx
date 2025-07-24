@@ -96,6 +96,7 @@ const FeatureReview: React.FC = () => {
   const [futureHouseProgress, setFutureHouseProgress] = useState<string[]>([]);
   const [futureHouseReferences, setFutureHouseReferences] = useState<any[]>([]);
   const [futureHouseError, setFutureHouseError] = useState<string | null>(null);
+  const [summarizedRecommendations, setSummarizedRecommendations] = useState<string | null>(null);
   
   // Results page functionality
   const [selectedFramework, setSelectedFramework] = useState('react');
@@ -497,7 +498,7 @@ const FeatureReview: React.FC = () => {
         console.log("[DEBUG] Data content (first 500 chars):", JSON.stringify(data).substring(0, 500));
         
         setAnalysis(data);
-        console.log("[Nichole DEBUG] Analysis:", data);
+        // console.log("[Nichole DEBUG] Analysis:", data);
         setLoading(false);
         
         // Initialize statuses - handle both old and new response formats
@@ -575,6 +576,15 @@ const FeatureReview: React.FC = () => {
         // Only make API calls if NOT in UI Test Mode
         if (!uiTest) {
           // --- NEW: Trigger OpenRouter API call here ---
+          // Debug: Log the mappedAnalysis structure
+          console.log('[DEBUG] mappedAnalysis structure:', mappedAnalysis);
+          console.log('[DEBUG] Current section:', section);
+          console.log('[DEBUG] featureName:', featureName);
+          
+          // Check if the feature exists in mappedAnalysis
+          const matchingFeature = mappedAnalysis.sections.find(s => s.name === featureName);
+          console.log('[DEBUG] Matching feature found:', matchingFeature);
+          
           // 1. Call OpenRouter to get the prompt
           const openRouterRes = await fetch('http://localhost:8000/openrouter-generate-research-prompt', {
             method: 'POST',
@@ -582,7 +592,40 @@ const FeatureReview: React.FC = () => {
             body: JSON.stringify({
               feature_name: featureName,
               screenshot_url: section.cropped_image_url || '',
-              feature_extraction_result: section
+              feature_extraction_result: {
+                websiteFeatures: mappedAnalysis.sections.map(s => ({
+                  featureName: s.name,
+                  detailedDescription: s.purpose,
+                  htmlStructure: s.htmlStructure,
+                  cssProperties: s.css_properties
+                })),
+                siteUXArchitecture: {
+                  businessContext: mappedAnalysis.ux_architecture.businessContext,
+                  targetAudience: mappedAnalysis.ux_architecture.targetAudience,
+                  userGoals: mappedAnalysis.ux_architecture.userGoals,
+                  navigationStructure: mappedAnalysis.ux_architecture.page_flow,
+                  responsiveness: mappedAnalysis.ux_architecture.responsiveness,
+                  accessibilityObservations: mappedAnalysis.ux_architecture.accessibilityObservations
+                },
+                brandIdentity: {
+                  logoUrl: mappedAnalysis.global_design_summary.logoUrl,
+                  dominantColorPalette: mappedAnalysis.global_design_summary.color_palette.split(', ').filter(c => c),
+                  typographyStyles: mappedAnalysis.global_design_summary.typographyStyles,
+                  designTone: mappedAnalysis.global_design_summary.designTone
+                },
+                companyOverview: {
+                  companyName: mappedAnalysis.business_analysis.companyName,
+                  employeeCount: mappedAnalysis.business_analysis.employeeCount,
+                  industry: mappedAnalysis.business_analysis.industry,
+                  headquartersLocation: mappedAnalysis.business_analysis.headquartersLocation,
+                  foundedYear: mappedAnalysis.business_analysis.foundedYear,
+                  externalLinks: {
+                    LinkedIn: mappedAnalysis.business_analysis.externalLinks.linkedIn,
+                    Facebook: mappedAnalysis.business_analysis.externalLinks.facebook,
+                    Instagram: mappedAnalysis.business_analysis.externalLinks.instagram
+                  }
+                }
+              }
             })
           });
           const response = await openRouterRes.json();
@@ -593,13 +636,10 @@ const FeatureReview: React.FC = () => {
 
           console.log("[DEBUG]: prompt_to_FH", prompt_to_FH);
 
-          // 3. Add a loading message for FutureHouse
+          // 3. Add a loading message for FutureHouse immediately
           console.log("[DEBUG]: Adding FutureHouse loading message");
           chatbotRef.current?.addBotMessage("FutureHouse is analyzing... (this may take a few minutes)");
           console.log("[DEBUG]: FutureHouse loading message added");
-
-          // Small delay to ensure message appears
-          await new Promise(resolve => setTimeout(resolve, 100));
 
           // 4. Call FutureHouse with the prompt
           setFutureHouseLoading(true);
@@ -637,10 +677,33 @@ const FeatureReview: React.FC = () => {
             })
           });
           const summarizeResponse = await summarizeRes.json();
+          console.log("[DEBUG]: Full summarizeResponse:", summarizeResponse);
+          
+          // Check if summary_text exists in the response
+          if (!summarizeResponse.summary_text) {
+            console.error("[DEBUG]: summary_text not found in response. Available keys:", Object.keys(summarizeResponse));
+            throw new Error("summary_text not found in response");
+          }
+          
           const { summary_text } = summarizeResponse;
+          console.log("[DEBUG]: summary_text:", summary_text);
+
+          // Store the summarized recommendations in state
+          setSummarizedRecommendations(summary_text);
+          console.log("[DEBUG]: Stored summarizedRecommendations in state:", summary_text);
 
           // 7. Show the improvements in the chat
-          chatbotRef.current?.addBotMessage(summary_text);
+          console.log("[DEBUG]: chatbotRef.current:", chatbotRef.current);
+          if (chatbotRef.current) {
+            console.log("[DEBUG]: addBotMessage method exists:", typeof chatbotRef.current.addBotMessage);
+            chatbotRef.current.addBotMessage(summary_text);
+            console.log("[DEBUG]: addBotMessage called successfully");
+          } else {
+            console.error("[DEBUG]: chatbotRef.current is null!");
+            // Fallback: try to show the message in the console or alert
+            console.log("[FALLBACK] Summary text:", summary_text);
+            alert(`FutureHouse Analysis Complete:\n\n${summary_text}`);
+          }
         } else {
           // In UI Test Mode, just show a mock message
           chatbotRef.current?.addBotMessage("UI Test Mode: Mock analysis complete. This would show real recommendations in production mode.");

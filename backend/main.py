@@ -898,7 +898,7 @@ mock_extraction_result = {
 class OpenRouterPromptRequest(BaseModel):
     feature_name: str
     # screenshot_url: str
-    # feature_extraction_result: dict
+    feature_extraction_result: dict
 
 @app.post("/openrouter-generate-research-prompt")
 async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
@@ -908,11 +908,19 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
     if not OPENROUTER_API_KEY or OPENROUTER_API_KEY.startswith("sk-..."):
         raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
 
-    # For testing, use the mock data instead of request.feature_extraction_result
-    extraction_result = mock_extraction_result  # <-- use mock here
-
-    # If you want to use the real data when provided, do:
-    # extraction_result = request.feature_extraction_result or mock_extraction_result
+    # Debug: Log what we received
+    print(f"[DEBUG] Received feature_name: {request.feature_name}")
+    print(f"[DEBUG] Received feature_extraction_result: {request.feature_extraction_result}")
+    
+    # Use the real data when provided, fallback to mock for testing
+    extraction_result = request.feature_extraction_result if request.feature_extraction_result else mock_extraction_result
+    
+    # Debug: Check if the feature exists in the extraction result
+    if extraction_result and "websiteFeatures" in extraction_result:
+        matching_feature = next((f for f in extraction_result["websiteFeatures"] if f["featureName"] == request.feature_name), None)
+        print(f"[DEBUG] Matching feature in extraction_result: {matching_feature}")
+    else:
+        print(f"[DEBUG] No websiteFeatures found in extraction_result")
 
     openrouter_prompt = build_openrouter_prompt(extraction_result, request.feature_name)
 
@@ -927,8 +935,8 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
                 ]
             }
         ],
-        'temperature': 0.3,
-        'max_tokens': 3000
+        # 'temperature': 0.3,
+        # 'max_tokens': 8000
     }
     headers = {
         'Authorization': f'Bearer {OPENROUTER_API_KEY}',
@@ -970,72 +978,72 @@ def build_openrouter_prompt(extraction_result, feature_name):
     company = extraction_result.get("companyOverview", {})
 
     # Compose the prompt
-    prompt = f"""
-Given the following website section and global context, generate a research request prompt for FutureHouse API using this format and only output the research request.
-
-Section:
+    prompt = f"""Generate a research request for FutureHouse API using the exact format below.
+INPUT DATA:
+==========
+Section Information:
 - Name: {feature['featureName']}
 - Description: {feature['detailedDescription']}
-- HTML Structure: {feature.get('htmlStructure', '')}
-- CSS Properties: {feature.get('cssProperties', '')}
-
+- HTML Structure: {feature.get('htmlStructure', 'Not provided')}
+- CSS Properties: {feature.get('cssProperties', 'Not provided')}
 Global Context:
-- Business Context: {ux.get('businessContext', '')}
-- Target Audience: {ux.get('targetAudience', '')}
-- User Goals: {ux.get('userGoals', '')}
-- Navigation Structure: {ux.get('navigationStructure', '')}
-- Responsiveness: {ux.get('responsiveness', '')}
-- Accessibility: {ux.get('accessibilityObservations', '')}
-- Brand Colors: {brand.get('dominantColorPalette', '')}
-- Typography: {brand.get('typographyStyles', '')}
-- Design Tone: {brand.get('designTone', '')}
-- Company: {company.get('companyName', '')}, {company.get('industry', '')}, {company.get('headquartersLocation', '')}
-
-Output format:
-Provide a comprehensive analysis of {feature['featureName']} design in {company.get('industry', '')} websites with supporting research studies and data, specifically for {company.get('companyName', '')} based in {company.get('headquartersLocation', '')}.
-Key areas to address:
+- Business Context: {ux.get('businessContext', 'Not specified')}
+- Target Audience: {ux.get('targetAudience', 'Not specified')}
+- User Goals: {ux.get('userGoals', 'Not specified')}
+- Navigation Structure: {ux.get('navigationStructure', 'Not specified')}
+- Responsiveness: {ux.get('responsiveness', 'Not specified')}
+- Accessibility: {ux.get('accessibilityObservations', 'Not specified')}
+Brand Information:
+- Brand Colors: {brand.get('dominantColorPalette', 'Not specified')}
+- Typography: {brand.get('typographyStyles', 'Not specified')}
+- Design Tone: {brand.get('designTone', 'Not specified')}
+Company Information:
+- Company: {company.get('companyName', 'Not specified')}
+- Industry: {company.get('industry', 'Not specified')}
+- Location: {company.get('headquartersLocation', 'Not specified')}
+REQUIRED OUTPUT:
+===============
+Output only the research request below, no additional text:
+---BEGIN RESEARCH REQUEST---
+Provide a comprehensive analysis of {feature['featureName']} design in {company.get('industry', 'general')} websites with supporting research studies and data, specifically for {company.get('companyName', 'the target company')} based in {company.get('headquartersLocation', 'their location')}.
+KEY RESEARCH AREAS:
 1. User Experience Research
-    - Behavioral patterns for {ux.get('targetAudience', '')}
-    - Interaction analysis aligned with {ux.get('userGoals', '')}
-    - Navigation effectiveness within {ux.get('navigationStructure', '')}
-    - Accessibility implementation for {ux.get('accessibilityObservations', '')}
-
+   • Behavioral patterns for {ux.get('targetAudience', 'target users')}
+   • Interaction analysis aligned with {ux.get('userGoals', 'user objectives')}
+   • Navigation effectiveness within {ux.get('navigationStructure', 'current navigation')}
+   • Accessibility implementation for {ux.get('accessibilityObservations', 'accessibility requirements')}
 2. Design Implementation
-    - Layout optimization for {ux.get('responsiveness', '')}
-    - Integration with {brand.get('designTone', '')} design principles
-    - Color scheme implementation using {brand.get('dominantColorPalette', '')}
-    - Typography integration of {brand.get('typographyStyles', '')}
-    - Technical Architecture
-
-3. HTML Structure Optimization
-    - HTML structure optimization: {feature.get('htmlStructure', '')}
-    - CSS property implementation: {feature.get('cssProperties', '')}
-    - Responsive framework considerations
-    - Cross-browser compatibility solutions
-
+   • Layout optimization for {ux.get('responsiveness', 'responsive design')}
+   • Integration with {brand.get('designTone', 'brand design')} principles
+   • Color scheme implementation using {brand.get('dominantColorPalette', 'brand colors')}
+   • Typography integration of {brand.get('typographyStyles', 'brand typography')}
+3. Technical Architecture
+   • HTML structure optimization: {feature.get('htmlStructure', 'current structure')}
+   • CSS property implementation: {feature.get('cssProperties', 'current styling')}
+   • Responsive framework considerations
+   • Cross-browser compatibility solutions
 4. Business Alignment
-    - Alignment with {ux.get('businessContext', '')}
-    - Feature integration within {feature['detailedDescription']}
-    - Performance metrics tracking
-    - ROI measurement framework
-
+   • Alignment with {ux.get('businessContext', 'business objectives')}
+   • Feature integration within {feature['detailedDescription']}
+   • Performance metrics tracking
+   • ROI measurement framework
 5. Implementation Guidelines
-    - Development Standards
-    - Quality assurance protocols
-    - Performance benchmarks
-    - Maintenance requirements
-
-Format requirements:
-    - Include quantitative data and analytics
-    - Reference industry-specific case studies
-    - Provide technical specifications
-    - Document accessibility compliance
-    - Detail responsive design guidelines
-
-Target audience context: Industry: {company.get('industry', '')} Target Users: {ux.get('targetAudience', '')} Business Goals: {ux.get('businessContext', '')}
-
-Please maintain consistent analysis depth across all sections while emphasizing {company.get('companyName', '')}'s specific needs and market position.
-"""
+   • Development standards
+   • Quality assurance protocols
+   • Performance benchmarks
+   • Maintenance requirements
+RESEARCH REQUIREMENTS:
+• Include quantitative data and analytics
+• Reference industry-specific case studies for {company.get('industry', 'the industry')}
+• Provide technical specifications
+• Document accessibility compliance standards
+• Detail responsive design guidelines
+CONTEXT SUMMARY:
+Industry: {company.get('industry', 'Not specified')}
+Target Users: {ux.get('targetAudience', 'Not specified')}
+Business Goals: {ux.get('businessContext', 'Not specified')}
+Maintain consistent analysis depth across all sections while emphasizing {company.get('companyName', 'the company')}'s specific needs and market position in {company.get('headquartersLocation', 'their market')}.
+---END RESEARCH REQUEST---"""   
     return prompt
 
 
@@ -1244,8 +1252,8 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
         "messages": [
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.3,
-        "max_tokens": 6000,
+        # "temperature": 0.3,
+        # "max_tokens": 8000,
     }
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
