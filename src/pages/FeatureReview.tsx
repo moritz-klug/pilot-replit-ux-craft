@@ -1461,32 +1461,29 @@ const FeatureReview: React.FC = () => {
                               key={section.name || idx}
                               author={{
                                 name: section.name,
-                                username: "", 
-                                avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                                timeAgo: ""
                               }}
                               content={{
                                 text: `${section.purpose || 'UI Component'}`,
-                                link: {
-                                  title: `${section.elements || 'Component Elements'}`,
-                                  description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                                  icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
-                                }
+                                // link: {
+                                //   title: `${section.elements || 'Component Elements'}`,
+                                //   // description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
+                                //   // icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
+                                // }
                               }}
                               statusOptions={[...STATUS_OPTIONS]}
                               currentStatus={componentStatuses[section.name || idx] || 'rejected'}
                               onStatusChange={(status) => handleStatusChange(section, status as Status)}
-                              engagement={{
-                                likes: 0,
-                                comments: 0,
-                                shares: 0,
-                                isLiked: false,
-                                isBookmarked: false
-                              }}
+                              // engagement={{
+                              //   likes: 0,
+                              //   comments: 0,
+                              //   shares: 0,
+                              //   isLiked: false,
+                              //   isBookmarked: false
+                              // }}
                               className="mb-4"
                             >
                               <div className="text-sm text-muted-foreground space-y-1">
-                                <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
+                                {/* <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div> */}
 
                                 <div className="flex gap-2 items-center mt-6">
                                   {STATUS_OPTIONS.map((status) => (

@@ -104,18 +104,18 @@ export function SocialCard({
           {/* Author section */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <img
+              {/* <img
                 src={author?.avatar}
                 alt={author?.name}
                 className="w-10 h-10 rounded-full ring-2 ring-white dark:ring-zinc-800"
-              />
+              /> */}
               <div>
                 <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                   {author?.name}
                 </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {/* <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   @{author?.username} · {author?.timeAgo}
-                </p>
+                </p> */}
               </div>
             </div>
             <div className="relative">
