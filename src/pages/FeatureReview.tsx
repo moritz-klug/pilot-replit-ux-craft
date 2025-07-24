@@ -221,7 +221,7 @@ const FeatureReview: React.FC = () => {
           name: webhookJsonData.output.featureName,
           description: webhookJsonData.output.detailedDescription,
           id: 1,
-          purpose: webhookJsonData.output.detailedDescription,
+          detailedDescription: webhookJsonData.output.detailedDescription,
           recommendations: [],
           status: 'rejected'
         }];
@@ -232,7 +232,7 @@ const FeatureReview: React.FC = () => {
           name: item.featureName,
           description: item.detailedDescription,
           id: index + 1,
-          purpose: item.detailedDescription,
+          detailedDescription: item.detailedDescription,
           recommendations: [],
           status: 'rejected'
         }));
@@ -243,7 +243,7 @@ const FeatureReview: React.FC = () => {
           name: item.featureName,
           description: item.detailedDescription,
           id: index + 1,
-          purpose: item.detailedDescription,
+          detailedDescription: item.detailedDescription,
           recommendations: [],
           status: 'rejected'
         }));
@@ -569,7 +569,7 @@ const FeatureReview: React.FC = () => {
         setTab('chatbot');
         const featureName = section.name || `Feature ${section.id || 'Unknown'}`;
         setCurrentChatFeature(featureName);
-        setCurrentFeatureDescription(section.purpose || 'No design description available');
+        setCurrentFeatureDescription(section.detailedDescription || 'No design description available');
         setCurrentHTMLStructure(section.htmlStructure || '');
         setActiveChatbots(prev => ({ ...prev, [featureName]: true }));
 
