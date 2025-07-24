@@ -1242,6 +1242,79 @@ def format_references_for_prompt(references):
     return "\n".join(lines)
 
 
+@app.post("/resolve-authors")
+def resolve_authors(data: dict = Body(...)):
+    """
+    Resolve real author names for academic papers with 'unknownauthors' citations.
+    Uses OpenRouter with o4-mini to identify real authors from paper titles.
+    """
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set.")
+    
+    titles = data.get("titles", [])
+    if not titles:
+        return {"authorsMap": {}}
+    
+    prompt = f"""Given these academic paper titles, provide the real author names. These are known papers from Finnish university repositories:
+
+{chr(10).join(f'{i + 1}. "{title}"' for i, title in enumerate(titles))}
+
+Please respond with a JSON object mapping each title to its author(s) in this exact format:
+{{
+  "title1": "Author Name",
+  "title2": "Author Name", 
+  "title3": "Author Name"
+}}
+
+Use the exact titles as keys. For multiple authors, use format: "First Author, Second Author"
+
+Known information:
+- "Online Lead Generation in B2B Marketing: The Role of Conversion Design on the Corporate Website" by Mathias Lehtinen
+- "How user experience design can improve marketing performance of a website" by Timur Arifulin  
+- "Conversion rate optimization in online stores for high involvement products with the use of conjoint analysis" by Pauline Sell"""
+
+    try:
+        response = requests.post(
+            OPENROUTER_API_URL,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "openai/gpt-4o-mini",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+            }
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"OpenRouter error: {response.text}")
+        
+        result = response.json()
+        content = result["choices"][0]["message"]["content"].strip()
+        
+        # Try to extract JSON from the response
+        import json
+        try:
+            # Try direct JSON parsing first
+            authorsMap = json.loads(content)
+        except json.JSONDecodeError:
+            # Try to extract JSON substring if LLM wraps it
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                authorsMap = json.loads(json_match.group(0))
+            else:
+                print(f"Could not parse JSON from OpenRouter response: {content}")
+                authorsMap = {}
+        
+        print(f"[DEBUG] Resolved authors: {authorsMap}")
+        return {"authorsMap": authorsMap}
+        
+    except Exception as e:
+        print(f"Error resolving authors: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Author resolution error: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
