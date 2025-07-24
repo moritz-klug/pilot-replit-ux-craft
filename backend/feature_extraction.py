@@ -1,159 +1,93 @@
 import os
-import time
 import json
 import requests
 from fastapi import HTTPException, Request
-from dotenv import load_dotenv
 from fastapi.responses import StreamingResponse
 
-def build_openrouter_payload(body, screenshot_image_url=None):
-    openrouter_payload = body.copy()
-    if screenshot_image_url and openrouter_payload.get("messages"):
-        if isinstance(openrouter_payload["messages"], list) and len(openrouter_payload["messages"]) > 0:
-            content = openrouter_payload["messages"][0].get("content", [])
-            if isinstance(content, list):
-                content.append({"type": "image_url", "image_url": {"url": screenshot_image_url}})
-                openrouter_payload["messages"][0]["content"] = content
-    return openrouter_payload
-
 async def extract_features_logic(request: Request):
-    load_dotenv()
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        print("[Backend] No OPENROUTER_API_KEY found!")
-        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not set in .env")
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    body = await request.json()
-    print("[Backend] Received request body:", body)
-    website_url = body.get("url")
-    use_screenshot = body.get("screenshot", False)
-    print("[Backend] use_screenshot value:", use_screenshot)
-    stream = False  # Always use non-streaming mode for OpenRouter
-    # Validate and normalize website_url
-    if not website_url or not isinstance(website_url, str):
-        print("[Backend] Invalid or missing 'url' for screenshot:", website_url)
-        raise HTTPException(status_code=400, detail="Invalid or missing 'url' for screenshot.")
-    if not (website_url.startswith("http://") or website_url.startswith("https://")):
-        website_url = "https://" + website_url
-        body["url"] = website_url
+    """
+    Main function to handle feature extraction requests.
+    This is the function that main.py imports and calls.
+    """
+    print("[DEBUG] ===== extract_features_logic started =====")
+    try:
+        print("[DEBUG] About to parse request body...")
+        body = await request.json()
+        print(f"[DEBUG] Request body parsed: {body}")
+        print(f"[DEBUG] Request body type: {type(body)}")
+        
+        print("[DEBUG] About to call build_openrouter_payload...")
+        result = build_openrouter_payload(body)
+        print(f"[DEBUG] build_openrouter_payload returned: {type(result)}")
+        print(f"[DEBUG] Result content (first 500 chars): {str(result)[:500]}")
+        
+        print("[DEBUG] ===== extract_features_logic completed successfully =====")
+        return result
+    except Exception as e:
+        print(f"[DEBUG] ===== ERROR in extract_features_logic =====")
+        print(f"[DEBUG] Exception type: {type(e)}")
+        print(f"[DEBUG] Exception message: {str(e)}")
+        import traceback
+        print(f"[DEBUG] Full traceback:")
+        traceback.print_exc()
+        print("[DEBUG] ===== END ERROR =====")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # Build the OpenRouter payload as in the working Postman/main-v2.py example
-    full_schema = {
-        "name": "ui_ux_site_analysis",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "url": {"type": "string", "description": "The full URL of the website analyzed"},
-                "visual_analysis": {
-                    "type": "object",
-                    "properties": {
-                        "ui_sections": {"type": "array", "items": {"type": "string"}, "description": "List of UI section names in order of appearance"}
-                    },
-                    "required": ["ui_sections"],
-                    "additionalProperties": False
-                },
-                "sections": {
-                    "type": "array",
-                    "description": "List of cropped UI sections with detailed analysis",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string", "description": "Section name"},
-                            "elements": {"type": "array", "items": {"type": "string"}},
-                            "purpose": {"type": "string"},
-                            "style": {
-                                "type": "object",
-                                "properties": {
-                                    "fonts": {"type": "string"},
-                                    "colors": {"type": "string"},
-                                    "layout": {"type": "string"},
-                                    "interactions": {"type": "string"},
-                                    "css_properties": {"type": "object", "description": "Raw CSS properties used in this section", "additionalProperties": False}
-                                },
-                                "required": ["fonts", "colors", "layout", "interactions", "css_properties"],
-                                "additionalProperties": False
-                            },
-                            "mobile_behavior": {"type": "string"},
-                            "image_crop_url": {"type": "string", "description": "Image URL of the cropped UI section"}
-                        },
-                        "required": ["name", "elements", "purpose", "style", "mobile_behavior", "image_crop_url"],
-                        "additionalProperties": False
-                    }
-                },
-                "global_design_summary": {
-                    "type": "object",
-                    "properties": {
-                        "typography": {"type": "string"},
-                        "colors": {"type": "string"},
-                        "buttons": {"type": "string"},
-                        "layout": {"type": "string"},
-                        "icons": {"type": "string"},
-                        "css_properties": {"type": "object", "description": "CSS properties applied globally (e.g., body, :root, html)", "additionalProperties": False}
-                    },
-                    "required": ["typography", "colors", "buttons", "layout", "icons", "css_properties"],
-                    "additionalProperties": False
-                },
-                "ux_architecture": {
-                    "type": "object",
-                    "properties": {
-                        "page_flow": {"type": "string"},
-                        "emotional_strategy": {"type": "string"},
-                        "conversion_points": {"type": "string"},
-                        "design_trends": {"type": "string"}
-                    },
-                    "required": ["page_flow", "emotional_strategy", "conversion_points", "design_trends"],
-                    "additionalProperties": False
-                },
-                "business_analysis": {
-                    "type": "object",
-                    "properties": {
-                        "summary": {"type": "string"},
-                        "business_type": {"type": "string"},
-                        "target_audience": {"type": "string"},
-                        "keywords": {"type": "array", "items": {"type": "string"}}
-                    },
-                    "required": ["summary", "business_type", "target_audience", "keywords"],
-                    "additionalProperties": False
-                }
-            },
-            "required": ["url", "visual_analysis", "sections", "global_design_summary", "ux_architecture", "business_analysis"],
-            "additionalProperties": False
-        }
-    }
-    detailed_prompt = (
-        "You are an advanced UI/UX analyst, visual design expert, and business intelligence extractor. "
-        f"Given the screenshot and/or webpage - {website_url}, analyze the entire website UI using this flow:\n\n"
-        "1. Visual Analysis & Cropping\nDetect distinct UI sections and label them clearly.\nReturn image_crop_url per section (use the provided image as source).\n\n"
-        "2. Detailed Per-Section Structured Breakdown\nFor each section:\n- name\n- elements\n- purpose\n- Under style, return actual CSS property-value mappings (e.g., font-size: 36px, background-color: #ffffff, padding: 2rem). Use a css_properties object where keys are CSS property names and values are the actual values as seen in the design.\n- mobile_behavior\n- image_crop_url\n\n"
-        "3. Detailed Global Design System Summary\nInclude css styles, return actual CSS property-value mappings (e.g., font-size: 36px, background-color: #ffffff, padding: 2rem). Use a css_properties object where keys are CSS property names and values are the actual values as seen in the design.\n\n"
-        "4. Detailed UX Architecture & Interaction Patterns\nExplain the site journey, emotional strategy, conversion points, and design trends.\n\n"
-        "5. Detailed Business & Audience Analysis\nWhat is the site about? Business type? Target audience? Extract 10–20 keywords from hero, menu, services, etc.\n\n"
-        "Only return response in json_schema given in the response format."
-    )
-    print("[Backend] Building OpenRouter payload for:", website_url)
+def build_openrouter_payload(body, screenshot_image_url=None):
+    print("[DEBUG] ===== build_openrouter_payload started =====")
+    print(f"[DEBUG] Input body: {body}")
+    print(f"[DEBUG] Input body type: {type(body)}")
+    
+    website_url = body.get("url", "https://www.apple.com")
+    print(f"[DEBUG] Website URL: {website_url}")
+    
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    print(f"[DEBUG] API key present: {api_key is not None}")
+    print(f"[DEBUG] API key starts with 'sk-': {api_key.startswith('sk-') if api_key else 'N/A'}")
+    
+    if not api_key:
+        print("[DEBUG] ERROR: OpenRouter API key not configured")
+        raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
+    
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    stream = body.get("stream", False)
+    print(f"[DEBUG] OpenRouter URL: {url}")
+    print(f"[DEBUG] Stream mode: {stream}")
+    
+    print("[DEBUG] Building OpenRouter payload...")
     openrouter_payload = {
-        "model": "mistralai/mistral-small-3.2-24b-instruct:free",
+        "model": "deepseek/deepseek-chat-v3-0324:free",
         "stream": False,
         "structured_outputs": True,
         "require_parameters": True,
-        "response_format": {"type": "json_schema", "json_schema": full_schema},
+        "reasoning": {
+            "effort": "high",
+            "exclude": True
+        },
         "messages": [
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": detailed_prompt}
+                    {
+                        "type": "text",
+                        "text": f"You are a Website Feature Extraction AI that analyzes websites and identifies distinct UI/UX features, outputting structured JSON data.\n\n**TASK:** Analyze this website: {website_url}\n\n**TOOL TO USE:** \n- Use the \"Airtop\" tool to browse and scrape the website content\n\n**WHAT CONSTITUTES A FEATURE:**\n✅ VALID FEATURES (extract these):\n- Hero section\n- Navigation bar/menu\n- Testimonials section\n- About us section\n- Contact form\n- Footer\n- Product showcase\n- Pricing tables\n- Call-to-action sections\n- Blog/news sections\n- Team/staff sections\n- FAQ sections\n- Search functionality\n- Login/signup areas\n\n❌ NOT FEATURES (ignore these):\n- Individual buttons\n- Single testimonial cards\n- Individual images\n- Specific text blocks\n- Logo alone\n- Single form fields\n\n**ANALYSIS PROCESS:**\n1. Scan the entire webpage systematically\n2. Identify each distinct feature section\n3. For each feature, ask: \"Is this a complete functional/visual section or just a component within a larger section?\"\n4. Extract comprehensive details about each feature's appearance and functionality\n5. Synthesize higher‑level insights:\n   - BusinessContext (offering, value proposition, KPIs)\n   - TargetAudience & UserGoals\n   - NavigationStructure / site IA\n   - Responsiveness & Accessibility observations\n   - BrandIdentity (logo URL, colors, typography, design tone)\n   - CompanyOverview (name, employee count, industry, HQ, founded year, external links)\n6. Assemble the final JSON exactly in the format below.\n\n**OUTPUT FORMAT:**\nReturn a JSON array where each feature is an object with exactly these keys:\n\n```json\n[\n  \"websiteFeatures\": [\n    {{\n      \"featureName\": \"Clear, descriptive name of the feature\",\n      \"detailedDescription\": \"Extremely detailed description including: layout position, color scheme (specific colors/hex codes if visible), typography details, spacing, visual hierarchy, interactive elements, content type, styling (shadows, borders, gradients), responsive behavior if observable, and any unique design elements. Be as comprehensive as possible.\",\n      \"htmlStructure\": \"Cleaned HTML structure of the section. It must exact and accurate copy.\",\n      \"cssProperties\": \"All relevant css styles: layout, spacing rules, typography, colors, media queries, hover/focus states, animations, inherited css properties with values, url for any assets\"\n    }}\n    /* …repeat for each feature… */\n  ],\n  \"siteUXArchitecture\": {{\n    \"businessContext\": \"What is the business offering? Value proposition? KPIs or goals?\",\n    \"targetAudience\": \"Key user groups, their goals, digital habits, pain points.\",\n    \"userGoals\": \"What are users trying to accomplish on this site?\",\n    \"navigationStructure\": \"Describe menu structure, page hierarchy, user flow.\",\n    \"responsiveness\": \"How well is the UX adapted across screen sizes?\",\n    \"accessibilityObservations\": \"Contrast, ARIA, keyboard support, alt text, etc.\"\n  }},\n  \"brandIdentity\": {{\n    \"logoUrl\": \"URL of the company logo (if visible or discoverable)\",\n    \"dominantColorPalette\": [\"#HEX\", \"#HEX\", \"...\"],\n    \"typographyStyles\": \"Fonts, weights, spacing, heading logic\",\n    \"designTone\": \"Describe tone: minimalist, playful, luxurious, corporate, etc.\"\n  }},\n  \"companyOverview\": {{\n    \"companyName\": \"If identified\",\n    \"employeeCount\": \"Rough estimate from LinkedIn/Crunchbase if accessible\",\n    \"industry\": \"Tech, fashion, SaaS, etc.\",\n    \"headquartersLocation\": \"City/country if available\",\n    \"foundedYear\": \"—\",\n    \"externalLinks\": {{\n      \"LinkedIn\": \"—\",\n      \"Crunchbase\": \"—\"\n    }}\n  }}\n]\n```\n\nQUALITY CHECK:\nBefore finalizing, verify:\n- Have I identified ALL major website sections?\n- Are my descriptions detailed enough to recreate the feature?\n- Did I avoid listing individual components as separate features?\n- Is my JSON properly formatted?\n- Are there all the css properties and values related to the UI section and UI elements and components within the identified UI section?\n- Is the html structure fully copied?\n- Is businessContext clearly articulated?\n- Are targetAudience and userGoals realistic and specific?\n- Does navigationStructure reflect actual menus & flows?\n- Are responsiveness and accessibility notes concrete (e.g., breakpoints, contrast ratios)?\n- Are logo URL, color palette, typography, and design tone captured accurately?\n- Are company name, industry, and employee count present or marked \"—\" if truly undiscoverable?\n- Are external links provided when available?\n- Is the JSON valid, properly formatted, and matches the schema above?\n\nEXAMPLE OUTPUT:\njson {{\n  \"websiteFeatures\": [{{\n    \"featureName\": \"Hero Section\",\n    \"detailedDescription\": \"Large full-width banner at the top with a dark blue gradient background (#1a237e to #3949ab). Features a centered white headline in bold sans-serif font (approximately 48px), followed by a smaller gray subtitle (16px). Contains a prominent orange call-to-action button (#ff9800) with rounded corners and subtle drop shadow. Background includes a subtle geometric pattern overlay. Section height spans approximately 80vh with content vertically centered.\",\n    \"htmlStructure\": \"<section class=\\\"hero-section\\\">\\n  <div class=\\\"content-wrapper\\\">\\n    <h2 class=\\\"hero-title\\\">iPhone 15 Pro</h2>\\n    <p class=\\\"hero-subtitle\\\">Titanium. So strong. So light. So Pro.</p>\\n    <div class=\\\"cta-buttons\\\">\\n      <a href=\\\"/iphone-15-pro/\\\" class=\\\"cta-link\\\">Learn more</a>\\n      <a href=\\\"/shop/buy-iphone/iphone-15-pro\\\" class=\\\"cta-link\\\">Buy</a>\\n    </div>\\n  </div>\\n  <div class=\\\"hero-image-wrapper\\\">\\n    <img src=\\\"/v/iphone-15-pro/a/images/overview/hero/hero_static__e6khcva4hkeq_large.jpg\\\" alt=\\\"iPhone 15 Pro\\\" />\\n  </div>\\n</section>\",\n    \"cssProperties\": \"/* Hero container */\\n.hero-section {{\\n  display: flex;\\n  flex-direction: column;\\n  align-items: center;\\n  justify-content: center;\\n  height: 100vh;\\n  padding: 60px 20px;\\n  background-color: #ffffff; /* or #000000 depending on theme */\\n  color: #000000; /* or #ffffff depending on theme */\\n  text-align: center;\\n}}\\n\\n/* Typography */\\n.hero-title {{\\n  font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', sans-serif;\\n  font-size: 3.5rem;\\n  font-weight: 600;\\n  margin: 0;\\n}}\\n.hero-subtitle {{\\n  font-size: 1.25rem;\\n  font-weight: 400;\\n  margin-top: 10px;\\n}}\\n\\n/* CTA buttons */\\n.cta-buttons {{\\n  display: flex;\\n  gap: 20px;\\n  margin-top: 25px;\\n}}\\n.cta-link {{\\n  font-size: 1rem;\\n  color: #0071e3;\\n  text-decoration: none;\\n  border-bottom: 1px solid transparent;\\n  transition: border 0.3s ease;\\n}}\\n.cta-link:hover {{\\n  border-bottom: 1px solid #0071e3;\\n}}\\n.cta-link:focus {{\\n  outline: 2px solid #0071e3;\\n  outline-offset: 2px;\\n}}\\n\\n/* Hero image */\\n.hero-image-wrapper img {{\\n  max-width: 100%;\\n  height: auto;\\n  margin-top: 30px;\\n}}\\n\\n/* Responsive behavior */\\n@media (max-width: 768px) {{\\n  .hero-title {{\\n    font-size: 2.25rem;\\n  }}\\n  .hero-subtitle {{\\n    font-size: 1rem;\\n  }}\\n  .cta-buttons {{\\n    flex-direction: column;\\n    gap: 10px;\\n  }}\\n}}\"\n  }}]\n}}\n\nAnalyze the website thoroughly and provide the most detailed feature extraction possible."
+                    }
                 ]
             }
-        ],
-        "url": website_url
+        ]
     }
-    print("[Backend] OpenRouter payload:", json.dumps(openrouter_payload, indent=2))
+    print(f"[DEBUG] OpenRouter payload built successfully")
+    print(f"[DEBUG] Payload keys: {list(openrouter_payload.keys())}")
+    print(f"[DEBUG] Messages count: {len(openrouter_payload['messages'])}")
+    
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    print(f"[DEBUG] Headers prepared: {list(headers.keys())}")
+    
     if stream:
+        print("[DEBUG] Stream mode enabled - using streaming response")
         def event_stream():
             print("[Backend] Sending streaming request to OpenRouter...")
             with requests.post(url, json=openrouter_payload, headers=headers, stream=True) as r:
@@ -172,33 +106,77 @@ async def extract_features_logic(request: Request):
                             yield f"event: progress\ndata: {json.dumps({'message': decoded})}\n\n"
         return StreamingResponse(event_stream(), media_type='text/event-stream')
     else:
+        print("[DEBUG] Non-stream mode - making direct API call")
         try:
-            print("[Backend] Sending request to OpenRouter...")
+            print("[DEBUG] About to send POST request to OpenRouter...")
+            print(f"[DEBUG] URL: {url}")
+            print(f"[DEBUG] Payload size: {len(json.dumps(openrouter_payload))} characters")
+            
             resp = requests.post(url, json=openrouter_payload, headers=headers)
-            print("[Backend] OpenRouter response status:", resp.status_code)
-            print("[Backend] OpenRouter response text:", resp.text[:500])
+            print(f"[DEBUG] OpenRouter response status: {resp.status_code}")
+            print(f"[DEBUG] OpenRouter response headers: {dict(resp.headers)}")
+            print(f"[DEBUG] OpenRouter response text length: {len(resp.text)}")
+            print(f"[DEBUG] OpenRouter response text (first 500 chars): {resp.text[:500]}")
+            
             if resp.status_code != 200:
-                print("[Backend] OpenRouter error:", resp.text)
+                print(f"[DEBUG] OpenRouter error response: {resp.text}")
                 raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            
             if not resp.text:
-                print("[Backend] Empty response from OpenRouter!")
+                print("[DEBUG] Empty response from OpenRouter!")
                 raise HTTPException(status_code=500, detail="Empty response from upstream service")
+            
             try:
+                print("[DEBUG] About to parse JSON response...")
                 data = resp.json()
+                print(f"[DEBUG] JSON parsed successfully. Keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
             except Exception as e:
-                print("[Backend] Failed to parse JSON from OpenRouter:", resp.text)
+                print(f"[DEBUG] Failed to parse JSON from OpenRouter: {e}")
+                print(f"[DEBUG] Raw response text: {resp.text}")
                 raise HTTPException(status_code=500, detail="Invalid JSON from upstream service")
+            
+            print("[DEBUG] About to extract content from response...")
             content_str = data["choices"][0]["message"]["content"]
-            print("[Backend] Content string from OpenRouter:", content_str[:500])
+            print(f"[DEBUG] Content string length: {len(content_str)}")
+            print(f"[DEBUG] Content string (first 500 chars): {content_str[:500]}")
+            
             try:
-                content_json = json.loads(content_str)
+                print("[DEBUG] About to extract JSON from markdown response...")
+                # OpenRouter returns markdown with JSON in code blocks, so we need to extract the JSON
+                import re
+                
+                # Try to find JSON code blocks in the response
+                json_pattern = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
+                json_match = re.search(json_pattern, content_str)
+                
+                if json_match:
+                    print("[DEBUG] Found JSON code block in markdown response")
+                    json_content = json_match.group(1)
+                    print(f"[DEBUG] Extracted JSON content (first 500 chars): {json_content[:500]}")
+                    content_json = json.loads(json_content)
+                else:
+                    print("[DEBUG] No JSON code block found, trying to parse entire content as JSON")
+                    # Fallback: try to parse the entire content as JSON
+                    content_json = json.loads(content_str)
+                
+                print(f"[DEBUG] Content JSON parsed successfully. Type: {type(content_json)}")
+                if isinstance(content_json, dict):
+                    print(f"[DEBUG] Content JSON keys: {list(content_json.keys())}")
+                elif isinstance(content_json, list):
+                    print(f"[DEBUG] Content JSON is a list with {len(content_json)} items")
             except Exception as e:
-                print("[Backend] Failed to parse content as JSON:", content_str)
+                print(f"[DEBUG] Failed to parse content as JSON: {e}")
+                print(f"[DEBUG] Content string that failed to parse: {content_str}")
                 raise HTTPException(status_code=500, detail=f"Failed to parse content as JSON: {e}")
-            print("[Backend] Returning parsed content_json to frontend")
+            
+            print("[DEBUG] ===== build_openrouter_payload completed successfully =====")
             return content_json
         except Exception as e:
+            print(f"[DEBUG] ===== ERROR in build_openrouter_payload =====")
+            print(f"[DEBUG] Exception type: {type(e)}")
+            print(f"[DEBUG] Exception message: {str(e)}")
             import traceback
-            print("[Backend] EXCEPTION in extract_features_logic:", e)
+            print(f"[DEBUG] Full traceback:")
             traceback.print_exc()
-            raise HTTPException(status_code=500, detail=str(e)) 
+            print("[DEBUG] ===== END ERROR =====")
+            raise 
