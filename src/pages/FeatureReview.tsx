@@ -497,6 +497,7 @@ const FeatureReview: React.FC = () => {
         console.log("[DEBUG] Data content (first 500 chars):", JSON.stringify(data).substring(0, 500));
         
         setAnalysis(data);
+        console.log("[Nichole DEBUG] Analysis:", data);
         setLoading(false);
         
         // Initialize statuses - handle both old and new response formats
