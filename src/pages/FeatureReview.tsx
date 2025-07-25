@@ -731,10 +731,22 @@ const FeatureReview: React.FC = () => {
           console.log("[DEBUG]: chatbotRef.current:", chatbotRef.current);
           if (chatbotRef.current) {
             console.log("[DEBUG]: addBotMessage method exists:", typeof chatbotRef.current.addBotMessage);
-            // Small delay before adding final message
+            console.log("[DEBUG]: updateLastBotMessage method exists:", typeof chatbotRef.current.updateLastBotMessage);
+            
+            // First add a placeholder message
+            chatbotRef.current.addBotMessage("Processing summary...");
             await new Promise(resolve => setTimeout(resolve, 100));
-            chatbotRef.current.addBotMessage(summary_text);
-            console.log("[DEBUG]: Final summary message added successfully");
+            
+            // Then update it with the actual summary
+            try {
+              chatbotRef.current.updateLastBotMessage(summary_text);
+              console.log("[DEBUG]: Final summary message updated successfully using updateLastBotMessage");
+            } catch (error) {
+              console.log("[DEBUG]: updateLastBotMessage failed, trying addBotMessage:", error);
+              // Fallback to addBotMessage
+              chatbotRef.current.addBotMessage(summary_text);
+              console.log("[DEBUG]: Final summary message added successfully using addBotMessage");
+            }
           } else {
             console.error("[DEBUG]: chatbotRef.current is null!");
             // Fallback: try to show the message in the console or alert
