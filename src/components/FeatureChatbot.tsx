@@ -9,9 +9,10 @@ interface FeatureChatbotProps {
   featureName: string;
   onChatUpdate?: (messages: Array<{ text: string; isUser: boolean; id: string }>) => void;
   onTypingChange?: (isTyping: boolean) => void;
+  disabled?: boolean; // Add disabled prop
 }
 
-const FeatureChatbot = forwardRef(({ featureName, onChatUpdate, onTypingChange }: FeatureChatbotProps, ref) => {
+const FeatureChatbot = forwardRef(({ featureName, onChatUpdate, onTypingChange, disabled = false }: FeatureChatbotProps, ref) => {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean; id: string; loading?: boolean }>>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -30,7 +31,7 @@ const FeatureChatbot = forwardRef(({ featureName, onChatUpdate, onTypingChange }
     if (onChatUpdate) {
       onChatUpdate(messages);
     }
-  }, [messages, onChatUpdate]);
+  }, [messages]);
 
   React.useEffect(() => {
     if (onTypingChange) {
@@ -39,7 +40,7 @@ const FeatureChatbot = forwardRef(({ featureName, onChatUpdate, onTypingChange }
   }, [isTyping, onTypingChange]);
   
   const handleSend = async () => {
-    if (inputValue.trim()) {
+    if (inputValue.trim() && !disabled) { // Check if disabled
       const userMessage = inputValue;
       const messageId = Date.now().toString();
       setMessages(prev => [...prev, { text: userMessage, isUser: true, id: messageId }]);
@@ -95,6 +96,7 @@ For specific technical recommendations, please ensure the backend server is runn
   };
 
   const handleSuggestionClick = (suggestion: string) => {
+    if (disabled) return; // Don't allow suggestions when disabled
     setInputValue(suggestion);
     setTimeout(() => handleSend(), 100); // Small delay to ensure state is updated
   };
@@ -173,7 +175,7 @@ For specific technical recommendations, please ensure the backend server is runn
       </div>
 
       {/* Suggestions */}
-      {messages.length === 0 && (
+      {messages.length === 0 && !disabled && (
         <div className="space-y-2">
           <p className="text-sm font-medium">Quick suggestions:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -198,13 +200,16 @@ For specific technical recommendations, please ensure the backend server is runn
         onValueChange={setInputValue}
         onSubmit={handleSend}
       >
-        <PromptInputTextarea placeholder={`Ask about ${featureName} improvements...`} />
+        <PromptInputTextarea 
+          placeholder={disabled ? "Waiting for analysis..." : `Ask about ${featureName} improvements...`}
+          disabled={disabled}
+        />
         <PromptInputActions className="justify-end">
           <Button
             size="sm"
             className="size-9 cursor-pointer rounded-full"
             onClick={handleSend}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || disabled}
             aria-label="Send"
           >
             <ArrowUp className="h-4 w-4" />

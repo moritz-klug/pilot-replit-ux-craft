@@ -1019,7 +1019,7 @@ const FeatureReview: React.FC = () => {
 
     try {
       let latestRecommendation = '';
-      if (chatHistory.length === 1) {
+      if (chatHistory.length === 1 && !summarizedRecommendations) {
         latestRecommendation = 'ONLY implement the CRITICAL PRIORITY recommendation or IMPLEMENT FIRST recommendation or HIGH IMPACT recommendation. ' + summarizedRecommendations;
       } else {
         latestRecommendation = chatHistory
@@ -1091,7 +1091,7 @@ const FeatureReview: React.FC = () => {
   // Effect to fetch code/prompt when needed
   React.useEffect(() => {
     if (!OutputTypeSelected ||
-      (outputType === 'code' && !FrameworkType) ||
+      (outputType === 'code' && (!FrameworkType || (FrameworkType !== 'Angular' && !Language))) ||
       (outputType === 'prompt' && !PlatformType)) {
       return;
     }
@@ -1124,6 +1124,15 @@ const FeatureReview: React.FC = () => {
     processedChatRef.current.clear();
     lastProcessedChatRef.current = '';
   }, [currentChatFeature]);
+
+  const isOkButtonEnabled = () => {
+    if (outputType === 'code') {
+      return FrameworkType && (FrameworkType === 'Angular' || Language);
+    } else if (outputType === 'prompt') {
+      return PlatformType;
+    }
+    return false;
+  };
 
   const hasCode = Boolean(resultCode)
   const hasStyle = Boolean(resultStyle)
@@ -1328,6 +1337,7 @@ const FeatureReview: React.FC = () => {
                       featureName={currentChatFeature}
                       onChatUpdate={handleChatUpdate}
                       onTypingChange={setIsTyping}
+                      disabled={!summarizedRecommendations}
                     />
                   </div>
                   <div className="w-1/2 bg-gray-100 rounded-lg h-full p-4">
@@ -1452,18 +1462,28 @@ const FeatureReview: React.FC = () => {
                             </CardHeader>
                             <CardContent>
                               <div className="mb-4">
-                                <div className="font-medium mb-2 text-lg">What kind of output do you want?</div>
-                                <div className="flex flex-wrap gap-4 mb-4 justify-center">
-                                  <ToggleGroup type="single" value={outputType} onValueChange={setOutputType} className="gap-2 justify-center flex flex-wrap">
-                                    <ToggleGroupItem
-                                      value="prompt"
-                                      className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
-                                    >Prompt</ToggleGroupItem>
-                                    <ToggleGroupItem value="code"
-                                      className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
-                                    >Code</ToggleGroupItem>
-                                  </ToggleGroup>
-                                </div>
+                                <ToggleGroup
+                                  type="single"
+                                  value={outputType}
+                                  onValueChange={(value) => {
+                                    if (value) {
+                                      setOutputType(value as 'code' | 'prompt');
+                                      setOutputTypeSelected(false);
+                                      setFrameworkType('');
+                                      setLanguage('');
+                                      setPlatformType('');
+                                    }
+                                  }}
+                                  className="justify-center"
+                                >
+                                  <ToggleGroupItem value="prompt"
+                                    className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
+                                  >Prompt</ToggleGroupItem>
+                                  <ToggleGroupItem value="code"
+                                    className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
+                                  >Code</ToggleGroupItem>
+                                </ToggleGroup>
+                                
                               </div>
                               {outputType === 'prompt' ? (
                                 <div className="mb-4">
@@ -1491,8 +1511,10 @@ const FeatureReview: React.FC = () => {
                                       size="sm"
                                       variant="default"
                                       className=" shadow-sm px-8"
-
-                                      onClick={() => setOutputTypeSelected(true)}>OK
+                                      disabled={!isOkButtonEnabled()}
+                                      onClick={() => setOutputTypeSelected(true)}
+                                    >
+                                      OK
                                     </Button>
                                   </div>
                                 </div>
@@ -1545,6 +1567,7 @@ const FeatureReview: React.FC = () => {
                                       size="sm"
                                       variant="default"
                                       className=" shadow-sm px-8"
+                                      disabled={!isOkButtonEnabled()}
                                       onClick={() => setOutputTypeSelected(true)}
                                     >
                                       OK
@@ -1853,17 +1876,9 @@ const FeatureReview: React.FC = () => {
                                       key={section.name || idx}
                                       author={{
                                         name: section.name,
-                                        username: "",
-                                        avatar: section.cropped_image_url || "https://via.placeholder.com/40",
-                                        timeAgo: ""
                                       }}
                                       content={{
                                         text: `${section.detailedDescription || 'UI Component'}`,
-                                        link: {
-                                          title: `${section.elements || 'Component Elements'}`,
-                                          description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
-                                          icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />
-                                        }
                                       }}
                                       statusOptions={[...STATUS_OPTIONS]}
                                       currentStatus={componentStatuses[section.name || idx] || 'rejected'}
@@ -1881,10 +1896,6 @@ const FeatureReview: React.FC = () => {
                                       onMouseLeave={() => setHoveredFeature(null)}
                                     >
                                       <div className="text-sm text-muted-foreground space-y-1">
-                                        <div><b>Layouts:</b> {section.style?.layout}</div>
-                                        <div><b>Interactions:</b> {section.style?.interactions}</div>
-                                        <div><b>Mobile:</b> {section.mobile_behavior}</div>
-                                        <div><b>CSS properties:</b> {section?.css_properties || 'N/A'}</div>
                                         {section.bounding_box && (
                                           <div className="text-xs bg-blue-50 px-2 py-1 rounded mt-2">
                                             <b>Position:</b> {Math.round(section.bounding_box.x)}%, {Math.round(section.bounding_box.y)}%
