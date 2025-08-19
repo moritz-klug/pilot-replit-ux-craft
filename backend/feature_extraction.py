@@ -1,10 +1,14 @@
 import os
-import json
+import json, re
 import requests
 import base64
 from fastapi import HTTPException, Request
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
+
+def clean_json(json_content: str):
+    cleaned = re.sub(r"^```[a-zA-Z]*\n|\n```$", "", json_content.strip())
+    return json.loads(cleaned)
 
 def detect_sections_with_cv(screenshot_path):
     """Stub for computer vision section detection"""
@@ -571,7 +575,7 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
             content_str = data["choices"][0]["message"]["content"]
             print("[Backend] Content string from OpenRouter:", content_str[:500])
             try:
-                content_json = json.loads(content_str)
+                content_json = clean_json(content_str)
             except Exception as e:
                 print("[Backend] Failed to parse content as JSON:", content_str)
                 raise HTTPException(status_code=500, detail=f"Failed to parse content as JSON: {e}")
