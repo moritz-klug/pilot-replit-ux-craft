@@ -1858,7 +1858,7 @@ const FeatureReview: React.FC = () => {
                                         timeAgo: ""
                                       }}
                                       content={{
-                                        text: `${section.purpose || 'UI Component'}`,
+                                        text: `${section.detailedDescription || 'UI Component'}`,
                                         link: {
                                           title: `${section.elements || 'Component Elements'}`,
                                           description: `Fonts: ${section.style?.fonts || 'N/A'} • Colors: ${section.style?.colors || 'N/A'}`,
