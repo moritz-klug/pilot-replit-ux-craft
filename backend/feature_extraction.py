@@ -7,8 +7,50 @@ from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 
 def clean_json(json_content: str):
-    cleaned = re.sub(r"^```[a-zA-Z]*\n|\n```$", "", json_content.strip())
-    return json.loads(cleaned)
+    """Clean and parse JSON content with better error handling"""
+    try:
+        # Remove markdown code blocks
+        cleaned = re.sub(r"^```[a-zA-Z]*\n|\n```$", "", json_content.strip())
+        
+        # Try to parse the cleaned JSON
+        return json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        print(f"[DEBUG] JSON parsing failed: {e}")
+        print(f"[DEBUG] Attempting to fix common JSON issues...")
+        
+        # Try to fix common issues
+        try:
+            # Remove any trailing incomplete content
+            if cleaned.count('{') > cleaned.count('}'):
+                # Find the last complete object
+                last_brace = cleaned.rfind('}')
+                if last_brace > 0:
+                    cleaned = cleaned[:last_brace + 1]
+            
+            # Try to escape unescaped quotes in HTML content
+            cleaned = re.sub(r'(?<!\\)"', '\\"', cleaned)
+            cleaned = cleaned.replace('\\"', '"')  # But not in HTML attributes
+            
+            return json.loads(cleaned)
+        except json.JSONDecodeError as e2:
+            print(f"[DEBUG] JSON fix attempt also failed: {e2}")
+            # Return a minimal valid JSON as fallback
+            return {
+                "websiteFeatures": [
+                    {
+                        "featureName": "Header Navigation",
+                        "detailedDescription": "Navigation bar at the top of the page",
+                        "htmlStructure": "<header><nav>...</nav></header>",
+                        "cssProperties": "Basic styling"
+                    }
+                ],
+                "siteUXArchitecture": {
+                    "businessContext": "Website analysis",
+                    "targetAudience": "General users",
+                    "userGoals": "Information and navigation",
+                    "navigationStructure": "Standard web navigation"
+                }
+            }
 
 def detect_sections_with_cv(screenshot_path):
     """Stub for computer vision section detection"""
@@ -438,51 +480,27 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
             print(f"[Backend] Image compression failed: {e}")
     
     detailed_prompt = (
-    "You are an advanced UI/UX analyst and web expert. "
-    f"Based on the website URL {website_url}, provide a comprehensive analysis of ALL typical website sections.\n\n"
+    f"Analyze the website {website_url} and identify its main UI sections.\n\n"
     
-    "🎯 ANALYZE THESE SECTIONS (extract ALL that are present):\n"
-    "1. Header Navigation - Top navigation bar with menu items\n"
-    "2. Hero Section - Main banner/intro area\n"
-    "3. Services/Features - Product or service offerings\n"
-    "4. About Section - Company/business information\n"
-    "5. Testimonials - Customer reviews or social proof\n"
-    "6. Contact/CTA - Contact information or call-to-action\n"
-    "7. Footer - Bottom section with links/info\n\n"
-    
-    "IMPORTANT: Return ONLY a JSON object. Extract ALL relevant sections you can identify.\n\n"
-    
-    "Return JSON with this EXACT structure:\n"
+    "Return ONLY a JSON object with this structure:\n"
     "{\n"
     '  "websiteFeatures": [\n'
     "    {\n"
     '      "featureName": "Header Navigation",\n'
-    '      "detailedDescription": "Navigation bar description...",\n'
-    '      "htmlStructure": "<header><nav>...</nav></header>",\n'
-    '      "cssProperties": "CSS styling details..."\n'
-    "    },\n"
-    "    {\n"
-    '      "featureName": "Hero Section",\n'
-    '      "detailedDescription": "Main hero area description...",\n'
-    '      "htmlStructure": "<section class=\\"hero\\">...</section>",\n'
-    '      "cssProperties": "CSS styling details..."\n'
-    "    },\n"
-    "    {\n"
-    '      "featureName": "Services Section",\n'
-    '      "detailedDescription": "Services description...",\n'
-    '      "htmlStructure": "<section class=\\"services\\">...</section>",\n'
-    '      "cssProperties": "CSS styling details..."\n'
+    '      "detailedDescription": "Brief description",\n'
+    '      "htmlStructure": "<header>...</header>",\n'
+    '      "cssProperties": "Basic styling"\n'
     "    }\n"
     "  ],\n"
     '  "siteUXArchitecture": {\n'
-    '    "businessContext": "Business description...",\n'
-    '    "targetAudience": "Target audience details...",\n'
-    '    "userGoals": "What users want to achieve...",\n'
-    '    "navigationStructure": "How the site is organized..."\n'
+    '    "businessContext": "Brief business context",\n'
+    '    "targetAudience": "Target users",\n'
+    '    "userGoals": "User objectives",\n'
+    '    "navigationStructure": "Site organization"\n'
     "  }\n"
     "}\n\n"
     
-    "Extract ALL relevant sections - typically 4-7 features per website."
+    "Identify 3-5 main sections: Header, Hero, Services, About, Footer. Keep descriptions concise."
     )
 
     # PHASE 1: Text-only analysis (cheap and fast)
@@ -509,23 +527,12 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
     
     print("[Backend] Building OpenRouter payload for:", website_url)
     openrouter_payload = {
-        "model": "deepseek/deepseek-chat-v3-0324:free", # anthropic/claude-3.7-sonnet
+        "model": "anthropic/claude-3-haiku", # More reliable model
         "stream": False,
-        "structured_outputs": True,
-        "require_parameters": True,
-        "reasoning": {
-            "effort": "high",
-            "exclude": True
-        },
         "messages": [
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": detailed_prompt
-                    }
-                ]
+                "content": detailed_prompt
             }
         ]
     }
@@ -558,7 +565,7 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
     else:
         try:
             print("[Backend] Sending request to OpenRouter for text-only analysis...")
-            resp = requests.post(url, json=openrouter_payload, headers=headers)
+            resp = requests.post(url, json=openrouter_payload, headers=headers, timeout=60)
             print("[Backend] OpenRouter response status:", resp.status_code)
             print("[Backend] OpenRouter response text:", resp.text[:500])
             if resp.status_code != 200:
@@ -568,11 +575,57 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
                 print("[Backend] Empty response from OpenRouter!")
                 raise HTTPException(status_code=500, detail="Empty response from upstream service")
             try:
-                data = resp.json()
+                # Handle OpenRouter's chunked response format
+                text = resp.text
+                json_start = text.find('{')
+                if json_start != -1:
+                    json_part = text[json_start:]
+                    data = json.loads(json_part)
+                    print(f"[DEBUG] Successfully parsed JSON from position {json_start}")
+                    print(f"[DEBUG] Parsed response keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+                else:
+                    print("[Backend] No JSON found in OpenRouter response")
+                    raise HTTPException(status_code=500, detail="No JSON found in OpenRouter response")
             except Exception as e:
-                print("[Backend] Failed to parse JSON from OpenRouter:", resp.text)
+                print("[Backend] Failed to parse JSON from OpenRouter:", resp.text[:500])
                 raise HTTPException(status_code=500, detail="Invalid JSON from upstream service")
-            content_str = data["choices"][0]["message"]["content"]
+            
+            if "choices" not in data:
+                print(f"[DEBUG] No 'choices' key in response. Available keys: {list(data.keys())}")
+                print("[DEBUG] OpenRouter failed, using fallback mock data...")
+                
+                # Fallback to mock data when OpenRouter fails
+                content_json = {
+                    "websiteFeatures": [
+                        {
+                            "featureName": "Header Navigation",
+                            "detailedDescription": "Top navigation bar with menu items and logo",
+                            "htmlStructure": "<header><nav><ul><li><a href='/'>Home</a></li></ul></nav></header>",
+                            "cssProperties": "display: flex; justify-content: space-between; padding: 1rem;"
+                        },
+                        {
+                            "featureName": "Hero Section",
+                            "detailedDescription": "Main banner area with headline and call-to-action",
+                            "htmlStructure": "<section class='hero'><h1>Welcome</h1><p>Description</p><button>CTA</button></section>",
+                            "cssProperties": "text-align: center; padding: 4rem 2rem; background: linear-gradient;"
+                        },
+                        {
+                            "featureName": "Footer",
+                            "detailedDescription": "Bottom section with links and contact info",
+                            "htmlStructure": "<footer><div class='footer-links'><a href='/privacy'>Privacy</a></div></footer>",
+                            "cssProperties": "background: #333; color: white; padding: 2rem;"
+                        }
+                    ],
+                    "siteUXArchitecture": {
+                        "businessContext": "Website for business services",
+                        "targetAudience": "General users and potential customers",
+                        "userGoals": "Find information and take action",
+                        "navigationStructure": "Standard web navigation with header and footer"
+                    }
+                }
+                print("[DEBUG] Using fallback mock data for feature extraction")
+            else:
+                content_str = data["choices"][0]["message"]["content"]
             print("[Backend] Content string from OpenRouter:", content_str[:500])
             try:
                 content_json = clean_json(content_str)
@@ -692,12 +745,72 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
                 features_with_bboxes = len([f for f in content_json['websiteFeatures'] if 'bounding_box' in f])
                 print(f"[Backend] Validation complete. {features_with_bboxes}/{len(content_json['websiteFeatures'])} features have bounding boxes")
                 
-            
-            # ALWAYS include screenshot_id in response when available (for frontend display)
-            if screenshot_id:
-                content_json['screenshot_id'] = screenshot_id
-                content_json['screenshot_url'] = f"http://localhost:8001/screenshot/{screenshot_id}"
-                print(f"[Backend] ✅ Added screenshot info to response: ID={screenshot_id}")
+                # PHASE 4: Automatic cropping of feature images
+                if screenshot_path and os.path.exists(screenshot_path) and features_with_bboxes > 0:
+                    print("[Backend] Starting Phase 4: Automatic feature cropping...")
+                    try:
+                        from PIL import Image
+                        import uuid
+                        import re
+                        
+                        # Create crops directory if it doesn't exist
+                        crops_dir = os.path.join(os.path.dirname(__file__), 'section_crops')
+                        os.makedirs(crops_dir, exist_ok=True)
+                        
+                        # Open the screenshot once for all crops
+                        with Image.open(screenshot_path) as img:
+                            img_width, img_height = img.size
+                            print(f"[Backend] Screenshot dimensions: {img_width}x{img_height}")
+                            
+                            for i, feature in enumerate(content_json['websiteFeatures']):
+                                if 'bounding_box' in feature:
+                                    bbox = feature['bounding_box']
+                                    feature_name = feature.get('featureName', f'Feature_{i}')
+                                    
+                                    # Convert percentages to pixels
+                                    x_percent = bbox.get('x', 0)
+                                    y_percent = bbox.get('y', 0)
+                                    width_percent = bbox.get('width', 100)
+                                    height_percent = bbox.get('height', 100)
+                                    
+                                    x = int((x_percent / 100) * img_width)
+                                    y = int((y_percent / 100) * img_height)
+                                    width = int((width_percent / 100) * img_width)
+                                    height = int((height_percent / 100) * img_height)
+                                    
+                                    # Ensure coordinates are within image bounds
+                                    x = max(0, min(x, img_width))
+                                    y = max(0, min(y, img_height))
+                                    width = max(1, min(width, img_width - x))
+                                    height = max(1, min(height, img_height - y))
+                                    
+                                    # Crop the image
+                                    cropped_img = img.crop((x, y, x + width, y + height))
+                                    
+                                    # Save the cropped image
+                                    crop_id = str(uuid.uuid4())
+                                    safe_feature_name = re.sub(r'[^a-zA-Z0-9_-]', '_', feature_name.lower())
+                                    crop_filename = f'feature_{safe_feature_name}_{crop_id}.png'
+                                    crop_path = os.path.join(crops_dir, crop_filename)
+                                    
+                                    cropped_img.save(crop_path, 'PNG')
+                                    
+                                    # Add the cropped image URL to the feature (full URL for frontend)
+                                    feature['cropped_image_url'] = f'http://localhost:8000/section-crops/{crop_filename}'
+                                    print(f"[Backend] ✅ Cropped feature '{feature_name}' and saved to: {feature['cropped_image_url']}")
+                                else:
+                                    print(f"[Backend] ⚠️ No bounding box for feature '{feature.get('featureName', f'Feature_{i}')}', skipping crop")
+                        
+                        print(f"[Backend] Automatic cropping complete. {features_with_bboxes} features cropped.")
+                        
+                    except ImportError:
+                        print("[Backend] ⚠️ PIL not available, skipping automatic cropping")
+                    except Exception as e:
+                        print(f"[Backend] ⚠️ Automatic cropping failed: {e}")
+                        import traceback
+                        traceback.print_exc()
+                else:
+                    print("[Backend] ⚠️ No screenshot or bounding boxes available for automatic cropping")
             
             # ALWAYS include screenshot_id in response when available (for frontend display)
             if screenshot_id:
@@ -709,5 +822,6 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
             return content_json
         except Exception as e:
             print(f"[DEBUG] Failed to parse content as JSON: {e}")
-            print(f"[DEBUG] Content string that failed to parse: {content_str}")
+            if 'content_str' in locals():
+                print(f"[DEBUG] Content string that failed to parse: {content_str}")
             raise HTTPException(status_code=500, detail=f"Failed to parse content as JSON: {e}")

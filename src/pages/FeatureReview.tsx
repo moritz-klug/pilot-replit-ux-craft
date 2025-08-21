@@ -1175,7 +1175,8 @@ const FeatureReview: React.FC = () => {
           detailedDescription: feature.detailedDescription || '',
           htmlStructure: feature.htmlStructure || '',
           css_properties: feature.cssProperties || '',
-          bounding_box: feature.bounding_box || null
+          bounding_box: feature.bounding_box || null,
+          cropped_image_url: feature.cropped_image_url || null
         })) || [],
 
         // Transform brandIdentity to global_design_summary
@@ -1483,7 +1484,7 @@ const FeatureReview: React.FC = () => {
                                     className="px-5 py-2 rounded-md hover:bg-zinc-100 cursor-pointer"
                                   >Code</ToggleGroupItem>
                                 </ToggleGroup>
-                                
+
                               </div>
                               {outputType === 'prompt' ? (
                                 <div className="mb-4">
