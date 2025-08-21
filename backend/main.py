@@ -967,7 +967,7 @@ def get_prompt_code(request):
                 },
             ],
             'temperature': 0.7,
-            'max_tokens': 2000
+            'max_tokens': 8000
         }
         
         headers = {

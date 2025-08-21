@@ -38,6 +38,13 @@ const FeatureChatbot = forwardRef(({ featureName, onChatUpdate, onTypingChange, 
       onTypingChange(isTyping);
     }
   }, [isTyping, onTypingChange]);
+
+  React.useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.isUser) {
+      setCurrentBotResponse("");
+    }
+  }, [messages]);
   
   const handleSend = async () => {
     if (inputValue.trim() && !disabled) { // Check if disabled
@@ -46,7 +53,7 @@ const FeatureChatbot = forwardRef(({ featureName, onChatUpdate, onTypingChange, 
       setMessages(prev => [...prev, { text: userMessage, isUser: true, id: messageId }]);
       setInputValue("");
       setIsTyping(true);
-      setCurrentBotResponse("");
+      setCurrentBotResponse(""); 
       
       try {
         const response = await fetch('http://localhost:8000/chat', {
@@ -98,15 +105,19 @@ For specific technical recommendations, please ensure the backend server is runn
   const handleSuggestionClick = (suggestion: string) => {
     if (disabled) return; // Don't allow suggestions when disabled
     setInputValue(suggestion);
-    setTimeout(() => handleSend(), 100); // Small delay to ensure state is updated
+    handleSend(); 
   };
 
   useImperativeHandle(ref, () => ({
     addBotMessage: (text) => {
-      setMessages(prev => [...prev, { text, isUser: false, id: Date.now().toString() }]);
+      const messageId = Date.now().toString();
+      setMessages(prev => [...prev, { text, isUser: false, id: messageId }]);
+      setCurrentBotResponse(text);
+      setIsTyping(false);
     },
     addLoadingMessage: (text) => {
-      setMessages(prev => [...prev, { text, isUser: false, id: Date.now().toString(), loading: true }]);
+      const messageId = Date.now().toString();
+      setMessages(prev => [...prev, { text, isUser: false, id: messageId, loading: true }]);
     },
     updateLastBotMessage: (text) => {
       setMessages(prev => {
@@ -118,6 +129,8 @@ For specific technical recommendations, please ensure the backend server is runn
         }
         return prev;
       });
+      setCurrentBotResponse(text);
+      setIsTyping(false);
     }
   }));
 
@@ -128,7 +141,7 @@ For specific technical recommendations, please ensure the backend server is runn
         {messages.length === 0 && (
           <div className="text-center text-muted-foreground py-8">
             <h3 className="font-medium mb-2">Hi! I'm your {featureName} assistant</h3>
-            <p className="text-sm">Ask me anything about improving this component or click a suggestion below.</p>
+            <p className="text-sm">Please wait for FutureHouse to finish analyzing your {featureName}.</p>
           </div>
         )}
         
@@ -148,8 +161,7 @@ For specific technical recommendations, please ensure the backend server is runn
                 {message.isUser ? (
                   message.text
                 ) : (
-                  // Animate bot responses only for the most recent message
-                  index === messages.length - 1 && !message.isUser ? 
+                  index === messages.length - 1 && !message.isUser && currentBotResponse === message.text ? 
                     animatedBotResponse : 
                     message.text
                 )}
