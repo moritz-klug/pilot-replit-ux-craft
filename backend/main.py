@@ -1343,7 +1343,7 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
     openrouter_prompt = build_openrouter_prompt(extraction_result, request.feature_name)
 
     openrouter_data = {
-        'model': 'mistralai/mistral-small-3.2-24b-instruct:free', # anthropic/claude-3.5-sonnet
+        'model': 'anthropic/claude-3.5-sonnet', # anthropic/claude-3.5-sonnet
         'messages': [
             {
                 "role": "user",
@@ -1659,7 +1659,7 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
     print(f"[DEBUG]: prompt: {prompt}")
 
     data = {
-        "model": "deepseek/deepseek-chat-v3-0324:free",  # or your preferred modelanthropic/claude-3.7-sonnet:thinking
+        "model": "anthropic/claude-3.5-sonnet",  # or your preferred modelanthropic/claude-3.7-sonnet:thinking
         "messages": [
             {"role": "user", "content": prompt}
         ],
