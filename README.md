@@ -13,9 +13,9 @@ A comprehensive web application for UI analysis, feature recommendations, and au
 
 - [Features](#-features)
 - [Prerequisites Checklist](#-prerequisites-checklist)
+- [Configuration](#%EF%B8%8F-configuration)
 - [Installation](#%EF%B8%8F-installation)
 - [Usage](#-usage)
-- [Configuration](#%EF%B8%8F-configuration)
 - [Troubleshooting Common Issues](#-troubleshooting-common-issues)
 - [Testing Your Setup](#-testing-your-setup)
 - [Project Structure Explained](#-project-structure-explained)
@@ -59,6 +59,29 @@ python --version
 # Check Git
 git --version
 ```
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create a `.env` file in the backend directory:
+
+```env
+# AI Services
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+FUTURE_HOUSE_API_KEY=your_futurehouse_api_key_here
+```
+
+### API Key Setup
+
+#### OpenRouter API Key
+1. Visit [OpenRouter](https://openrouter.ai/)
+2. Create an account and get your API key
+3. Add to `.env` file
+
+#### FutureHouse API Key
+1. Visit [FutureHouse](https://www.futurehouse.org)
+2. Sign up for research access
+3. Get your API key and add to `.env`
 
 ## 🛠️ Installation
 
@@ -228,30 +251,6 @@ python test_screenshot.py
 5. **Recommendations**: AI generates actionable improvements
 6. **Results Display**: Interactive UI shows analysis and suggestions
 
-## ⚙️ Configuration
-
-### Environment Variables
-
-Create a `.env` file in the backend directory:
-
-```env
-# AI Services
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-FUTURE_HOUSE_API_KEY=your_futurehouse_api_key_here
-```
-
-### API Key Setup
-
-#### OpenRouter API Key
-1. Visit [OpenRouter](https://openrouter.ai/)
-2. Create an account and get your API key
-3. Add to `.env` file
-
-#### FutureHouse API Key
-1. Visit [FutureHouse](https://futurehouse.ai/)
-2. Sign up for research access
-3. Get your API key and add to `.env`
-
 ## 🔧 Troubleshooting Common Issues
 
 ### Issue 1: "422 Unprocessable Entity" Error
@@ -409,7 +408,6 @@ Once everything is working, you should be able to:
 - Visit http://localhost:8080
 - Enter any website URL
 - Click "Analyze" and see both analysis and screenshots
-- Use the standalone screenshot tool at /screenshot-tool
 
 ---
 
