@@ -473,6 +473,20 @@ async def analyze_ui(request: Request):
             # 4. Parse LLM response
             try:
                 print("[DEBUG] Parsing LLM response")
+                
+                # Check if the response has the expected structure
+                if "choices" not in llm_result:
+                    raise Exception(f"Unexpected OpenRouter response format: {llm_result}")
+                
+                if not llm_result["choices"] or len(llm_result["choices"]) == 0:
+                    raise Exception("No choices in OpenRouter response")
+                
+                if "message" not in llm_result["choices"][0]:
+                    raise Exception(f"Unexpected choice format: {llm_result['choices'][0]}")
+                
+                if "content" not in llm_result["choices"][0]["message"]:
+                    raise Exception(f"Unexpected message format: {llm_result['choices'][0]['message']}")
+                
                 analysis = json.loads(llm_result["choices"][0]["message"]["content"])
                 print("[DEBUG] Parsed analysis:", str(analysis)[:500])
             except Exception as e:
@@ -563,6 +577,20 @@ async def chat_with_feature(request: ChatRequest):
             )
 
         result = resp.json()
+        
+        # Check if the response has the expected structure
+        if "choices" not in result:
+            raise HTTPException(status_code=500, detail=f"Unexpected OpenRouter response format: {result}")
+        
+        if not result["choices"] or len(result["choices"]) == 0:
+            raise HTTPException(status_code=500, detail="No choices in OpenRouter response")
+        
+        if "message" not in result["choices"][0]:
+            raise HTTPException(status_code=500, detail=f"Unexpected choice format: {result['choices'][0]}")
+        
+        if "content" not in result["choices"][0]["message"]:
+            raise HTTPException(status_code=500, detail=f"Unexpected message format: {result['choices'][0]['message']}")
+        
         response_text = result["choices"][0]["message"]["content"]
 
         return ChatResponse(response=response_text)
@@ -983,6 +1011,20 @@ def get_prompt_code(request):
             raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
             
         results = resp.json()
+        
+        # Check if the response has the expected structure
+        if "choices" not in results:
+            raise HTTPException(status_code=500, detail=f"Unexpected OpenRouter response format: {results}")
+        
+        if not results["choices"] or len(results["choices"]) == 0:
+            raise HTTPException(status_code=500, detail="No choices in OpenRouter response")
+        
+        if "message" not in results["choices"][0]:
+            raise HTTPException(status_code=500, detail=f"Unexpected choice format: {results['choices'][0]}")
+        
+        if "content" not in results["choices"][0]["message"]:
+            raise HTTPException(status_code=500, detail=f"Unexpected message format: {results['choices'][0]['message']}")
+        
         response_text = results['choices'][0]['message']['content']
         
         try:
@@ -1364,6 +1406,20 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
     if resp.status_code != 200:
         raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
     result = resp.json()
+    
+    # Check if the response has the expected structure
+    if "choices" not in result:
+        raise HTTPException(status_code=500, detail=f"Unexpected OpenRouter response format: {result}")
+    
+    if not result["choices"] or len(result["choices"]) == 0:
+        raise HTTPException(status_code=500, detail="No choices in OpenRouter response")
+    
+    if "message" not in result["choices"][0]:
+        raise HTTPException(status_code=500, detail=f"Unexpected choice format: {result['choices'][0]}")
+    
+    if "content" not in result["choices"][0]["message"]:
+        raise HTTPException(status_code=500, detail=f"Unexpected message format: {result['choices'][0]['message']}")
+    
     openrouter_prompt = result['choices'][0]['message']['content'].strip()
     print(f"DEBUG: openrouter_prompt: {openrouter_prompt}")
     
@@ -1673,7 +1729,24 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
     resp = requests.post(OPENROUTER_API_URL, json=data, headers=headers)
     if resp.status_code != 200:
         raise HTTPException(status_code=500, detail=f"OpenRouter error: {resp.text}")
+    
     result = resp.json()
+    print(f"[DEBUG] OpenRouter response structure: {list(result.keys())}")
+    print(f"[DEBUG] Full response: {result}")
+    
+    # Check if the response has the expected structure
+    if "choices" not in result:
+        raise HTTPException(status_code=500, detail=f"Unexpected OpenRouter response format: {result}")
+    
+    if not result["choices"] or len(result["choices"]) == 0:
+        raise HTTPException(status_code=500, detail="No choices in OpenRouter response")
+    
+    if "message" not in result["choices"][0]:
+        raise HTTPException(status_code=500, detail=f"Unexpected choice format: {result['choices'][0]}")
+    
+    if "content" not in result["choices"][0]["message"]:
+        raise HTTPException(status_code=500, detail=f"Unexpected message format: {result['choices'][0]['message']}")
+    
     summary_text = result["choices"][0]["message"]["content"].strip()
     print(f"[DEBUG]: summary_text: {summary_text}")
 
@@ -1763,6 +1836,20 @@ Known information:
             raise HTTPException(status_code=500, detail=f"OpenRouter error: {response.text}")
         
         result = response.json()
+        
+        # Check if the response has the expected structure
+        if "choices" not in result:
+            raise HTTPException(status_code=500, detail=f"Unexpected OpenRouter response format: {result}")
+        
+        if not result["choices"] or len(result["choices"]) == 0:
+            raise HTTPException(status_code=500, detail="No choices in OpenRouter response")
+        
+        if "message" not in result["choices"][0]:
+            raise HTTPException(status_code=500, detail=f"Unexpected choice format: {result['choices'][0]}")
+        
+        if "content" not in result["choices"][0]["message"]:
+            raise HTTPException(status_code=500, detail=f"Unexpected message format: {result['choices'][0]['message']}")
+        
         content = result["choices"][0]["message"]["content"].strip()
         
         # Try to extract JSON from the response

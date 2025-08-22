@@ -179,6 +179,24 @@ async def extract_bounding_boxes_only(screenshot_url: str, sections: list, websi
             return []
         
         result = resp.json()
+        
+        # Check if the response has the expected structure
+        if "choices" not in result:
+            print(f"[Backend] Unexpected response format: {result}")
+            return []
+        
+        if not result["choices"] or len(result["choices"]) == 0:
+            print(f"[Backend] No choices in response: {result}")
+            return []
+        
+        if "message" not in result["choices"][0]:
+            print(f"[Backend] Unexpected choice format: {result['choices'][0]}")
+            return []
+        
+        if "content" not in result["choices"][0]["message"]:
+            print(f"[Backend] Unexpected message format: {result['choices'][0]['message']}")
+            return []
+        
         content = result["choices"][0]["message"]["content"]
         print(f"[Backend] Vision model response: {content}")
         
@@ -625,6 +643,23 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
                 }
                 print("[DEBUG] Using fallback mock data for feature extraction")
             else:
+                # Check if the response has the expected structure
+                if "choices" not in data:
+                    print(f"[Backend] Unexpected response format: {data}")
+                    raise HTTPException(status_code=500, detail=f"Unexpected OpenRouter response format: {data}")
+                
+                if not data["choices"] or len(data["choices"]) == 0:
+                    print(f"[Backend] No choices in response: {data}")
+                    raise HTTPException(status_code=500, detail="No choices in OpenRouter response")
+                
+                if "message" not in data["choices"][0]:
+                    print(f"[Backend] Unexpected choice format: {data['choices'][0]}")
+                    raise HTTPException(status_code=500, detail=f"Unexpected choice format: {data['choices'][0]}")
+                
+                if "content" not in data["choices"][0]["message"]:
+                    print(f"[Backend] Unexpected message format: {data['choices'][0]['message']}")
+                    raise HTTPException(status_code=500, detail=f"Unexpected message format: {data['choices'][0]['message']}")
+                
                 content_str = data["choices"][0]["message"]["content"]
             print("[Backend] Content string from OpenRouter:", content_str[:500])
             try:
