@@ -154,7 +154,7 @@ npm run dev
 ```
   VITE v5.x.x  ready in xxx ms
 
-  ➜  Local:   http://localhost:5173/
+  ➜  Local:   http://localhost:8080/
   ➜  Network: use --host to expose
 ```
 
@@ -169,7 +169,7 @@ curl http://localhost:8001/health
 curl http://localhost:8000/health
 
 # Check frontend (should show the website)
-open http://localhost:5173
+open http://localhost:8080
 ```
 
 #### 5.2 Test Screenshot Functionality
@@ -182,7 +182,7 @@ python test_screenshot.py
 
 ### Basic Website Analysis
 
-1. **Open the Application**: Navigate to http://localhost:5173
+1. **Open the Application**: Navigate to http://localhost:8080
 2. **Enter URL**: Input any website URL you want to analyze
 3. **Click Analyze**: The system will automatically:
    - Take a full-page screenshot
@@ -240,7 +240,7 @@ FUTURE_HOUSE_API_KEY=your_futurehouse_api_key_here
 # Server Configuration
 PORT=8000
 SCREENSHOT_PORT=8001
-FRONTEND_PORT=5173
+FRONTEND_PORT=8080
 ```
 
 ### API Key Setup
@@ -376,7 +376,7 @@ pilot-replit-ux-craft/
 
 ## 🎯 What Each Service Does
 
-- **Frontend (Port 5173)**: React web application
+- **Frontend (Port 8080)**: React web application
 - **Main API (Port 8000)**: Handles feature analysis and recommendations
 - **Screenshot Server (Port 8001)**: Takes screenshots of websites
 
@@ -410,7 +410,7 @@ If you're still having issues:
 ## 🎉 Success!
 
 Once everything is working, you should be able to:
-- Visit http://localhost:5173
+- Visit http://localhost:8080
 - Enter any website URL
 - Click "Analyze" and see both analysis and screenshots
 - Use the standalone screenshot tool at /screenshot-tool
