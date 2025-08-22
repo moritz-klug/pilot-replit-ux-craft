@@ -169,8 +169,10 @@ async def take_screenshot_async(request: ScreenshotRequest, screenshot_id: str):
                 device_scale_factor=2
             )
             
-            # Navigate to the page
-            await page.goto(request.url, wait_until="networkidle")
+            # Navigate to the page with a shorter timeout
+            print(f"[DEBUG] Navigating to {request.url}")
+            await page.goto(request.url, wait_until="domcontentloaded", timeout=15000)
+            print(f"[DEBUG] Navigation completed for {request.url}")
 
             # Wait for initial page load
             if request.wait_time > 0:

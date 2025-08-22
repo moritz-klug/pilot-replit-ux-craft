@@ -1083,29 +1083,29 @@ def get_prompt_code(request):
         raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
 
 
-@app.post("/extract-features")
-async def extract_features(request: Request):
-    print("[DEBUG] ===== /extract-features endpoint called =====")
-    print(f"[DEBUG] Request method: {request.method}")
-    print(f"[DEBUG] Request URL: {request.url}")
-    print(f"[DEBUG] Request headers: {dict(request.headers)}")
-    
-    try:
-        print("[DEBUG] About to call extract_features_logic...")
-        result = await extract_features_logic(request)
-        print(f"[DEBUG] extract_features_logic returned: {type(result)}")
-        print(f"[DEBUG] Result content (first 500 chars): {str(result)[:500]}")
-        print("[DEBUG] ===== /extract-features endpoint completed successfully =====")
-        return result
-    except Exception as e:
-        print(f"[DEBUG] ===== ERROR in /extract-features endpoint =====")
-        print(f"[DEBUG] Exception type: {type(e)}")
-        print(f"[DEBUG] Exception message: {str(e)}")
-        import traceback
-        print(f"[DEBUG] Full traceback:")
-        traceback.print_exc()
-        print("[DEBUG] ===== END ERROR =====")
-        raise
+# @app.post("/extract-features")
+# async def extract_features(request: Request):
+#     print("[DEBUG] ===== /extract-features endpoint called =====")
+#     print(f"[DEBUG] Request method: {request.method}")
+#     print(f"[DEBUG] Request URL: {request.url}")
+#     print(f"[DEBUG] Request headers: {dict(request.headers)}")
+#     
+#     try:
+#         print("[DEBUG] About to call extract_features_logic...")
+#         result = await extract_features_logic(request)
+#         print(f"[DEBUG] extract_features_logic returned: {type(result)}")
+#         print(f"[DEBUG] Result content (first 500 chars): {str(result)[:500]}")
+#         print("[DEBUG] ===== /extract-features endpoint completed successfully =====")
+#         return result
+#     except Exception as e:
+#         print(f"[DEBUG] ===== ERROR in /extract-features endpoint =====")
+#         print(f"[DEBUG] Exception type: {type(e)}")
+#         print(f"[DEBUG] Exception message: {str(e)}")
+#         import traceback
+#         print(f"[DEBUG] Full traceback:")
+#         traceback.print_exc()
+#         print("[DEBUG] ===== END ERROR =====")
+#         raise
 
 
 # FutureHouse API
@@ -1624,8 +1624,8 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
     """
     Accepts recommendations from FutureHouse, sends them to OpenRouter to summarize and turn into actionable improvements.
     """
-    if not OPENROUTER_API_KEY:
-        raise HTTPException(status_code=500, detail="OpenRouter API key not set.")
+    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-...':
+        raise HTTPException(status_code=500, detail="OpenRouter API key not set. Please add OPENROUTER_API_KEY to your .env file.")
 
     references_str = format_references_for_prompt(request.references)
     print(f"[DEBUG]: references_str: {references_str}")
@@ -1715,7 +1715,7 @@ def openrouter_summarize_recommendations(request: SummarizeRecommendationsReques
     print(f"[DEBUG]: prompt: {prompt}")
 
     data = {
-        "model": "deepseek/deepseek-chat-v3-0324:free",  # or your preferred modelanthropic/claude-3.7-sonnet:thinking
+        "model": "anthropic/claude-3.5-sonnet",  # Using Claude for better summarization
         "messages": [
             {"role": "user", "content": prompt}
         ],
