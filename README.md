@@ -183,7 +183,9 @@ python test_screenshot.py
 ### Basic Website Analysis
 
 1. **Open the Application**: Navigate to http://localhost:8080
-2. **Enter URL**: Input any website URL you want to analyze
+2. **Enter URL**: Input a website URL in full format, starting with `https://`  
+  (e.g., `https://example.com`).  
+  ⚠️ URLs without `https://` will not be accepted.
 3. **Click Analyze**: The system will automatically:
    - Take a full-page screenshot
    - Extract UI features and elements
@@ -258,16 +260,15 @@ FRONTEND_PORT=8080
 ## 🔧 Troubleshooting Common Issues
 
 ### Issue 1: "422 Unprocessable Entity" Error
-**Cause:** Missing Playwright browser installation OR invalid URL format
+**Cause:** Missing Playwright browser installation OR URL not starting with `https://`
 **Solutions:**
 ```bash
 # Install Playwright browsers
 cd backend
 playwright install chromium
 
-# Or check URL format - the system now automatically adds https:// to URLs
-# Valid formats: "https://example.com", "www.example.com", "example.com"
-```
+# Or check your URL format
+# Valid format: "https://example.com"
 
 ### Issue 2: "Module not found" errors
 **Cause:** Virtual environment not activated
@@ -382,13 +383,13 @@ pilot-replit-ux-craft/
 
 ## 🌐 URL Handling
 
-The system now automatically handles various URL formats:
+All URLs must be entered in full format:
 
-- **Full URLs**: `https://example.com` ✅
-- **WWW URLs**: `www.example.com` → `https://www.example.com` ✅
-- **Domain only**: `example.com` → `https://example.com` ✅
+- ✅ `https://example.com`
+- ❌ `www.example.com`
+- ❌ `example.com`
 
-This prevents 422 errors when users forget to add the protocol!
+This strict requirement ensures reliable analysis and avoids errors.
 
 ## 🚨 Common Mistakes to Avoid
 
