@@ -5,7 +5,6 @@ This script starts the screenshot API server on port 8001
 """
 
 import uvicorn
-from screenshot_server import app
 
 if __name__ == "__main__":
     print("Starting Screenshot API Server...")
@@ -13,7 +12,7 @@ if __name__ == "__main__":
     print("API Documentation: http://localhost:8001/docs")
     
     uvicorn.run(
-        app,
+        "screenshot_server:app",
         host="0.0.0.0",
         port=8001,
         reload=True,

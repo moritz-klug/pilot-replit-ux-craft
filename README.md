@@ -1,247 +1,422 @@
 # Auto UI - UI Analysis and Screenshot Tool
 
-A comprehensive web application for UI analysis, feature recommendations, and automatic webpage screenshot capture.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Node.js 16+](https://img.shields.io/badge/node-16+-green.svg)](https://nodejs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109.2+-blue.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
 
-## Features
+A comprehensive web application for UI analysis, feature recommendations, and automatic webpage screenshot capture. Built with modern technologies including FastAPI, React, TypeScript, and AI-powered analysis.
+
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Prerequisites Checklist](#-prerequisites-checklist)
+- [Installation](#%EF%B8%8F-installation)
+- [Usage](#-usage)
+- [Configuration](#%EF%B8%8F-configuration)
+- [Troubleshooting Common Issues](#-troubleshooting-common-issues)
+- [Testing Your Setup](#-testing-your-setup)
+- [Project Structure Explained](#-project-structure-explained)
+- [What Each Service Does](#-what-each-service-does)
+- [URL Handling](#-url-handling)
+- [Common Mistakes to Avoid](#-common-mistakes-to-avoid)
+- [Getting Help](#-getting-help)
+- [Success!](#-success)
+
+## ✨ Features
 
 ### 🎯 UI Analysis
-- Feature review and analysis
-- Scientific research-based recommendations
-- Interactive UI components
+- **AI-Powered Analysis**: Advanced feature review and analysis using OpenRouter AI models
+- **Scientific Research-Based Recommendations**: Integration with FutureHouse API for research-backed UI improvements
+- **Interactive UI Components**: Modern React components with real-time feedback
+- **Feature Extraction**: Automatic detection and analysis of website UI sections
+- **Bounding Box Detection**: Computer vision-powered element localization
 
-### 📸 Automatic Screenshots
-- **Automatic capture**: Screenshots are taken automatically when you click "Analyze" on any URL
-- Full-page screenshots for complete website analysis
-- Screenshots displayed alongside feature analysis
-- Download and manage captured screenshots
-- Standalone screenshot tool for manual captures
+### 🔬 Research Integration
+- **FutureHouse API**: Scientific research-based recommendations
+- **Academic Paper References**: Citations and research backing for all suggestions
+- **Evidence-Based Design**: All recommendations backed by research data
 
-## Project Structure
+## 📋 Prerequisites Checklist
+
+Before starting, ensure you have:
+
+- ✅ **Node.js** (v16 or higher) - [Download here](https://nodejs.org/)
+- ✅ **Python 3.11** (recommended) or Python 3.8+ - [Download here](https://www.python.org/)
+- ✅ **Git** - [Download here](https://git-scm.com/)
+- ✅ **Chrome browser** installed (for screenshots)
+
+### Verify Prerequisites
+```bash
+# Check Node.js
+node --version
+
+# Check Python
+python --version
+
+# Check Git
+git --version
+```
+
+## 🛠️ Installation
+
+### Step 1: Clone and Navigate
+```bash
+git clone <your-repo-url>
+cd pilot-replit-ux-craft
+```
+
+### Step 2: Frontend Setup
+```bash
+# Install Node.js dependencies
+npm install
+
+# Verify installation
+npm run build
+```
+
+### Step 3: Backend Setup (CRITICAL SECTION)
+
+#### 3.1 Navigate to Backend
+```bash
+cd backend
+```
+
+#### 3.2 Create Virtual Environment
+```bash
+# On macOS/Linux:
+python -m venv venv
+source venv/bin/activate
+
+# On Windows:
+python -m venv venv
+venv\Scripts\activate
+```
+
+#### 3.3 Install Python Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+#### 3.4 🚨 CRITICAL: Install Playwright Browsers
+```bash
+# This step is REQUIRED and often forgotten!
+playwright install chromium
+```
+
+#### 3.5 Verify Backend Setup
+```bash
+# Test if everything is installed correctly
+python -c "import playwright; print('✅ Playwright installed')"
+python -c "import fastapi; print('✅ FastAPI installed')"
+```
+
+### Step 4: Start All Services
+
+#### 4.1 Start Screenshot Server (Terminal 1)
+```bash
+cd backend
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+python run_screenshot_server.py
+```
+
+**Expected output:**
+```
+Starting Screenshot API Server...
+Server will be available at: http://localhost:8001
+API Documentation: http://localhost:8001/docs
+```
+
+#### 4.2 Start Main API Server (Terminal 2)
+```bash
+cd backend
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+python main.py
+```
+
+**Expected output:**
+```
+INFO:     Started server process
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+#### 4.3 Start Frontend (Terminal 3)
+```bash
+cd pilot-replit-ux-craft  # Go back to root directory
+npm run dev
+```
+
+**Expected output:**
+```
+  VITE v5.x.x  ready in xxx ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: use --host to expose
+```
+
+### Step 5: Verify Everything Works
+
+#### 5.1 Check All Services
+```bash
+# Check screenshot server
+curl http://localhost:8001/health
+
+# Check main API server
+curl http://localhost:8000/health
+
+# Check frontend (should show the website)
+open http://localhost:8080
+```
+
+#### 5.2 Test Screenshot Functionality
+```bash
+cd backend
+python test_screenshot.py
+```
+
+## 🎯 Usage
+
+### Basic Website Analysis
+
+1. **Open the Application**: Navigate to http://localhost:8080
+2. **Enter URL**: Input any website URL you want to analyze
+3. **Click Analyze**: The system will automatically:
+   - Take a full-page screenshot
+   - Extract UI features and elements
+4. **Review Results**: View the screenshot alongside feature analysis
+5. **Get Recommendations**: Access scientific research-based improvement suggestions
+
+### Feature Analysis
+
+1. **View Extracted Features**: See all detected UI sections
+2. **Interactive Screenshot**: Hover over features to see bounding boxes
+3. **Get Recommendations**: Request research-backed improvements
+4. **Chat with Features**: Use AI-powered chatbots for specific advice
+5. **Generate Code**: Get implementation-ready code snippets
+
+### Technology Stack
+
+#### Frontend
+- **React 18**: Modern React with hooks and functional components
+- **TypeScript**: Type-safe development
+- **Tailwind CSS**: Utility-first CSS framework
+- **Vite**: Fast build tool and dev server
+
+#### Backend
+- **FastAPI**: Modern, fast web framework for building APIs
+- **Python 3.11+**: Latest Python with async support
+- **Playwright**: Reliable browser automation
+- **Uvicorn**: ASGI server for FastAPI
+
+#### AI & External Services
+- **OpenRouter**: Access to multiple AI models (GPT-4, Claude, Mistral)
+- **FutureHouse**: Scientific research database for UI/UX
+- **Computer Vision**: AI-powered bounding box detection
+
+### Data Flow
+
+1. **User Input**: URL entered in frontend
+2. **Screenshot Capture**: Playwright takes full-page screenshot
+3. **Feature Extraction**: AI analyzes website structure
+4. **Research Integration**: FutureHouse provides scientific backing
+5. **Recommendations**: AI generates actionable improvements
+6. **Results Display**: Interactive UI shows analysis and suggestions
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create a `.env` file in the backend directory:
+
+```env
+# AI Services
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+FUTURE_HOUSE_API_KEY=your_futurehouse_api_key_here
+
+# Server Configuration
+PORT=8000
+SCREENSHOT_PORT=8001
+FRONTEND_PORT=8080
+```
+
+### API Key Setup
+
+#### OpenRouter API Key
+1. Visit [OpenRouter](https://openrouter.ai/)
+2. Create an account and get your API key
+3. Add to `.env` file
+
+#### FutureHouse API Key
+1. Visit [FutureHouse](https://futurehouse.ai/)
+2. Sign up for research access
+3. Get your API key and add to `.env`
+
+## 🔧 Troubleshooting Common Issues
+
+### Issue 1: "422 Unprocessable Entity" Error
+**Cause:** Missing Playwright browser installation OR invalid URL format
+**Solutions:**
+```bash
+# Install Playwright browsers
+cd backend
+playwright install chromium
+
+# Or check URL format - the system now automatically adds https:// to URLs
+# Valid formats: "https://example.com", "www.example.com", "example.com"
+```
+
+### Issue 2: "Module not found" errors
+**Cause:** Virtual environment not activated
+**Solution:**
+```bash
+cd backend
+source venv/bin/activate  # macOS/Linux
+# or
+venv\Scripts\activate     # Windows
+```
+
+### Issue 3: "Port already in use" errors
+**Cause:** Another process is using the port
+**Solution:**
+```bash
+# Find and kill the process
+lsof -ti:8001 | xargs kill -9  # macOS/Linux
+# or
+netstat -ano | findstr :8001   # Windows
+```
+
+### Issue 4: "Chrome not found" errors
+**Cause:** Chrome browser not installed or Playwright can't find it
+**Solution:**
+```bash
+# Reinstall Playwright browsers
+playwright install --force chromium
+```
+
+### Issue 5: "Permission denied" errors
+**Cause:** File permission issues
+**Solution:**
+```bash
+# Fix permissions
+chmod +x start_screenshot_server.sh
+mkdir -p screenshots
+chmod 755 screenshots
+```
+## 🧪 Testing Your Setup
+
+### Quick Test Script
+Create a file called `test_setup.py` in the backend directory:
+
+```python
+#!/usr/bin/env python3
+import requests
+import time
+
+def test_setup():
+    print("🧪 Testing your Auto UI setup...")
+    
+    # Test screenshot server
+    try:
+        response = requests.get("http://localhost:8001/health", timeout=5)
+        if response.status_code == 200:
+            print("✅ Screenshot server is running")
+        else:
+            print("❌ Screenshot server not responding correctly")
+            return False
+    except:
+        print("❌ Screenshot server not running")
+        return False
+    
+    # Test screenshot functionality
+    try:
+        response = requests.post("http://localhost:8001/screenshot", 
+            json={"url": "https://www.google.com"}, timeout=10)
+        if response.status_code == 200:
+            print("✅ Screenshot functionality working")
+        else:
+            print(f"❌ Screenshot test failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Screenshot test error: {e}")
+        return False
+    
+    print("🎉 All tests passed! Your setup is working correctly.")
+    return True
+
+if __name__ == "__main__":
+    test_setup()
+```
+
+Run it:
+```bash
+cd backend
+python test_setup.py
+```
+## 📁 Project Structure Explained
 
 ```
 pilot-replit-ux-craft/
 ├── backend/                    # Backend servers
-│   ├── main.py                # Main API server (recommendations)
-│   ├── screenshot_server.py   # Screenshot API server
+│   ├── main.py                # Main API server (port 8000)
+│   ├── screenshot_server.py   # Screenshot API server (port 8001)
 │   ├── requirements.txt       # Python dependencies
-│   ├── run_screenshot_server.py  # Screenshot server runner
-│   ├── test_screenshot.py     # Screenshot server tests
-│   ├── check_screenshot_server.py # Server status checker
-│   ├── start_screenshot_server.bat  # Windows startup script
-│   ├── start_screenshot_server.sh   # Unix startup script
-│   └── README_screenshot_server.md  # Screenshot server docs
+│   ├── venv/                  # Python virtual environment
+│   ├── screenshots/           # Generated screenshots
+│   └── run_screenshot_server.py  # Screenshot server runner
 ├── src/                       # Frontend React application
 │   ├── components/            # React components
-│   │   ├── ScreenshotTool.tsx # Standalone screenshot tool
-│   │   └── ...                # Other components
-│   ├── pages/                 # Page components
-│   └── ...                    # Other frontend files
-└── ...                        # Other project files
+│   └── pages/                 # Page components
+├── package.json               # Node.js dependencies
+└── README.md                  # Original README
 ```
 
-## Quick Start
+## 🎯 What Each Service Does
 
-### Prerequisites
-- Node.js (for frontend)
-- Python 3.8+ (for backend)
-- Chrome browser (for screenshots)
+- **Frontend (Port 8080)**: React web application
+- **Main API (Port 8000)**: Handles feature analysis and recommendations
+- **Screenshot Server (Port 8001)**: Takes screenshots of websites
 
-### 1. Install Dependencies
+## 🌐 URL Handling
 
-**Frontend:**
-```bash
-cd pilot-replit-ux-craft
-npm install
-```
+The system now automatically handles various URL formats:
 
-**Backend:**
-```bash
-cd pilot-replit-ux-craft/backend
-pip install -r requirements.txt
-```
+- **Full URLs**: `https://example.com` ✅
+- **WWW URLs**: `www.example.com` → `https://www.example.com` ✅
+- **Domain only**: `example.com` → `https://example.com` ✅
 
-### 2. Start the Servers
+This prevents 422 errors when users forget to add the protocol!
 
-**Main API Server (Port 8000):**
-```bash
-cd pilot-replit-ux-craft/backend
-python main.py
-```
+## 🚨 Common Mistakes to Avoid
 
-**Screenshot Server (Port 8001) - REQUIRED for screenshots:**
-```bash
-cd pilot-replit-ux-craft/backend
-python run_screenshot_server.py
-```
+1. **❌ Forgetting to activate virtual environment**
+2. **❌ Not installing Playwright browsers**
+3. **❌ Starting services in wrong order**
+4. **❌ Using wrong Python version**
+5. **❌ Not checking if ports are available**
 
-Or use the provided scripts:
-- Windows: `start_screenshot_server.bat`
-- Unix/Linux/Mac: `./start_screenshot_server.sh`
+## 📞 Getting Help
 
-**Frontend (Port 5173):**
-```bash
-cd pilot-replit-ux-craft
-npm run dev
-```
+If you're still having issues:
 
-### 3. Check Server Status
-```bash
-cd pilot-replit-ux-craft/backend
-python check_screenshot_server.py
-```
+1. **Run the test script**: `python test_setup.py`
+2. **Check server logs**: Look for error messages in the terminal
+3. **Verify all prerequisites**: Make sure Node.js, Python, and Chrome are installed
+4. **Check network**: Ensure no firewall is blocking localhost connections
 
-### 4. Access the Application
+## 🎉 Success!
 
-- **Main App**: http://localhost:5173
-- **Screenshot Tool**: http://localhost:5173/screenshot-tool
-- **API Documentation**: http://localhost:8001/docs
+Once everything is working, you should be able to:
+- Visit http://localhost:8080
+- Enter any website URL
+- Click "Analyze" and see both analysis and screenshots
+- Use the standalone screenshot tool at /screenshot-tool
 
-## How It Works
+---
 
-### 🚀 Automatic Screenshot Workflow
+**Remember:** The most common cause of 422 errors is missing Playwright browser installation. Always run `playwright install chromium` after installing requirements! 
 
-1. **Enter URL**: Go to the home page and enter any website URL
-2. **Click Analyze**: Click the "Analyze now" button
-3. **Automatic Capture**: The system automatically:
-   - Takes a full-page screenshot of the website
-   - Extracts UI features and elements
-   - Processes both in parallel for faster results
-4. **Review Results**: View the screenshot alongside feature analysis
-5. **Download**: Download the screenshot or view it in the analysis
-
-### 📸 Standalone Screenshot Tool
-
-For manual screenshot captures, visit `/screenshot-tool` to:
-- Take screenshots with custom settings
-- Set viewport sizes
-- Capture specific elements
-- Manage screenshot library
-
-## Screenshot Features
-
-### Automatic Capture (Home Page)
-- **Full-page screenshots**: Captures entire website content
-- **High resolution**: 1920x1080 viewport with full-page capture
-- **Wait time**: 3-second wait for dynamic content to load
-- **Error handling**: Graceful fallback if screenshot fails
-
-### Manual Capture (Screenshot Tool)
-- **Custom viewport**: Set any width and height
-- **Element-specific**: Screenshot specific CSS elements
-- **Wait time control**: Configure loading wait time
-- **File management**: View, download, and delete screenshots
-
-### API Endpoints
-
-#### Take Screenshot
-```bash
-POST http://localhost:8001/screenshot
-Content-Type: application/json
-
-{
-  "url": "https://example.com",
-  "width": 1920,
-  "height": 1080,
-  "wait_time": 3,
-  "full_page": true,
-  "element_selector": null
-}
-```
-
-#### Get Screenshot
-```bash
-GET http://localhost:8001/screenshot/{screenshot_id}
-```
-
-#### List Screenshots
-```bash
-GET http://localhost:8001/screenshots
-```
-
-#### Delete Screenshot
-```bash
-DELETE http://localhost:8001/screenshot/{screenshot_id}
-```
-
-## Testing
-
-### Test Screenshot Server
-```bash
-cd pilot-replit-ux-craft/backend
-python test_screenshot.py
-```
-
-### Check Server Status
-```bash
-cd pilot-replit-ux-craft/backend
-python check_screenshot_server.py
-```
-
-## Configuration
-
-### Environment Variables
-Create a `.env` file in the backend directory:
-
-```env
-FUTURE_HOUSE_API_KEY=your_api_key_here
-```
-
-### Screenshot Storage
-Screenshots are automatically saved in the `backend/screenshots/` directory with the naming convention:
-`screenshot_YYYYMMDD_HHMMSS_XXXXXXXX.png`
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Screenshot server not running**: 
-   ```bash
-   python check_screenshot_server.py
-   ```
-   Follow the instructions to start the server.
-
-2. **ChromeDriver not found**: The server automatically downloads ChromeDriver, but make sure Chrome browser is installed.
-
-3. **Port already in use**: Change the port in `run_screenshot_server.py` or kill the process using the port.
-
-4. **CORS errors**: The server includes CORS middleware, but ensure the frontend is running on the correct port.
-
-5. **Screenshot fails**: Check if the URL is accessible and the page loads properly.
-
-### Debug Mode
-Run the screenshot server with debug logging:
-```bash
-uvicorn screenshot_server:app --host 0.0.0.0 --port 8001 --reload --log-level debug
-```
-
-## Development
-
-### Adding New Features
-1. Backend: Add new endpoints to `screenshot_server.py`
-2. Frontend: Create new components in `src/components/`
-3. Routing: Add routes in `src/App.tsx`
-
-### Code Style
-- Backend: Follow PEP 8 Python style guide
-- Frontend: Use TypeScript and follow React best practices
-- Use meaningful commit messages
-
-## License
-
-This project is licensed under the MIT License.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## Support
-
-For issues and questions:
-1. Check the troubleshooting section
-2. Run `python check_screenshot_server.py` to verify server status
-3. Review the API documentation at `/docs`
-4. Create an issue in the repository
+**Happy Analyzing! 🎉**

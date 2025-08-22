@@ -545,7 +545,7 @@ async def build_openrouter_payload(body, screenshot_image_url=None):
     
     print("[Backend] Building OpenRouter payload for:", website_url)
     openrouter_payload = {
-        "model": "anthropic/claude-3-haiku", # More reliable model
+        "model": "anthropic/claude-3.7-sonnet:thinking", # More reliable model
         "stream": False,
         "messages": [
             {

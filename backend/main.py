@@ -1385,7 +1385,7 @@ async def openrouter_generate_research_prompt(request: OpenRouterPromptRequest):
     openrouter_prompt = build_openrouter_prompt(extraction_result, request.feature_name)
 
     openrouter_data = {
-        'model': 'mistralai/mistral-small-3.2-24b-instruct:free', # anthropic/claude-3.5-sonnet
+        'model': 'anthropic/claude-3.5-sonnet', # anthropic/claude-3.5-sonnet
         'messages': [
             {
                 "role": "user",
