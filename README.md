@@ -238,11 +238,6 @@ Create a `.env` file in the backend directory:
 # AI Services
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 FUTURE_HOUSE_API_KEY=your_futurehouse_api_key_here
-
-# Server Configuration
-PORT=8000
-SCREENSHOT_PORT=8001
-FRONTEND_PORT=8080
 ```
 
 ### API Key Setup
