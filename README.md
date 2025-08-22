@@ -11,20 +11,19 @@ A comprehensive web application for UI analysis, feature recommendations, and au
 
 ## 📋 Table of Contents
 
-- [Features](#features)
-- [Prerequisites Checklist](#prerequisites-checklist)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Troubleshooting Common Issues](#troubleshooting-common-issues)
-- [Testing Your Setup](#testing-your-setup)
-- [Development](#development)
-- [Project Structure Explained](#project-structure-explained)
-- [What Each Service Does](#what-each-service-does)
-- [URL Handling](#url-handling)
-- [Common Mistakes to Avoid](#common-mistakes-to-avoid)
-- [Getting Help](#getting-help)
-- [Success!](#success)
+- [Features](#-features)
+- [Prerequisites Checklist](#-prerequisites-checklist)
+- [Installation](#%EF%B8%8F-installation)
+- [Usage](#-usage)
+- [Configuration](#%EF%B8%8F-configuration)
+- [Troubleshooting Common Issues](#-troubleshooting-common-issues)
+- [Testing Your Setup](#-testing-your-setup)
+- [Project Structure Explained](#-project-structure-explained)
+- [What Each Service Does](#-what-each-service-does)
+- [URL Handling](#-url-handling)
+- [Common Mistakes to Avoid](#-common-mistakes-to-avoid)
+- [Getting Help](#-getting-help)
+- [Success!](#-success)
 
 ## ✨ Features
 
