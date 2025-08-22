@@ -94,23 +94,31 @@ def test_screenshot_server():
         print_error(f"Error connecting to screenshot server: {e}")
         return False
     
-    # Test screenshot functionality
-    try:
-        response = requests.post("http://localhost:8001/screenshot", 
-            json={"url": "https://www.google.com"}, timeout=10)
-        if response.status_code == 200:
-            result = response.json()
-            screenshot_id = result.get("screenshot_id")
-            print_success(f"Screenshot functionality working (ID: {screenshot_id})")
-            return True
-        else:
-            print_error(f"Screenshot test failed with status: {response.status_code}")
-            if response.status_code == 422:
-                print_warning("This might be a validation error. Check the URL format.")
+    # Test screenshot functionality with different URL formats
+    test_urls = [
+        "https://www.google.com",
+        "www.apple.com",
+        "example.com"
+    ]
+    
+    for test_url in test_urls:
+        try:
+            response = requests.post("http://localhost:8001/screenshot", 
+                json={"url": test_url}, timeout=10)
+            if response.status_code == 200:
+                result = response.json()
+                screenshot_id = result.get("screenshot_id")
+                normalized_url = result.get("url")
+                print_success(f"Screenshot functionality working for '{test_url}' -> '{normalized_url}' (ID: {screenshot_id})")
+                return True
+            else:
+                print_error(f"Screenshot test failed for '{test_url}' with status: {response.status_code}")
+                if response.status_code == 422:
+                    print_warning("This might be a validation error. Check the URL format.")
+                return False
+        except Exception as e:
+            print_error(f"Screenshot test error for '{test_url}': {e}")
             return False
-    except Exception as e:
-        print_error(f"Screenshot test error: {e}")
-        return False
 
 def test_main_api_server():
     """Test if main API server is running"""

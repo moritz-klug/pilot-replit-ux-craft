@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from playwright.async_api import async_playwright
 
 app = FastAPI(title="Screenshot API", description="API for taking screenshots of webpages")
@@ -120,13 +120,33 @@ body {
 """
 
 class ScreenshotRequest(BaseModel):
-    url: HttpUrl
+    url: str  # Changed from HttpUrl to str for more flexible URL handling
     width: int = 1920
     height: int = 1080
     wait_time: int = 0
     full_page: bool = True  # Changed default to True for better full-page capture
     element_selector: Optional[str] = None
     hide_popups: bool = True  # New option to hide popups
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Normalize URL to ensure it has a protocol
+        self.url = self._normalize_url(self.url)
+    
+    def _normalize_url(self, url: str) -> str:
+        """Normalize URL to ensure it has a protocol"""
+        url = url.strip()
+        
+        # If URL doesn't start with http:// or https://, add https://
+        if not url.startswith(('http://', 'https://')):
+            # If it starts with www., add https://
+            if url.startswith('www.'):
+                url = 'https://' + url
+            # If it doesn't start with www., assume it's a domain and add https://
+            else:
+                url = 'https://' + url
+        
+        return url
 
 class ScreenshotResponse(BaseModel):
     screenshot_id: str
@@ -150,7 +170,7 @@ async def take_screenshot_async(request: ScreenshotRequest, screenshot_id: str):
             )
             
             # Navigate to the page
-            await page.goto(str(request.url), wait_until="networkidle")
+            await page.goto(request.url, wait_until="networkidle")
 
             # Wait for initial page load
             if request.wait_time > 0:
@@ -282,7 +302,7 @@ async def create_screenshot(request: ScreenshotRequest, background_tasks: Backgr
     return ScreenshotResponse(
         screenshot_id=screenshot_id,
         message="Screenshot creation initiated.",
-        url=str(request.url)
+        url=request.url
     )
 
 @app.get("/screenshots")

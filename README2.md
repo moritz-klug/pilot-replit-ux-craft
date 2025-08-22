@@ -146,11 +146,15 @@ python test_screenshot.py
 ## 🔧 Troubleshooting Common Issues
 
 ### Issue 1: "422 Unprocessable Entity" Error
-**Cause:** Missing Playwright browser installation
-**Solution:**
+**Cause:** Missing Playwright browser installation OR invalid URL format
+**Solutions:**
 ```bash
+# Install Playwright browsers
 cd backend
 playwright install chromium
+
+# Or check URL format - the system now automatically adds https:// to URLs
+# Valid formats: "https://example.com", "www.example.com", "example.com"
 ```
 
 ### Issue 2: "Module not found" errors
@@ -265,6 +269,16 @@ pilot-replit-ux-craft/
 - **Frontend (Port 5173)**: React web application
 - **Main API (Port 8000)**: Handles feature analysis and recommendations
 - **Screenshot Server (Port 8001)**: Takes screenshots of websites
+
+## 🌐 URL Handling
+
+The system now automatically handles various URL formats:
+
+- **Full URLs**: `https://example.com` ✅
+- **WWW URLs**: `www.example.com` → `https://www.example.com` ✅
+- **Domain only**: `example.com` → `https://example.com` ✅
+
+This prevents 422 errors when users forget to add the protocol!
 
 ## 🚨 Common Mistakes to Avoid
 

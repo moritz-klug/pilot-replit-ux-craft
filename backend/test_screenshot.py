@@ -27,35 +27,48 @@ def test_screenshot_creation():
     """Test taking a screenshot"""
     global SCREENSHOT_ID
     print("\nTesting screenshot creation...")
-    try:
-        payload = {
-            "url": "https://www.apple.com/",
-            "width": 1920,
-            "height": 1080,
-            "wait_time": 2,
-            "full_page": True
-        }
-        
-        response = requests.post(f"{BASE_URL}/screenshot", json=payload, timeout=10)
-        response.raise_for_status()
-        
-        result = response.json()
-        SCREENSHOT_ID = result.get("screenshot_id")
+    
+    # Test with different URL formats
+    test_urls = [
+        "https://www.apple.com/",
+        "www.google.com",
+        "example.com"
+    ]
+    
+    for test_url in test_urls:
+        print(f"\nTesting URL: {test_url}")
+        try:
+            payload = {
+                "url": test_url,
+                "width": 1920,
+                "height": 1080,
+                "wait_time": 2,
+                "full_page": True
+            }
+            
+            response = requests.post(f"{BASE_URL}/screenshot", json=payload, timeout=10)
+            response.raise_for_status()
+            
+            result = response.json()
+            screenshot_id = result.get("screenshot_id")
+            
+            if screenshot_id:
+                print(f"✅ Screenshot creation successful for '{test_url}'")
+                print(f"   Screenshot ID: {screenshot_id}")
+                print(f"   Normalized URL: {result.get('url')}")
+                
+                # Use the first successful screenshot ID for other tests
+                if not SCREENSHOT_ID:
+                    SCREENSHOT_ID = screenshot_id
+                    print("Waiting 20 seconds for screenshot to be generated...")
+                    time.sleep(30)
+            else:
+                print(f"❌ Screenshot creation failed for '{test_url}': No screenshot_id in response")
 
-        if SCREENSHOT_ID:
-            print("✅ Screenshot creation initiated successfully")
-            print(f"Screenshot ID: {SCREENSHOT_ID}")
-            print(f"URL: {result.get('url')}")
-            # Wait for the background task to complete
-            print("Waiting 20 seconds for screenshot to be generated...")
-            time.sleep(30)
-        else:
-            print("❌ Screenshot creation failed: No screenshot_id in response")
-
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Screenshot test error: {e}")
-        if e.response:
-            print(f"Response: {e.response.text}")
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Screenshot test error for '{test_url}': {e}")
+            if e.response:
+                print(f"Response: {e.response.text}")
 
 def test_get_screenshot():
     """Test getting a screenshot by ID"""
